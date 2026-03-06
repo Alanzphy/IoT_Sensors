@@ -302,6 +302,8 @@ CREATE TABLE ciclos_cultivo (
     fecha_inicio    DATE NOT NULL,
     fecha_fin       DATE NULL DEFAULT NULL,
     creado_en       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    eliminado_en    DATETIME NULL DEFAULT NULL,
 
     INDEX idx_ciclos_cultivo_area_id (area_riego_id),
     INDEX idx_ciclos_cultivo_area_fechas (area_riego_id, fecha_fin),
@@ -311,7 +313,7 @@ CREATE TABLE ciclos_cultivo (
 );
 ```
 
-> **Notas:** `fecha_fin` NULL = ciclo activo. **Constraint lógica en backend:** solo 1 ciclo activo por área (fecha_fin IS NULL o fecha_fin > NOW()). Múltiples ciclos cerrados permitidos (historial). El filtrado por ciclo se traduce a: `WHERE lecturas.marca_tiempo BETWEEN ciclo.fecha_inicio AND ciclo.fecha_fin`.
+> **Notas:** `fecha_fin` NULL = ciclo activo. **Constraint lógica en backend:** solo 1 ciclo activo por área (fecha_fin IS NULL o fecha_fin > NOW()). Múltiples ciclos cerrados permitidos (historial). El filtrado por ciclo se traduce a: `WHERE lecturas.marca_tiempo BETWEEN ciclo.fecha_inicio AND ciclo.fecha_fin`. Soft delete con `eliminado_en` para mantener consistencia con las demás entidades principales.
 
 **Ejemplo de datos:**
 | id | area_riego_id | fecha_inicio | fecha_fin | Significado |
@@ -556,6 +558,8 @@ erDiagram
         date fecha_inicio
         date fecha_fin
         datetime creado_en
+        datetime actualizado_en
+        datetime eliminado_en
     }
 
     nodos {
@@ -700,6 +704,138 @@ WHERE n.api_key = ?
 - **Soft delete:** Implementar como mixin de SQLAlchemy (`SoftDeleteMixin`) con `eliminado_en` y override de queries por defecto.
 - **Timestamps:** Almacenar siempre en UTC. La conversión a timezone local se hace en el frontend.
 - **Serialización:** Los schemas Pydantic mapean columnas en español (BD) a campos en inglés (API JSON). Ejemplo: `nombre_empresa` → `company_name` en la respuesta JSON.
+
+# 9.1. SCHEMA PREVISTO PARA FASE 2 (NO IMPLEMENTAR AÚN)
+
+> **IMPORTANTE:** Las siguientes tablas NO se crean en el MVP. Se documentan aquí para que el diseño actual las soporte sin fricción cuando se implementen. Las FKs apuntan a tablas que ya existen en el MVP.
+
+## `umbrales` — Rangos configurables por área y parámetro (Fase 2 — sección 4.2 de AGENTS.md)
+
+Permite al Cliente configurar rangos personalizados de humedad (y otros parámetros) por cada área de riego. El dashboard usará estos rangos para mostrar indicadores de color (verde/amarillo/rojo).
+
+```sql
+CREATE TABLE umbrales (
+    id              INT AUTO_INCREMENT PRIMARY KEY,
+    area_riego_id   INT NOT NULL,
+    parametro       VARCHAR(50) NOT NULL,          -- ej: 'soil.humidity', 'environmental.eto'
+    valor_minimo    DECIMAL(10,4) NULL DEFAULT NULL,
+    valor_maximo    DECIMAL(10,4) NULL DEFAULT NULL,
+    severidad       ENUM('optimo', 'advertencia', 'critico') NOT NULL,
+    creado_en       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    eliminado_en    DATETIME NULL DEFAULT NULL,
+
+    INDEX idx_umbrales_area_parametro (area_riego_id, parametro),
+
+    CONSTRAINT fk_umbrales_area_riego
+        FOREIGN KEY (area_riego_id) REFERENCES areas_riego(id) ON DELETE CASCADE
+);
+```
+
+## `alertas` — Historial de alertas generadas (Fase 2 — secciones 4.2, 4.3 y 4.4 de AGENTS.md)
+
+Cada vez que un valor de sensor sale de los rangos configurados, se genera un registro aquí. También se generan alertas por inactividad de nodo (≥20 min sin datos).
+
+```sql
+CREATE TABLE alertas (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    nodo_id         INT NOT NULL,
+    area_riego_id   INT NOT NULL,
+    parametro       VARCHAR(50) NOT NULL,          -- ej: 'soil.humidity', 'node.inactivity'
+    valor_actual    DECIMAL(10,4) NULL DEFAULT NULL,
+    severidad       ENUM('advertencia', 'critico') NOT NULL,
+    mensaje         VARCHAR(500) NULL DEFAULT NULL,
+    leida           BOOLEAN NOT NULL DEFAULT FALSE,
+    leida_en        DATETIME NULL DEFAULT NULL,
+    creado_en       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_alertas_area (area_riego_id, creado_en),
+    INDEX idx_alertas_nodo (nodo_id, creado_en),
+    INDEX idx_alertas_no_leidas (area_riego_id, leida, creado_en),
+
+    CONSTRAINT fk_alertas_nodo
+        FOREIGN KEY (nodo_id) REFERENCES nodos(id) ON DELETE CASCADE,
+    CONSTRAINT fk_alertas_area_riego
+        FOREIGN KEY (area_riego_id) REFERENCES areas_riego(id) ON DELETE CASCADE
+);
+```
+
+## `preferencias_notificacion` — Canal de notificación por usuario/área (Fase 2 — sección 4.3 de AGENTS.md)
+
+El usuario elige qué alertas le llegan y por qué canal (email, WhatsApp).
+
+```sql
+CREATE TABLE preferencias_notificacion (
+    id              INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id      INT NOT NULL,
+    area_riego_id   INT NOT NULL,
+    canal           ENUM('email', 'whatsapp') NOT NULL,
+    activo          BOOLEAN NOT NULL DEFAULT TRUE,
+    creado_en       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    UNIQUE KEY uk_pref_usuario_area_canal (usuario_id, area_riego_id, canal),
+
+    CONSTRAINT fk_pref_notif_usuario
+        FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    CONSTRAINT fk_pref_notif_area_riego
+        FOREIGN KEY (area_riego_id) REFERENCES areas_riego(id) ON DELETE CASCADE
+);
+```
+
+## `tokens_recuperacion` — Recuperación de contraseña (Fase 2 — sección 4.7 de AGENTS.md)
+
+Tokens temporales de un solo uso para el flujo "Olvidé mi contraseña".
+
+```sql
+CREATE TABLE tokens_recuperacion (
+    id              INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id      INT NOT NULL,
+    token           VARCHAR(512) NOT NULL UNIQUE,
+    expira_en       DATETIME NOT NULL,
+    usado_en        DATETIME NULL DEFAULT NULL,
+    creado_en       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_tokens_recuperacion_token (token),
+    INDEX idx_tokens_recuperacion_usuario_id (usuario_id),
+
+    CONSTRAINT fk_tokens_recuperacion_usuario
+        FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+```
+
+## `audit_log` — Logs de auditoría (Fase 2 — sección 4.8 de AGENTS.md)
+
+Registra quién hizo qué cambio, en qué entidad y cuándo. Vista exclusiva para el Administrador.
+
+```sql
+CREATE TABLE audit_log (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id      INT NULL,                      -- NULL si fue acción del sistema
+    accion          ENUM('crear', 'actualizar', 'eliminar') NOT NULL,
+    entidad         VARCHAR(50) NOT NULL,          -- ej: 'clientes', 'predios', 'nodos'
+    entidad_id      INT NOT NULL,
+    datos_anteriores JSON NULL DEFAULT NULL,
+    datos_nuevos    JSON NULL DEFAULT NULL,
+    creado_en       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_audit_log_usuario (usuario_id, creado_en),
+    INDEX idx_audit_log_entidad (entidad, entidad_id, creado_en),
+
+    CONSTRAINT fk_audit_log_usuario
+        FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
+);
+```
+
+## Decisión sobre NDVI (Fase 2 — sección 4.5 de AGENTS.md)
+
+Cuando se integre NDVI, se recomienda agregar el campo directamente a `lecturas_suelo` como columna nullable, evitando JOINs adicionales:
+
+```sql
+ALTER TABLE lecturas_suelo ADD COLUMN ndvi DECIMAL(5,4) NULL DEFAULT NULL;
+```
+
+> **Nota:** Estas tablas son un **boceto de diseño** para garantizar compatibilidad futura. Los detalles exactos (columnas, índices, constraints) se revisarán al momento de implementar cada funcionalidad de Fase 2.
 
 # 10. GLOSARIO
 

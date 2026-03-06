@@ -5,7 +5,7 @@ Actúa como un Arquitecto de Software Senior y experto en modelado UML. Tu objet
 - El sistema es una plataforma web cliente-servidor tradicional.
 - **Fuera del alcance actual:** Inteligencia Artificial, agentes autónomos y flujos automatizados con n8n. Todo el modelado debe restringirse al flujo de datos transaccional básico (ingesta, gestión y visualización).
 - El sistema central ("Servidor Grogu") alojará la base de datos y la API REST que orquesta la comunicación entre el hardware simulado y la interfaz web.
-- **Jerarquía de entidades:** Cliente → Predios → Áreas de Riego → Cultivo (del catálogo fijo) → Nodo IoT (relación 1:1 entre Área y Nodo).
+- **Jerarquía de entidades:** Cliente → Predios → Áreas de Riego → Cultivo (del catálogo administrable) → Nodo IoT (relación 1:1 entre Área y Nodo).
 
 # 2. ACTORES DEL SISTEMA
 Debes considerar estrictamente a los siguientes 3 actores interactuando con la plataforma:
@@ -13,7 +13,8 @@ Debes considerar estrictamente a los siguientes 3 actores interactuando con la p
 1. **Administrador (Usuario Humano):** Tiene privilegios globales. Gestiona toda la plataforma:
    - CRUD de **Clientes** (agricultores/dueños de tierras).
    - CRUD de **Predios** (terrenos/propiedades) asignados a cada cliente.
-   - CRUD de **Áreas de Riego** dentro de cada predio, asignando el tipo de cultivo del catálogo fijo: **Nogal, Alfalfa, Manzana, Maíz, Chile, Algodón**.
+   - CRUD de **Áreas de Riego** dentro de cada predio, asignando el tipo de cultivo del catálogo administrable. Valores iniciales (seed): **Nogal, Alfalfa, Manzana, Maíz, Chile, Algodón**.
+   - CRUD del **Catálogo de Tipos de Cultivo** (agregar, editar, eliminar tipos de cultivo).
    - Definición de **Ciclos de Cultivo** (fecha inicio/fin) para cada área de riego.
    - Registro de **Nodos IoT** con datos estáticos (GPS latitud/longitud, tamaño) y vinculación 1:1 a un área de riego.
    - **Supervisión:** Puede ver el dashboard e histórico de cualquier cliente/predio/área.
@@ -51,6 +52,7 @@ flowchart LR
         GestCiclos("Definir Ciclos de Cultivo (Inicio/Fin)")
         GestNodos("Registrar Nodos IoT (GPS, Tamaño)")
         AsignarNodo("Vincular Nodo ↔ Área de Riego (1:1)")
+        GestCatalogo("Gestionar Catálogo de Cultivos (CRUD)")
 
         %% Visualización (Admin + Cliente)
         Dashboard("Visualizar Dashboard Multicategoría")
@@ -70,6 +72,7 @@ flowchart LR
     Admin --> GestCiclos
     Admin --> GestNodos
     Admin --> AsignarNodo
+    Admin --> GestCatalogo
     Admin --> Dashboard
     Admin --> Frescura
     Admin --> Historico
@@ -94,4 +97,4 @@ flowchart LR
 > - **Transmitir Lectura** envía un payload JSON con **3 categorías dinámicas**: Suelo (4 campos), Riego (3 campos: active, accumulated_liters, flow_per_minute), Ambiental (5 campos). **12 campos dinámicos** por lectura. Los datos "Generales" (Cultivo, Tamaño, GPS) son estáticos y NO van en el payload. Cada lectura lleva `timestamp` obligatorio. Campos no disponibles = `0` o `null`. NDVI excluido del MVP.
 > - **Auth:** JWT para usuarios (Admin/Cliente), API Key fija (`X-API-Key` header) para nodos IoT.
 > - **Stack:** Python/FastAPI (backend), React (frontend), MySQL 8 (BD), Docker Compose (deploy).
-> - Catálogo fijo de cultivos: **Nogal, Alfalfa, Manzana, Maíz, Chile, Algodón**.
+> - Catálogo administrable de cultivos (CRUD por Admin). Valores iniciales (seed): **Nogal, Alfalfa, Manzana, Maíz, Chile, Algodón**.

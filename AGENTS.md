@@ -41,7 +41,7 @@ El payload contiene **3 categorías dinámicas** (12 campos en total). Los datos
   - `environmental.eto` — E.T.O. Evapotranspiración (mm/día) ⭐ (dato prioritario)
 
 - **Datos Estáticos (NO van en el payload, se registran al configurar nodo/área):**
-  - Tipo de Cultivo (del catálogo fijo, asignado al Área de Riego)
+  - Tipo de Cultivo (del catálogo administrable, asignado al Área de Riego)
   - Tamaño del área
   - GPS latitud/longitud (registrado en el Nodo)
 
