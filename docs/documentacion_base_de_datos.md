@@ -2,7 +2,7 @@
 
 > **Audiencia:** Desarrolladores del equipo.
 > **Propósito:** Entender la estructura de la base de datos, por qué está diseñada así, cómo se relacionan las tablas entre sí, y cómo fluyen los datos desde el sensor hasta la pantalla del usuario.
-> **Referencia técnica:** El SQL completo (DDL), queries de referencia y seed data están en `agente_base_de_datos.md`. Este documento **no duplica el SQL** — explica la lógica detrás del diseño.
+> **Referencia técnica:** El SQL completo (DDL), queries de referencia y seed data están en `.agent/agente_base_de_datos.md`. Este documento **no duplica el SQL** — explica la lógica detrás del diseño.
 
 ---
 

@@ -8,7 +8,25 @@ wheels/
 
 # Virtual environments
 .venv
+
+# IDE / tools
 /.sisyphus
+.DS_Store
+
+# Environment files (secrets)
+.env
+
+# Binary docs
 *.pdf
-/srs
+
+# Drafts / local only
 /others
+# /docs/srs
+
+# Backend
+backend/.venv/
+
+# Frontend build output (when implemented)
+frontend/node_modules/
+frontend/dist/
+frontend/build/

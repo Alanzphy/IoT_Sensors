@@ -2,7 +2,7 @@
 
 > **Audiencia:** Desarrolladores del equipo (frontend y backend).
 > **Propósito:** Entender cómo funciona la API del sistema, qué endpoints existen, cómo autenticarse, qué enviar y qué esperar como respuesta. Este documento acompaña al spec técnico `openapi.yaml` (importable en Swagger UI / Postman).
-> **Referencia:** La arquitectura general está en `AGENTS.md`. El modelo de datos en `agente_base_de_datos.md` y `documentacion_base_de_datos.md`.
+> **Referencia:** La arquitectura general está en `docs/arquitectura.md`. El modelo de datos en `.agent/agente_base_de_datos.md` y `docs/documentacion_base_de_datos.md`.
 
 ---
 
