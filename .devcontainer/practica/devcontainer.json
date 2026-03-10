@@ -14,13 +14,16 @@
     "DB_HOST": "mysql"
   },
 
-  "postCreateCommand": "pip install fastapi uvicorn sqlalchemy pymysql cryptography && cd /workspace/practica && python practica_setup.py",
+  "postCreateCommand": "python -m venv /workspace/practica/.venv && /workspace/practica/.venv/bin/pip install fastapi uvicorn sqlalchemy pymysql cryptography && cd /workspace/practica && .venv/bin/python practica_setup.py",
 
   "customizations": {
     "vscode": {
       "extensions": [
         "ms-python.python"
-      ]
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/workspace/practica/.venv/bin/python"
+      }
     }
   }
 }
