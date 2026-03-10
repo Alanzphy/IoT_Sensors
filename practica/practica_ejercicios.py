@@ -112,63 +112,138 @@ app = FastAPI(title="Ejercicios — CRUD", version="1.0")
 # TODO: GET /predios — Listar todos los predios
 @app.get("/predios")
 def listar_predios():
-    # 1. Abre la sesión de BD:       db = Session()
-    # 2. Consulta todos los predios no eliminados:
-    #    resultados = db.query(Predio).filter(Predio.eliminado_en == None).all()
-    # 3. Convierte cada uno a diccionario con: id, cliente_id, nombre, ubicacion
-    # 4. Cierra la sesión:            db.close()
-    # 5. Devuelve la lista
-    pass  # ← borra esto y escribe tu código
+    db = Session()
+
+    resultados = db.query(Predio).filter(Predio.eliminado_en == None).all()
+
+    lista = []
+    for predio in resultados:
+        lista.append(
+            {
+                "id": predio.id,
+                "cliente_id": predio.cliente_id,
+                "nombre": predio.nombre,
+                "ubicacion": predio.ubicacion,
+            }
+        )
+
+    db.close()
+    return lista
 
 
 # TODO: GET /predios/{id} — Obtener un predio por su ID
 @app.get("/predios/{id}")
 def obtener_predio(id: int):
-    # 1. Abre la sesión
-    # 2. Busca el predio por id (y que no esté eliminado)
-    #    usa .first() en vez de .all()
-    # 3. Cierra la sesión
-    # 4. Si no existe → raise HTTPException(status_code=404, detail="...")
-    # 5. Devuelve el diccionario con: id, cliente_id, nombre, ubicacion
-    pass
+    db = Session()
+
+    predio = (
+        db.query(Predio)
+        .filter(
+            Predio.id == id,
+            Predio.eliminado_en == None,
+        )
+        .first()
+    )
+
+    db.close()
+
+    if predio is None:
+        raise HTTPException(status_code=404, detail="Predio no encontrado")
+
+    return {
+        "id": predio.id,
+        "cliente_id": predio.cliente_id,
+        "nombre": predio.nombre,
+        "ubicacion": predio.ubicacion,
+    }
 
 
 # TODO: POST /predios — Crear un predio nuevo
 @app.post("/predios")
 def crear_predio(cliente_id: int, nombre: str, ubicacion: str = None):
-    # 1. Abre la sesión
-    # 2. Crea el objeto:  nuevo = Predio(cliente_id=..., nombre=..., ubicacion=...)
-    # 3. db.add(nuevo)
-    # 4. db.commit()
-    # 5. db.refresh(nuevo)
-    # 6. Arma el diccionario resultado
-    # 7. db.close()
-    # 8. Devuelve el resultado
-    pass
+    db = Session()
+
+    nuevo = Predio(
+        cliente_id=cliente_id,
+        nombre=nombre,
+        ubicacion=ubicacion,
+    )
+
+    db.add(nuevo)
+    db.commit()
+    db.refresh(nuevo)
+
+    resultado = {
+        "id": nuevo.id,
+        "cliente_id": nuevo.cliente_id,
+        "nombre": nuevo.nombre,
+        "ubicacion": nuevo.ubicacion,
+    }
+
+    db.close()
+    return resultado
 
 
 # TODO: PUT /predios/{id} — Actualizar un predio
 @app.put("/predios/{id}")
 def actualizar_predio(id: int, nombre: str = None, ubicacion: str = None):
-    # 1. Busca el predio (como en obtener_predio)
-    # 2. Si no existe → 404
-    # 3. Si nombre fue enviado (is not None) → predio.nombre = nombre
-    # 4. Si ubicacion fue enviado → predio.ubicacion = ubicacion
-    # 5. db.commit() + db.refresh(predio)
-    # 6. Devuelve el resultado
-    pass
+    db = Session()
+
+    predio = (
+        db.query(Predio)
+        .filter(
+            Predio.id == id,
+            Predio.eliminado_en == None,
+        )
+        .first()
+    )
+
+    if predio is None:
+        db.close()
+        raise HTTPException(status_code=404, detail="Predio no encontrado")
+
+    if nombre is not None:
+        predio.nombre = nombre
+    if ubicacion is not None:
+        predio.ubicacion = ubicacion
+
+    db.commit()
+    db.refresh(predio)
+
+    resultado = {
+        "id": predio.id,
+        "cliente_id": predio.cliente_id,
+        "nombre": predio.nombre,
+        "ubicacion": predio.ubicacion,
+    }
+
+    db.close()
+    return resultado
 
 
 # TODO: DELETE /predios/{id} — Eliminar un predio (soft delete)
 @app.delete("/predios/{id}")
 def eliminar_predio(id: int):
-    # 1. Busca el predio
-    # 2. Si no existe → 404
-    # 3. predio.eliminado_en = func.now()
-    # 4. db.commit()
-    # 5. db.close()
-    # 6. Devuelve: {"mensaje": f"Predio '{predio.nombre}' eliminado"}
-    pass
+    db = Session()
+
+    predio = (
+        db.query(Predio)
+        .filter(
+            Predio.id == id,
+            Predio.eliminado_en == None,
+        )
+        .first()
+    )
+
+    if predio is None:
+        db.close()
+        raise HTTPException(status_code=404, detail="Predio no encontrado")
+
+    predio.eliminado_en = func.now()
+    db.commit()
+    db.close()
+
+    return {"mensaje": f"Predio '{predio.nombre}' eliminado"}
 
 
 # ==========================================================
