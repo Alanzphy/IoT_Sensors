@@ -1,0 +1,27 @@
+{
+  "name": "Sensores IoT — Desarrollo",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
+
+  "forwardPorts": [5050],
+  "portsAttributes": {
+    "5050": { "label": "Backend API", "onAutoForward": "notify" }
+  },
+
+  "remoteEnv": {
+    "DB_HOST": "mysql",
+    "DB_PASSWORD": "rootpass"
+  },
+
+  "postCreateCommand": "cd /workspace/backend && pip install . && alembic upgrade head && python -m app.db.seed",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.pylance"
+      ]
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "Práctica Endpoints",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
+
+  "forwardPorts": [8001, 8000],
+  "portsAttributes": {
+    "8001": { "label": "Mis ejercicios", "onAutoForward": "openBrowser" },
+    "8000": { "label": "Respuestas" }
+  },
+
+  "remoteEnv": {
+    "DB_HOST": "mysql"
+  },
+
+  "postCreateCommand": "pip install fastapi uvicorn sqlalchemy pymysql && cd /workspace/practica && python practica_setup.py",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python"
+      ]
+    }
+  }
+}
