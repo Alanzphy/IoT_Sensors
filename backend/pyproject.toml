@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "alembic>=1.18.4",
+    "cryptography>=44.0.0",
     "fastapi>=0.135.1",
     "openpyxl>=3.1.5",
     "passlib[bcrypt]>=1.7.4",

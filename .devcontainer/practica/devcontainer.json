@@ -14,7 +14,7 @@
     "DB_HOST": "mysql"
   },
 
-  "postCreateCommand": "pip install fastapi uvicorn sqlalchemy pymysql && cd /workspace/practica && python practica_setup.py",
+  "postCreateCommand": "pip install fastapi uvicorn sqlalchemy pymysql cryptography && cd /workspace/practica && python practica_setup.py",
 
   "customizations": {
     "vscode": {
