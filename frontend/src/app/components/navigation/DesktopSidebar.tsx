@@ -1,0 +1,107 @@
+import { useState } from "react";
+import { Link, useLocation } from "react-router";
+import { 
+  LayoutDashboard, 
+  MapPin, 
+  Clock, 
+  Download, 
+  Users, 
+  Layers, 
+  Sprout,
+  Radio,
+  ChevronRight,
+  ChevronLeft,
+  LogOut
+} from "lucide-react";
+
+interface DesktopSidebarProps {
+  role: "client" | "admin";
+}
+
+export function DesktopSidebar({ role }: DesktopSidebarProps) {
+  const [expanded, setExpanded] = useState(true);
+  const location = useLocation();
+
+  const clientNavItems = [
+    { path: "/cliente", icon: LayoutDashboard, label: "Dashboard" },
+    { path: "/cliente/areas", icon: MapPin, label: "Predios" },
+    { path: "/cliente/historico", icon: Clock, label: "Histórico" },
+    { path: "/cliente/exportar", icon: Download, label: "Exportar" },
+  ];
+
+  const adminNavItems = [
+    { path: "/admin", icon: LayoutDashboard, label: "Dashboard" },
+    { path: "/admin/clientes", icon: Users, label: "Clientes" },
+    { path: "/admin/nodos", icon: Radio, label: "Nodos" },
+    { path: "/admin/cultivos", icon: Sprout, label: "Catálogo" },
+  ];
+
+  const navItems = role === "client" ? clientNavItems : adminNavItems;
+
+  return (
+    <div 
+      className={`${expanded ? "w-60" : "w-20"} bg-[#F9F8F4] border-r border-[#2C2621]/10 transition-all duration-300 flex flex-col`}
+    >
+      {/* Logo */}
+      <div className="p-6 flex items-center justify-between">
+        {expanded && (
+          <h2 className="font-serif text-xl text-[#2C2621]">
+            Sensores Agrícolas
+          </h2>
+        )}
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="p-2 rounded-full hover:bg-[#E2D4B7]/50 transition-colors"
+        >
+          {expanded ? (
+            <ChevronLeft className="w-5 h-5 text-[#6E6359]" />
+          ) : (
+            <ChevronRight className="w-5 h-5 text-[#6E6359]" />
+          )}
+        </button>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 px-3 space-y-2">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = location.pathname === item.path || 
+                          (item.path !== "/" && location.pathname.startsWith(item.path));
+
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`flex items-center gap-3 px-4 py-3 rounded-full transition-all ${
+                isActive
+                  ? "bg-[#6D7E5E] text-[#F4F1EB]"
+                  : "text-[#6E6359] hover:bg-[#E2D4B7]/30"
+              }`}
+            >
+              <Icon className="w-5 h-5 flex-shrink-0" />
+              {expanded && <span className="font-medium">{item.label}</span>}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* User section */}
+      <div className="p-4 border-t border-[#2C2621]/10">
+        <div className={`flex items-center gap-3 ${expanded ? "" : "justify-center"}`}>
+          <div className="w-10 h-10 rounded-full bg-[#6D7E5E] flex items-center justify-center text-[#F4F1EB] font-medium">
+            JL
+          </div>
+          {expanded && (
+            <div className="flex-1">
+              <p className="font-medium text-[#2C2621]">Juan López</p>
+              <p className="text-sm text-[#6E6359]">{role === "client" ? "Agricultor" : "Admin"}</p>
+            </div>
+          )}
+          <button className="p-2 rounded-full hover:bg-[#E2D4B7]/50 transition-colors">
+            <LogOut className="w-4 h-4 text-[#6E6359]" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
