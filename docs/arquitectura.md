@@ -110,13 +110,7 @@ sequenceDiagram
         N-->>S: 400 Bad Request
     end
 
-    B->>DB: BEGIN TRANSACTION
-    B->>DB: INSERT lecturas (timestamp, nodo_id)
-    B->>DB: INSERT lecturas_suelo (conductivity, temperature, humidity, water_potential)
-    B->>DB: INSERT lecturas_riego (active, accumulated_liters, flow_per_minute)
-    B->>DB: INSERT lecturas_ambiental (temperature, relative_humidity, wind_speed, solar_radiation, eto)
-    B->>DB: COMMIT
-
+    B->>DB: INSERT lecturas (marca_tiempo, nodo_id, + 12 variables de estado)
     B-->>N: 201 Created
     N-->>S: 201 Created
 ```
@@ -246,21 +240,7 @@ graph TD
     TC["📋 Tipo de Cultivo<br/>(catálogo administrable)<br/>ej: Nogal"]
     CC["📅 Ciclo de Cultivo<br/>ej: 2026-02-01 → ..."]
     ND["📡 Nodo IoT<br/>(relación 1:1 con Área)<br/>GPS: lat/lon"]
-    L["📊 Lecturas<br/>144/día por nodo<br/>(cada 10 min)"]
-    LS["🟤 Suelo<br/>4 campos"]
-    LR["💧 Riego<br/>3 campos"]
-    LA["🌤️ Ambiental<br/>5 campos"]
-
-    U -->|"1:1 si rol=cliente"| C
-    C -->|"1:N"| P
-    P -->|"1:N"| AR
-    TC -.->|"1:N (catálogo)"| AR
-    AR -->|"1:N (historial)"| CC
-    AR -->|"1:1"| ND
-    ND -->|"1:N"| L
-    L -->|"1:1"| LS
-    L -->|"1:1"| LR
-    L -->|"1:1"| LA
+    ND -->|"1:N"| L["📊 Lecturas<br/>1 tabla plana con<br/>12 campos dinámicos"]
 
     style U fill:#e3f2fd,stroke:#1565c0,color:#000
     style C fill:#bbdefb,stroke:#1565c0,color:#000
@@ -270,9 +250,6 @@ graph TD
     style CC fill:#ffe0b2,stroke:#e65100,color:#000
     style ND fill:#e1bee7,stroke:#6a1b9a,color:#000
     style L fill:#f8bbd0,stroke:#880e4f,color:#000
-    style LS fill:#d7ccc8,stroke:#4e342e,color:#000
-    style LR fill:#b3e5fc,stroke:#0277bd,color:#000
-    style LA fill:#dcedc8,stroke:#558b2f,color:#000
 ```
 
 **Reglas clave:**

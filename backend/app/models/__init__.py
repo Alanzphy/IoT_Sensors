@@ -7,9 +7,6 @@ from app.models.irrigation_area import IrrigationArea
 from app.models.crop_cycle import CropCycle
 from app.models.node import Node
 from app.models.reading import Reading
-from app.models.reading_soil import ReadingSoil
-from app.models.reading_irrigation import ReadingIrrigation
-from app.models.reading_environmental import ReadingEnvironmental
 
 __all__ = [
     "User",
@@ -21,7 +18,4 @@ __all__ = [
     "CropCycle",
     "Node",
     "Reading",
-    "ReadingSoil",
-    "ReadingIrrigation",
-    "ReadingEnvironmental",
 ]

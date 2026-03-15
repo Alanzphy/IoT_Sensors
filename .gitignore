@@ -26,6 +26,7 @@ wheels/
 # Backend
 backend/.venv/
 
+
 # Frontend build output (when implemented)
 frontend/node_modules/
 frontend/dist/

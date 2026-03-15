@@ -90,7 +90,7 @@ Cliente abre dashboard → Frontend pide GET /api/v1/readings (JWT)
 | `nodos` | `/api/v1/nodes` |
 | `lecturas` | `/api/v1/readings` |
 
-# 3. SCHEMA DE TABLAS (12 tablas)
+# 3. SCHEMA DE TABLAS (9 tablas)
 
 > **Convenciones usadas en todas las tablas:**
 > - `creado_en` — Fecha/hora de creación del registro (automático).
@@ -359,9 +359,9 @@ CREATE TABLE nodos (
 | 2 | 2 | ak_n02_f7g8h9i0j1k2 | Sensor Alfalfa Poniente | 28.1845210 | -105.4730150 | true |
 | 3 | 3 | ak_n03_l3m4n5o6p7q8 | Sensor Maíz Principal | 28.6352140 | -106.0889360 | false |
 
-## 3.9. `lecturas` — Tabla parent de cada evento de lectura
+## 3.9. `lecturas` — Tabla Única de Mediciones (Wide Table)
 
-**¿Qué guarda?** El registro "maestro" de cada lectura: qué nodo la envió y cuándo fue tomada. Es la tabla parent que conecta con las 3 tablas de categoría (suelo, riego, ambiental). Cada vez que un nodo envía datos, se crea **1 fila aquí** + 1 fila en cada tabla de categoría.
+**¿Qué guarda?** Almacena todos los datos emitidos por el nodo en un solo registro atómico en base de datos. Los campos que el sensor no reporte o que no apliquen llegarán como `NULL`.
 
 **¿Quién crea registros aquí?** El sistema automáticamente, cada vez que un nodo envía un POST. El simulador envía 1 lectura cada 10 minutos = **144 lecturas/día por nodo**.
 
@@ -371,10 +371,28 @@ CREATE TABLE nodos (
 
 ```sql
 CREATE TABLE lecturas (
-    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
-    nodo_id         INT NOT NULL,
-    marca_tiempo    DATETIME NOT NULL,
-    creado_en       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    id                          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    nodo_id                     INT NOT NULL,
+    marca_tiempo                DATETIME NOT NULL,
+    creado_en                   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    -- Datos Suelo
+    suelo_conductividad         DECIMAL(8,3) NULL DEFAULT NULL,
+    suelo_temperatura           DECIMAL(6,2) NULL DEFAULT NULL,
+    suelo_humedad               DECIMAL(6,2) NULL DEFAULT NULL,
+    suelo_potencial_hidrico     DECIMAL(8,4) NULL DEFAULT NULL,
+
+    -- Datos Riego
+    riego_activo                BOOLEAN NULL DEFAULT NULL,
+    riego_litros_acumulados     DECIMAL(12,2) NULL DEFAULT NULL,
+    riego_flujo_por_minuto      DECIMAL(8,2) NULL DEFAULT NULL,
+
+    -- Datos Ambientales
+    ambiental_temperatura       DECIMAL(6,2) NULL DEFAULT NULL,
+    ambiental_humedad_relativa  DECIMAL(6,2) NULL DEFAULT NULL,
+    ambiental_velocidad_viento  DECIMAL(7,2) NULL DEFAULT NULL,
+    ambiental_radiacion_solar   DECIMAL(8,2) NULL DEFAULT NULL,
+    ambiental_eto               DECIMAL(6,3) NULL DEFAULT NULL,
 
     INDEX idx_lecturas_nodo_tiempo (nodo_id, marca_tiempo),
     INDEX idx_lecturas_tiempo (marca_tiempo),
@@ -385,94 +403,6 @@ CREATE TABLE lecturas (
 ```
 
 > **Notas:** BIGINT por alto volumen (144 lecturas/día × N nodos). `marca_tiempo` = momento de la medición (enviado por el simulador, ISO 8601 UTC). `creado_en` = momento de ingesta en el servidor. Índice compuesto `(nodo_id, marca_tiempo)` es el query principal para dashboard e histórico. Índice simple `(marca_tiempo)` para extracciones masivas de Fase 2. **Sin soft delete** — las lecturas no se borran.
-
-**Ejemplo de datos:**
-| id | nodo_id | marca_tiempo | creado_en |
-|----|---------|-------------|----------|
-| 1 | 1 | 2026-02-24 14:00:00 | 2026-02-24 14:00:03 |
-| 2 | 1 | 2026-02-24 14:10:00 | 2026-02-24 14:10:02 |
-| 3 | 2 | 2026-02-24 14:00:00 | 2026-02-24 14:00:04 |
-
-## 3.10. `lecturas_suelo` — Categoría Suelo
-
-**¿Qué guarda?** Los 4 campos de la categoría de suelo de cada lectura. Vinculada 1:1 con `lecturas` a través de `lectura_id`.
-
-```sql
-CREATE TABLE lecturas_suelo (
-    id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
-    lectura_id          BIGINT NOT NULL UNIQUE,
-    conductividad       DECIMAL(8,3) NULL DEFAULT NULL,
-    temperatura         DECIMAL(6,2) NULL DEFAULT NULL,
-    humedad             DECIMAL(6,2) NULL DEFAULT NULL,
-    potencial_hidrico   DECIMAL(8,4) NULL DEFAULT NULL,
-
-    CONSTRAINT fk_lecturas_suelo_lectura
-        FOREIGN KEY (lectura_id) REFERENCES lecturas(id) ON DELETE CASCADE
-);
-```
-
-> **Campos:** conductividad (dS/m), temperatura (°C), humedad (% ⭐ prioritario), potencial_hidrico (MPa, valores negativos). Todos nullable: si el sensor no reporta un campo, llega como null.
-
-**Ejemplo de datos:**
-| id | lectura_id | conductividad | temperatura | humedad ⭐ | potencial_hidrico |
-|----|-----------|--------------|------------|-----------|------------------|
-| 1 | 1 | 2.500 | 22.30 | 45.60 | -0.8000 |
-| 2 | 2 | 2.480 | 22.10 | 44.90 | -0.8200 |
-| 3 | 3 | NULL | 19.50 | 62.30 | NULL |
-
-## 3.11. `lecturas_riego` — Categoría Riego
-
-**¿Qué guarda?** Los 3 campos de la categoría de riego de cada lectura. Vinculada 1:1 con `lecturas`.
-
-```sql
-CREATE TABLE lecturas_riego (
-    id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
-    lectura_id          BIGINT NOT NULL UNIQUE,
-    activo              BOOLEAN NULL DEFAULT NULL,
-    litros_acumulados   DECIMAL(12,2) NULL DEFAULT NULL,
-    flujo_por_minuto    DECIMAL(8,2) NULL DEFAULT NULL,
-
-    CONSTRAINT fk_lecturas_riego_lectura
-        FOREIGN KEY (lectura_id) REFERENCES lecturas(id) ON DELETE CASCADE
-);
-```
-
-> **Campos:** activo (bool on/off), litros_acumulados (L), flujo_por_minuto (L/min ⭐ prioritario). Todos nullable.
-
-**Ejemplo de datos:**
-| id | lectura_id | activo | litros_acumulados | flujo_por_minuto ⭐ |
-|----|-----------|--------|------------------|-------------------|
-| 1 | 1 | true | 1250.00 | 8.30 |
-| 2 | 2 | true | 1333.00 | 8.30 |
-| 3 | 3 | false | 800.50 | 0.00 |
-
-## 3.12. `lecturas_ambiental` — Categoría Ambiental
-
-**¿Qué guarda?** Los 5 campos de la categoría ambiental de cada lectura. Vinculada 1:1 con `lecturas`.
-
-```sql
-CREATE TABLE lecturas_ambiental (
-    id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
-    lectura_id          BIGINT NOT NULL UNIQUE,
-    temperatura         DECIMAL(6,2) NULL DEFAULT NULL,
-    humedad_relativa    DECIMAL(6,2) NULL DEFAULT NULL,
-    velocidad_viento    DECIMAL(7,2) NULL DEFAULT NULL,
-    radiacion_solar     DECIMAL(8,2) NULL DEFAULT NULL,
-    eto                 DECIMAL(6,3) NULL DEFAULT NULL,
-
-    CONSTRAINT fk_lecturas_ambiental_lectura
-        FOREIGN KEY (lectura_id) REFERENCES lecturas(id) ON DELETE CASCADE
-);
-```
-
-> **Campos:** temperatura (°C), humedad_relativa (%), velocidad_viento (km/h), radiacion_solar (W/m²), eto (mm/día ⭐ prioritario). Todos nullable.
-
-**Ejemplo de datos:**
-| id | lectura_id | temperatura | humedad_relativa | velocidad_viento | radiacion_solar | eto ⭐ |
-|----|-----------|------------|-----------------|-----------------|----------------|-------|
-| 1 | 1 | 28.10 | 55.00 | 12.50 | 650.00 | 5.200 |
-| 2 | 2 | 28.30 | 54.50 | 13.00 | 660.00 | 5.250 |
-| 3 | 3 | 25.80 | 60.20 | 8.30 | 580.00 | NULL |
 
 # 4. DIAGRAMA ENTIDAD-RELACIÓN (ERD)
 
@@ -486,9 +416,6 @@ erDiagram
     areas_riego ||--o{ ciclos_cultivo : "1:N"
     areas_riego ||--|| nodos : "1:1"
     nodos ||--o{ lecturas : "1:N"
-    lecturas ||--|| lecturas_suelo : "1:1"
-    lecturas ||--|| lecturas_riego : "1:1"
-    lecturas ||--|| lecturas_ambiental : "1:1"
 
     usuarios {
         int id PK
@@ -581,33 +508,18 @@ erDiagram
         int nodo_id FK
         datetime marca_tiempo
         datetime creado_en
-    }
-
-    lecturas_suelo {
-        bigint id PK
-        bigint lectura_id UK
-        decimal conductividad
-        decimal temperatura
-        decimal humedad
-        decimal potencial_hidrico
-    }
-
-    lecturas_riego {
-        bigint id PK
-        bigint lectura_id UK
-        boolean activo
-        decimal litros_acumulados
-        decimal flujo_por_minuto
-    }
-
-    lecturas_ambiental {
-        bigint id PK
-        bigint lectura_id UK
-        decimal temperatura
-        decimal humedad_relativa
-        decimal velocidad_viento
-        decimal radiacion_solar
-        decimal eto
+        decimal suelo_conductividad
+        decimal suelo_temperatura
+        decimal suelo_humedad
+        decimal suelo_potencial_hidrico
+        boolean riego_activo
+        decimal riego_litros_acumulados
+        decimal riego_flujo_por_minuto
+        decimal ambiental_temperatura
+        decimal ambiental_humedad_relativa
+        decimal ambiental_velocidad_viento
+        decimal ambiental_radiacion_solar
+        decimal ambiental_eto
     }
 ```
 
@@ -660,13 +572,10 @@ INSERT INTO usuarios (correo, contrasena_hash, nombre_completo, rol) VALUES
 **Dashboard — última lectura de un nodo (indicador de frescura):**
 ```sql
 SELECT l.id, l.marca_tiempo, l.creado_en,
-       ls.humedad AS humedad_suelo,
-       lr.flujo_por_minuto,
-       la.eto
+       l.suelo_humedad AS humedad_suelo,
+       l.riego_flujo_por_minuto AS flujo_por_minuto,
+       l.ambiental_eto AS eto
 FROM lecturas l
-LEFT JOIN lecturas_suelo ls ON ls.lectura_id = l.id
-LEFT JOIN lecturas_riego lr ON lr.lectura_id = l.id
-LEFT JOIN lecturas_ambiental la ON la.lectura_id = l.id
 WHERE l.nodo_id = ?
 ORDER BY l.marca_tiempo DESC
 LIMIT 1;
@@ -674,14 +583,8 @@ LIMIT 1;
 
 **Histórico — lecturas por rango de fecha:**
 ```sql
-SELECT l.marca_tiempo,
-       ls.conductividad, ls.temperatura AS temp_suelo, ls.humedad AS humedad_suelo, ls.potencial_hidrico,
-       lr.activo, lr.litros_acumulados, lr.flujo_por_minuto,
-       la.temperatura AS temp_ambiental, la.humedad_relativa, la.velocidad_viento, la.radiacion_solar, la.eto
+SELECT l.*
 FROM lecturas l
-LEFT JOIN lecturas_suelo ls ON ls.lectura_id = l.id
-LEFT JOIN lecturas_riego lr ON lr.lectura_id = l.id
-LEFT JOIN lecturas_ambiental la ON la.lectura_id = l.id
 WHERE l.nodo_id = ?
   AND l.marca_tiempo BETWEEN ? AND ?
 ORDER BY l.marca_tiempo ASC
@@ -700,7 +603,7 @@ WHERE n.api_key = ?
 
 - **ORM:** SQLAlchemy 2.0 con modelos declarativos. Cada tabla = un modelo Python. Los nombres de clase del modelo van en inglés (PEP 8), con `__tablename__` en español apuntando a la tabla real.
 - **Migraciones:** Alembic. La migración inicial crea las 12 tablas + seed data.
-- **Ingesta de lectura (POST):** Transacción atómica — INSERT en `lecturas` + INSERT en las 3 tablas de categoría dentro del mismo commit.
+- **Ingesta de lectura (POST):** Un solo INSERT a la tabla `lecturas` que ya contiene todas las métricas "aplanadas" a partir del JSON que viene agrupado en 3 categorías.
 - **Soft delete:** Implementar como mixin de SQLAlchemy (`SoftDeleteMixin`) con `eliminado_en` y override de queries por defecto.
 - **Timestamps:** Almacenar siempre en UTC. La conversión a timezone local se hace en el frontend.
 - **Serialización:** Los schemas Pydantic mapean columnas en español (BD) a campos en inglés (API JSON). Ejemplo: `nombre_empresa` → `company_name` en la respuesta JSON.

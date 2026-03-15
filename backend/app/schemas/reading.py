@@ -40,38 +40,46 @@ class ReadingCreate(BaseModel):
 class SoilResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    conductivity: float | None = Field(default=None, validation_alias="conductividad")
-    temperature: float | None = Field(default=None, validation_alias="temperatura")
-    humidity: float | None = Field(default=None, validation_alias="humedad")
+    conductivity: float | None = Field(
+        default=None, validation_alias="suelo_conductividad"
+    )
+    temperature: float | None = Field(
+        default=None, validation_alias="suelo_temperatura"
+    )
+    humidity: float | None = Field(default=None, validation_alias="suelo_humedad")
     water_potential: float | None = Field(
-        default=None, validation_alias="potencial_hidrico"
+        default=None, validation_alias="suelo_potencial_hidrico"
     )
 
 
 class IrrigationResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    active: bool | None = Field(default=None, validation_alias="activo")
+    active: bool | None = Field(default=None, validation_alias="riego_activo")
     accumulated_liters: float | None = Field(
-        default=None, validation_alias="litros_acumulados"
+        default=None, validation_alias="riego_litros_acumulados"
     )
     flow_per_minute: float | None = Field(
-        default=None, validation_alias="flujo_por_minuto"
+        default=None, validation_alias="riego_flujo_por_minuto"
     )
 
 
 class EnvironmentalResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    temperature: float | None = Field(default=None, validation_alias="temperatura")
+    temperature: float | None = Field(
+        default=None, validation_alias="ambiental_temperatura"
+    )
     relative_humidity: float | None = Field(
-        default=None, validation_alias="humedad_relativa"
+        default=None, validation_alias="ambiental_humedad_relativa"
     )
-    wind_speed: float | None = Field(default=None, validation_alias="velocidad_viento")
+    wind_speed: float | None = Field(
+        default=None, validation_alias="ambiental_velocidad_viento"
+    )
     solar_radiation: float | None = Field(
-        default=None, validation_alias="radiacion_solar"
+        default=None, validation_alias="ambiental_radiacion_solar"
     )
-    eto: float | None = None
+    eto: float | None = Field(default=None, validation_alias="ambiental_eto")
 
 
 # ---------- Top-level response schemas ----------

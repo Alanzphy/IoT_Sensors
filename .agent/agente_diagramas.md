@@ -59,15 +59,10 @@ flowchart TD
     G -- Sí --> I{¿Contiene las 3 categorías?<br>soil, irrigation, environmental}
     I -- No --> J[Responder 400 Bad Request<br>Categorías faltantes]
     I -- Sí --> K[Ignorar campo NDVI si viene<br>Aceptar campos 0 o null]
-    K --> L[Iniciar transacción atómica]
-    L --> M[INSERT lecturas<br>nodo_id + marca_tiempo]
-    M --> N[INSERT lecturas_suelo<br>conductividad, temperatura,<br>humedad, potencial_hidrico]
-    N --> O[INSERT lecturas_riego<br>activo, litros_acumulados,<br>flujo_por_minuto]
-    O --> P[INSERT lecturas_ambiental<br>temperatura, humedad_relativa,<br>velocidad_viento, radiacion_solar, eto]
-    P --> Q{¿Todos los INSERTs<br>exitosos?}
-    Q -- No --> R[ROLLBACK transacción<br>Responder 500 Internal Server Error]
-    Q -- Sí --> S[COMMIT transacción]
-    S --> T[Responder 201 Created<br>lectura_id + marca_tiempo]
+    K --> M[INSERT lecturas<br>nodo_id + marca_tiempo + 12 campos aplanados]
+    M --> Q{¿INSERT<br>exitoso?}
+    Q -- No --> R[Responder 500 Internal Server Error]
+    Q -- Sí --> T[Responder 201 Created<br>lectura_id + marca_tiempo]
 
     style A fill:#4CAF50,color:#fff
     style C fill:#f44336,color:#fff

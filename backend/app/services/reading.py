@@ -4,48 +4,33 @@ from datetime import date, datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from app.models.crop_cycle import CropCycle
 from app.models.node import Node
 from app.models.reading import Reading
-from app.models.reading_environmental import ReadingEnvironmental
-from app.models.reading_irrigation import ReadingIrrigation
-from app.models.reading_soil import ReadingSoil
 from app.schemas.reading import ReadingCreate
 
 
 def create_reading(db: Session, node: Node, data: ReadingCreate) -> Reading:
-    """Insert reading + 3 sub-tables in a single atomic transaction."""
+    """Insert reading in a single table."""
     reading = Reading(
         nodo_id=node.id,
         marca_tiempo=data.timestamp,
+        suelo_conductividad=data.soil.conductivity,
+        suelo_temperatura=data.soil.temperature,
+        suelo_humedad=data.soil.humidity,
+        suelo_potencial_hidrico=data.soil.water_potential,
+        riego_activo=data.irrigation.active,
+        riego_litros_acumulados=data.irrigation.accumulated_liters,
+        riego_flujo_por_minuto=data.irrigation.flow_per_minute,
+        ambiental_temperatura=data.environmental.temperature,
+        ambiental_humedad_relativa=data.environmental.relative_humidity,
+        ambiental_velocidad_viento=data.environmental.wind_speed,
+        ambiental_radiacion_solar=data.environmental.solar_radiation,
+        ambiental_eto=data.environmental.eto,
     )
     db.add(reading)
-    db.flush()  # Get the reading.id
-
-    soil = ReadingSoil(
-        lectura_id=reading.id,
-        conductividad=data.soil.conductivity,
-        temperatura=data.soil.temperature,
-        humedad=data.soil.humidity,
-        potencial_hidrico=data.soil.water_potential,
-    )
-    irrigation = ReadingIrrigation(
-        lectura_id=reading.id,
-        activo=data.irrigation.active,
-        litros_acumulados=data.irrigation.accumulated_liters,
-        flujo_por_minuto=data.irrigation.flow_per_minute,
-    )
-    environmental = ReadingEnvironmental(
-        lectura_id=reading.id,
-        temperatura=data.environmental.temperature,
-        humedad_relativa=data.environmental.relative_humidity,
-        velocidad_viento=data.environmental.wind_speed,
-        radiacion_solar=data.environmental.solar_radiation,
-        eto=data.environmental.eto,
-    )
-    db.add_all([soil, irrigation, environmental])
     db.commit()
     db.refresh(reading)
     return reading
@@ -67,11 +52,6 @@ def get_latest_reading(db: Session, irrigation_area_id: int) -> Reading | None:
 
     reading = db.execute(
         select(Reading)
-        .options(
-            joinedload(Reading.soil),
-            joinedload(Reading.irrigation),
-            joinedload(Reading.environmental),
-        )
         .where(Reading.nodo_id == node.id)
         .order_by(Reading.marca_tiempo.desc())
         .limit(1)
@@ -160,17 +140,12 @@ def list_readings(
 
     query = (
         select(Reading)
-        .options(
-            joinedload(Reading.soil),
-            joinedload(Reading.irrigation),
-            joinedload(Reading.environmental),
-        )
         .where(*conditions)
         .order_by(Reading.marca_tiempo.desc())
         .offset((page - 1) * per_page)
         .limit(per_page)
     )
-    items = list(db.execute(query).unique().scalars())
+    items = list(db.execute(query).scalars())
     return items, total
 
 
@@ -187,17 +162,8 @@ def export_readings_csv(
     )
     readings = list(
         db.execute(
-            select(Reading)
-            .options(
-                joinedload(Reading.soil),
-                joinedload(Reading.irrigation),
-                joinedload(Reading.environmental),
-            )
-            .where(*conditions)
-            .order_by(Reading.marca_tiempo.asc())
-        )
-        .unique()
-        .scalars()
+            select(Reading).where(*conditions).order_by(Reading.marca_tiempo.asc())
+        ).scalars()
     )
 
     output = io.StringIO()
@@ -221,25 +187,22 @@ def export_readings_csv(
         ]
     )
     for r in readings:
-        s = r.soil
-        irr = r.irrigation
-        e = r.environmental
         writer.writerow(
             [
                 r.marca_tiempo.isoformat(),
                 r.nodo_id,
-                s.conductividad if s else None,
-                s.temperatura if s else None,
-                s.humedad if s else None,
-                s.potencial_hidrico if s else None,
-                irr.activo if irr else None,
-                irr.litros_acumulados if irr else None,
-                irr.flujo_por_minuto if irr else None,
-                e.temperatura if e else None,
-                e.humedad_relativa if e else None,
-                e.velocidad_viento if e else None,
-                e.radiacion_solar if e else None,
-                e.eto if e else None,
+                r.suelo_conductividad,
+                r.suelo_temperatura,
+                r.suelo_humedad,
+                r.suelo_potencial_hidrico,
+                r.riego_activo,
+                r.riego_litros_acumulados,
+                r.riego_flujo_por_minuto,
+                r.ambiental_temperatura,
+                r.ambiental_humedad_relativa,
+                r.ambiental_velocidad_viento,
+                r.ambiental_radiacion_solar,
+                r.ambiental_eto,
             ]
         )
     return output.getvalue()
@@ -260,17 +223,8 @@ def export_readings_xlsx(
     )
     readings = list(
         db.execute(
-            select(Reading)
-            .options(
-                joinedload(Reading.soil),
-                joinedload(Reading.irrigation),
-                joinedload(Reading.environmental),
-            )
-            .where(*conditions)
-            .order_by(Reading.marca_tiempo.asc())
-        )
-        .unique()
-        .scalars()
+            select(Reading).where(*conditions).order_by(Reading.marca_tiempo.asc())
+        ).scalars()
     )
 
     wb = Workbook()
@@ -294,49 +248,54 @@ def export_readings_xlsx(
     ]
     ws.append(headers)
     for r in readings:
-        s = r.soil
-        irr = r.irrigation
-        e = r.environmental
         ws.append(
             [
                 r.marca_tiempo.isoformat(),
                 r.nodo_id,
-                float(s.conductividad) if s and s.conductividad is not None else None,
-                float(s.temperatura) if s and s.temperatura is not None else None,
-                float(s.humedad) if s and s.humedad is not None else None,
                 (
-                    float(s.potencial_hidrico)
-                    if s and s.potencial_hidrico is not None
+                    float(r.suelo_conductividad)
+                    if r.suelo_conductividad is not None
                     else None
                 ),
-                irr.activo if irr else None,
+                float(r.suelo_temperatura) if r.suelo_temperatura is not None else None,
+                float(r.suelo_humedad) if r.suelo_humedad is not None else None,
                 (
-                    float(irr.litros_acumulados)
-                    if irr and irr.litros_acumulados is not None
+                    float(r.suelo_potencial_hidrico)
+                    if r.suelo_potencial_hidrico is not None
                     else None
                 ),
+                r.riego_activo,
                 (
-                    float(irr.flujo_por_minuto)
-                    if irr and irr.flujo_por_minuto is not None
-                    else None
-                ),
-                float(e.temperatura) if e and e.temperatura is not None else None,
-                (
-                    float(e.humedad_relativa)
-                    if e and e.humedad_relativa is not None
+                    float(r.riego_litros_acumulados)
+                    if r.riego_litros_acumulados is not None
                     else None
                 ),
                 (
-                    float(e.velocidad_viento)
-                    if e and e.velocidad_viento is not None
+                    float(r.riego_flujo_por_minuto)
+                    if r.riego_flujo_por_minuto is not None
                     else None
                 ),
                 (
-                    float(e.radiacion_solar)
-                    if e and e.radiacion_solar is not None
+                    float(r.ambiental_temperatura)
+                    if r.ambiental_temperatura is not None
                     else None
                 ),
-                float(e.eto) if e and e.eto is not None else None,
+                (
+                    float(r.ambiental_humedad_relativa)
+                    if r.ambiental_humedad_relativa is not None
+                    else None
+                ),
+                (
+                    float(r.ambiental_velocidad_viento)
+                    if r.ambiental_velocidad_viento is not None
+                    else None
+                ),
+                (
+                    float(r.ambiental_radiacion_solar)
+                    if r.ambiental_radiacion_solar is not None
+                    else None
+                ),
+                float(r.ambiental_eto) if r.ambiental_eto is not None else None,
             ]
         )
 

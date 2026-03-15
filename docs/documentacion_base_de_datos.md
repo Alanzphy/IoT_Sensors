@@ -23,7 +23,7 @@
 
 ## 1. Vista General
 
-### La base de datos tiene 12 tablas organizadas en 4 grupos:
+### La base de datos tiene 9 tablas organizadas en 4 grupos:
 
 | Grupo | Tablas | Propósito |
 |-------|--------|-----------|
@@ -44,9 +44,6 @@ erDiagram
     areas_riego ||--o{ ciclos_cultivo : "1:N"
     areas_riego ||--|| nodos : "1:1"
     nodos ||--o{ lecturas : "1:N"
-    lecturas ||--|| lecturas_suelo : "1:1"
-    lecturas ||--|| lecturas_riego : "1:1"
-    lecturas ||--|| lecturas_ambiental : "1:1"
 ```
 
 ### La jerarquía del sistema: de arriba hacia abajo
@@ -60,10 +57,7 @@ Piensen en esto como una estructura de carpetas anidadas. Cada nivel "contiene" 
            ├── 📋 Tipo de Cultivo → viene del catálogo (ej. "Nogal")
            ├── 📅 Ciclo de Cultivo → la temporada actual (ej. "2026-02-01 a ...")
            └── 📡 Nodo IoT (el sensor, relación 1:1 con el área)
-                └── 📊 Lecturas (144 por día = 1 cada 10 minutos)
-                     ├── 🟤 Datos de Suelo (4 campos)
-                     ├── 💧 Datos de Riego (3 campos)
-                     └── 🌤️ Datos Ambientales (5 campos)
+                └── 📊 Lecturas (144 por día = 1 cada 10 minutos con 12 campos dinámicos)
 ```
 
 **¿Por qué importa esta jerarquía?** Porque define los permisos: un Cliente solo puede ver los datos que cuelgan debajo de él. Si Juan López es dueño de "Rancho Norte", solo ve las áreas, nodos y lecturas de ese predio — nunca los de otro cliente. El Admin puede ver todo.
@@ -127,7 +121,7 @@ Se usa en dos casos específicos:
 ### BIGINT vs INT
 
 - **INT:** Soporta hasta ~2,147 millones de registros. Se usa en la mayoría de tablas (usuarios, clientes, predios, etc.) porque nunca vamos a tener millones de clientes.
-- **BIGINT:** Soporta hasta ~9.2 quintillones de registros. Se usa **solo en las tablas de lecturas** (`lecturas`, `lecturas_suelo`, `lecturas_riego`, `lecturas_ambiental`) porque cada nodo genera 144 registros al día. Con muchos nodos y varios años de operación, los números crecen rápido.
+- **BIGINT:** Soporta hasta ~9.2 quintillones de registros. Se usa **solo en la tabla de lecturas** (`lecturas`) porque cada nodo genera 144 registros al día. Con muchos nodos y varios años de operación, los números crecen rápido.
 
 ### Índices
 
@@ -347,98 +341,36 @@ Simulador envía POST a /api/v1/readings
 
 ---
 
-## 6. Tablas de Lecturas
+## 6. Tabla de Lecturas (Unificada)
 
-Estas 4 tablas son **el corazón del sistema** — aquí viven los millones de datos que envían los sensores. Son las tablas que más crecen y las que más se consultan.
+Esta tabla es **el corazón del sistema** — aquí viven los millones de datos que envían los sensores.
 
-### Estructura: 1 tabla padre + 3 tablas hijas
+### 6.1. `lecturas` — Tabla Única (Wide Table)
 
-```
-📊 lecturas (tabla padre)
- │  → id, nodo_id, marca_tiempo, creado_en
- │
- ├── 🟤 lecturas_suelo (1:1)
- │    → conductividad, temperatura, humedad ⭐, potencial_hidrico
- │
- ├── 💧 lecturas_riego (1:1)
- │    → activo, litros_acumulados, flujo_por_minuto ⭐
- │
- └── 🌤️ lecturas_ambiental (1:1)
-      → temperatura, humedad_relativa, velocidad_viento, radiacion_solar, eto ⭐
-```
-
-**¿Por qué dividir en 4 tablas en vez de una sola tabla grande con 12 columnas?**
-1. **Consultas más eficientes:** Si el dashboard solo necesita mostrar datos de suelo, hace JOIN solo con `lecturas_suelo` sin cargar datos de riego ni ambientales.
-2. **Normalización:** Cada categoría tiene sus propios campos con sus propios tipos de dato y unidades. Separarlas es más limpio.
-3. **Extensibilidad:** Si mañana agregamos un campo nuevo a ambiental (ej. presión atmosférica), solo tocamos `lecturas_ambiental` sin afectar las otras tablas.
-
-### 6.1. `lecturas` — La tabla padre
-
-**Propósito:** Es el registro maestro de cada evento de lectura. Dice **qué nodo** envió datos y **cuándo** fue la medición. Cada fila aquí tiene exactamente 1 fila hija en cada tabla de categoría.
+**Propósito:** Almacena todos los datos emitidos por el nodo en un solo registro atómico en base de datos. Los campos que el sensor no reporte o que no apliquen llegarán como `NULL` (MySQL maneja los valores `NULL` eficientemente con un mapa de bits, sin penalizar el tamaño en disco).
 
 **Columnas clave:**
 
-| Columna | Qué guarda | Notas |
-|---------|-----------|-------|
-| `id` | Identificador único | **BIGINT** porque pueden acumularse millones de lecturas (144/día × N nodos × años). |
-| `nodo_id` | FK al nodo que envió la lectura | Conecta con `nodos.id`. |
-| `marca_tiempo` | Cuándo el sensor tomó la medición | Viene en el JSON del simulador como `timestamp`. Es el momento real de la medición. **Formato UTC.** |
-| `creado_en` | Cuándo el servidor guardó el dato | Se llena automáticamente. Puede tener unos segundos de diferencia con `marca_tiempo` por la latencia de red. |
+| Grupo | Columna | Qué guarda | Notas |
+|-------|---------|------------|-------|
+| **Base** | `id` | Identificador único | **BIGINT** por el alto volumen previsto. |
+| **Base** | `nodo_id` | FK al nodo | Conecta con `nodos.id`. |
+| **Base** | `marca_tiempo` | Fecha de medición | Viene en el JSON como `timestamp`. Formato UTC. |
+| **Base** | `creado_en` | Cuándo se guardó | Timestamp del servidor. |
+| **Suelo** | `suelo_conductividad` | dS/m | Conductividad eléctrica del suelo. |
+| **Suelo** | `suelo_temperatura` | °C | Temperatura radiando sobre el suelo. |
+| **Suelo** | `suelo_humedad` | % | **⭐ DATO PRIORITARIO** |
+| **Suelo** | `suelo_potencial_hidrico`| MPa | Siempre negativo. |
+| **Riego** | `riego_activo` | booleano | `true`/`false`. ¿Está activa la bomba? |
+| **Riego** | `riego_litros_acumulados`| L | Litros transcurridos en esta sesión. |
+| **Riego** | `riego_flujo_por_minuto` | L/min | **⭐ DATO PRIORITARIO** |
+| **Ambiente**| `ambiental_temperatura` | °C | Diferente a temperatura de suelo. |
+| **Ambiente**| `ambiental_humedad_relativa`| % | Humedad en el aire. |
+| **Ambiente**| `ambiental_velocidad_viento`| km/h | |
+| **Ambiente**| `ambiental_radiacion_solar`| W/m² | Irradiación directa. |
+| **Ambiente**| `ambiental_eto` | mm/día | **⭐ DATO PRIORITARIO** |
 
-**Diferencia entre `marca_tiempo` y `creado_en` — ejemplo:**
-- El sensor toma la medición a las `14:30:00` → `marca_tiempo = 14:30:00`
-- El dato viaja por internet y llega 3 segundos después → `creado_en = 14:30:03`
-
-Usamos `marca_tiempo` para filtrar y graficar (es el dato "real"). Usamos `creado_en` para saber cuándo se guardó (diagnóstico y auditoría).
-
-**Esta tabla NO tiene soft delete.** Las lecturas nunca se borran — son datos históricos que siempre deben estar disponibles.
-
-### 6.2. `lecturas_suelo` — Datos de Suelo (4 campos)
-
-Vinculada 1:1 con `lecturas` a través de `lectura_id` (UNIQUE).
-
-| Campo | Unidad | Qué mide | Notas |
-|-------|--------|----------|-------|
-| `conductividad` | dS/m | Conductividad eléctrica del suelo | Indica la concentración de sales. Valores altos = suelo salino. |
-| `temperatura` | °C | Temperatura del suelo | Diferente a la temperatura ambiental. Afecta el crecimiento de raíces. |
-| `humedad` | % | **⭐ Humedad volumétrica del suelo** | **DATO PRIORITARIO.** Es el indicador principal del estado del riego. El más importante para el cliente. |
-| `potencial_hidrico` | MPa | Potencial hídrico | Valores siempre **negativos** (ej. -0.8). Indica qué tan fácil es para la planta absorber agua del suelo. |
-
-Todos los campos pueden ser `NULL` — si el sensor no reporta un valor, llega como `null` en el JSON y se guarda así.
-
-### 6.3. `lecturas_riego` — Datos de Riego (3 campos)
-
-Vinculada 1:1 con `lecturas` a través de `lectura_id` (UNIQUE).
-
-| Campo | Unidad | Qué mide | Notas |
-|-------|--------|----------|-------|
-| `activo` | booleano | ¿El riego está encendido? | `true` = bomba/válvula activa, `false` = apagada. |
-| `litros_acumulados` | L (litros) | Total de agua usada en el ciclo | Contador acumulativo que crece con el tiempo. |
-| `flujo_por_minuto` | L/min | **⭐ Flujo instantáneo de agua** | **DATO PRIORITARIO.** Cuánta agua está fluyendo ahora mismo. Sirve para monitorear el consumo en tiempo real. |
-
-### 6.4. `lecturas_ambiental` — Datos Ambientales (5 campos)
-
-Vinculada 1:1 con `lecturas` a través de `lectura_id` (UNIQUE).
-
-| Campo | Unidad | Qué mide | Notas |
-|-------|--------|----------|-------|
-| `temperatura` | °C | Temperatura del aire | Diferente a `lecturas_suelo.temperatura` (esa es del suelo, esta es del ambiente). |
-| `humedad_relativa` | % | Humedad relativa del aire | Diferente a `lecturas_suelo.humedad` (esa es del suelo, esta es del aire). |
-| `velocidad_viento` | km/h | Velocidad del viento | Afecta la evaporación y la dispersión del riego. |
-| `radiacion_solar` | W/m² | Radiación solar incidente | Energía solar que llega al suelo. Factor clave para la evapotranspiración. |
-| `eto` | mm/día | **⭐ Evapotranspiración de referencia** | **DATO PRIORITARIO.** Cuánta agua pierde el suelo/planta por evaporación y transpiración. Es la referencia para calcular cuánto regar. |
-
-### Datos prioritarios — resumen visual
-
-Los 3 datos con mayor importancia para el cliente:
-
-| # | Dato | Tabla | Campo | Por qué importa |
-|---|------|-------|-------|-----------------|
-| ⭐1 | Humedad del suelo | `lecturas_suelo` | `humedad` | Indicador principal: ¿el suelo tiene suficiente agua? |
-| ⭐2 | Flujo de agua | `lecturas_riego` | `flujo_por_minuto` | ¿Cuánta agua se está usando? Control de consumo hídrico. |
-| ⭐3 | Evapotranspiración | `lecturas_ambiental` | `eto` | ¿Cuánta agua necesita el cultivo? Referencia para programar riegos. |
-
-Estos deben tener **prominencia visual** en el dashboard (más grandes, más visibles, con gráficas destacadas).
+*Ventaja de diseño:* Consolidar la información ahorra las sub-consultas (JOIN) al momento de listar en el dashboard, y nos evita sobrecargar la BD con múltiples `INSERT` por cada ciclo de envío del sensor. El backend es el responsable de tomar el JSON que se divide en 3 objetos, "aplanarlo", y mapearlo a esta tabla de forma transparente.
 
 ---
 
@@ -460,16 +392,9 @@ Estos deben tener **prominencia visual** en el dashboard (más grandes, más vis
 │   (FastAPI)      │  2. Verifica que el nodo está activo y no eliminado
 │                  │  3. Abre una transacción de BD
 └──────┬──────────┘
-       │ Transacción atómica (todo o nada)
        ▼
 ┌─────────────────────────────────────────────────────────┐
-│  INSERT en `lecturas`            → id=1001, nodo_id=1   │
-│  INSERT en `lecturas_suelo`      → lectura_id=1001      │
-│  INSERT en `lecturas_riego`      → lectura_id=1001      │
-│  INSERT en `lecturas_ambiental`  → lectura_id=1001      │
-│                                                          │
-│  Si todo OK → COMMIT (se guardan las 4 filas)           │
-│  Si algo falla → ROLLBACK (no se guarda nada)           │
+│  INSERT atómico en `lecturas` (todo en un comando)      │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -489,7 +414,7 @@ Estos deben tener **prominencia visual** en el dashboard (más grandes, más vis
 │   BACKEND        │  1. Valida el JWT → identifica al usuario
 │   (FastAPI)      │  2. Verifica que el usuario tiene acceso a esa área
 │                  │     (es suya o es admin)
-│                  │  3. Ejecuta SELECT con JOINs a las 3 tablas de categoría
+│                  │  3. Ejecuta SELECT sobre la tabla lecturas
 └──────┬──────────┘
        │ JSON con los 12 campos + marca_tiempo
        ▼
@@ -561,7 +486,7 @@ Además, se evaluará agregar un campo `ndvi` (Índice de Vegetación) a la tabl
 
 ---
 
-## Referencia Rápida — Las 12 Tablas del MVP
+## Referencia Rápida — Las 9 Tablas del MVP
 
 | # | Tabla | Grupo | Propósito en una línea | ID tipo |
 |---|-------|-------|----------------------|---------|
@@ -573,7 +498,4 @@ Además, se evaluará agregar un campo `ndvi` (Índice de Vegetación) a la tabl
 | 6 | `areas_riego` | Campo | Parcelas con cultivo asignado — entidad central del sistema | INT |
 | 7 | `ciclos_cultivo` | Campo | Temporadas agrícolas (inicio/fin) por área | INT |
 | 8 | `nodos` | Hardware | Sensores IoT con API Key y coordenadas GPS | INT |
-| 9 | `lecturas` | Lecturas | Registro padre de cada medición (nodo + timestamp) | BIGINT |
-| 10 | `lecturas_suelo` | Lecturas | 4 campos de suelo (conductividad, temperatura, ⭐humedad, potencial) | BIGINT |
-| 11 | `lecturas_riego` | Lecturas | 3 campos de riego (activo, litros, ⭐flujo) | BIGINT |
-| 12 | `lecturas_ambiental` | Lecturas | 5 campos ambientales (temp, humedad aire, viento, radiación, ⭐ETO) | BIGINT |
+| 9 | `lecturas` | Lecturas | Registro centralizado con las 12 métricas dinámicas | BIGINT |
