@@ -1,18 +1,62 @@
-import { Calendar, Download, Filter } from "lucide-react";
+import { format, subDays } from "date-fns";
+import { Calendar, Download, FileSpreadsheet, FileText, Filter } from "lucide-react";
 import { useState } from "react";
-import { PillButton } from "../../components/PillButton";
 import { BentoCard } from "../../components/BentoCard";
+import { PillButton } from "../../components/PillButton";
+import { useSelection } from "../../context/SelectionContext";
+import { api } from "../../services/api";
 
 export function ExportData() {
-  const [selectedArea, setSelectedArea] = useState("all");
-  const [selectedSensor, setSelectedSensor] = useState("all");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [format, setFormat] = useState("csv");
+  const { areas, selectedArea, setSelectedArea } = useSelection();
 
-  const handleExport = () => {
-    // Mock export functionality
-    alert("Exportando datos en formato " + format.toUpperCase());
+  const [startDate, setStartDate] = useState(format(subDays(new Date(), 7), "yyyy-MM-dd"));
+  const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [exportFormat, setExportFormat] = useState<"csv" | "excel" | "pdf">("csv");
+  const [loading, setLoading] = useState(false);
+
+  const handleExport = async () => {
+    if (!selectedArea) {
+      alert("Por favor selecciona un área de riego");
+      return;
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays > 90) {
+      alert("El rango de fechas no puede ser mayor a 90 días.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const params = new URLSearchParams({
+        irrigation_area_id: selectedArea.id.toString(),
+        start_date: new Date(startDate).toISOString().split("T")[0],
+        end_date: new Date(endDate).toISOString().split("T")[0],
+        format: exportFormat
+      });
+
+      const response = await api.get(`/readings/export?${params}`, {
+        responseType: "blob"
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      const extension = exportFormat === "excel" ? "xlsx" : exportFormat;
+      link.setAttribute("download", `export_${selectedArea.name}_${format(new Date(), "yyyy-MM-dd")}.${extension}`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error("Export failed", err);
+      alert("Hubo un error al exportar los datos. Intenta nuevamente.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -75,31 +119,17 @@ export function ExportData() {
                     Área de Riego
                   </label>
                   <select
-                    value={selectedArea}
-                    onChange={(e) => setSelectedArea(e.target.value)}
+                    value={selectedArea?.id || ""}
+                    onChange={(e) => {
+                      const area = areas.find(a => a.id.toString() === e.target.value);
+                      if (area) setSelectedArea(area);
+                    }}
                     className="w-full px-4 py-2.5 bg-white border-2 border-[#E5DDD1] rounded-2xl text-[#2C2621] focus:outline-none focus:border-[#7C8F5C]"
                   >
-                    <option value="all">Todas las áreas</option>
-                    <option value="area-1">Parcela Norte - Aguacate</option>
-                    <option value="area-2">Campo Sur - Maíz</option>
-                    <option value="area-3">Invernadero A - Tomate</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-[#6B5E4C] mb-2">
-                    Tipo de Sensor
-                  </label>
-                  <select
-                    value={selectedSensor}
-                    onChange={(e) => setSelectedSensor(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white border-2 border-[#E5DDD1] rounded-2xl text-[#2C2621] focus:outline-none focus:border-[#7C8F5C]"
-                  >
-                    <option value="all">Todos los sensores</option>
-                    <option value="humidity">Humedad de Suelo</option>
-                    <option value="temperature">Temperatura</option>
-                    <option value="ph">pH del Suelo</option>
-                    <option value="ec">Conductividad Eléctrica</option>
+                    {!selectedArea && <option value="">Selecciona un área</option>}
+                    {areas.map(area => (
+                       <option key={area.id} value={area.id}>{area.name}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -112,53 +142,47 @@ export function ExportData() {
               </label>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <button
-                  onClick={() => setFormat("csv")}
+                  onClick={() => setExportFormat("csv")}
                   className={`p-4 rounded-2xl border-2 transition-all ${
-                    format === "csv"
+                    exportFormat === "csv"
                       ? "border-[#7C8F5C] bg-[#7C8F5C]/10"
                       : "border-[#E5DDD1] bg-white hover:border-[#7C8F5C]/50"
                   }`}
                 >
-                  <div className="text-center">
-                    <div className="text-2xl mb-1">📊</div>
+                  <div className="text-center flex flex-col items-center">
+                    <div className="mb-2"><FileText className="w-8 h-8 text-[#2C2621]" /></div>
                     <div className="font-medium text-[#2C2621]">CSV</div>
-                    <div className="text-xs text-[#6B5E4C]">
-                      Excel compatible
-                    </div>
+                    <div className="text-xs text-[#6B5E4C]">Ligero y rápido</div>
                   </div>
                 </button>
 
                 <button
-                  onClick={() => setFormat("json")}
+                  onClick={() => setExportFormat("excel")}
                   className={`p-4 rounded-2xl border-2 transition-all ${
-                    format === "json"
+                    exportFormat === "excel"
                       ? "border-[#7C8F5C] bg-[#7C8F5C]/10"
                       : "border-[#E5DDD1] bg-white hover:border-[#7C8F5C]/50"
                   }`}
                 >
-                  <div className="text-center">
-                    <div className="text-2xl mb-1">🔧</div>
-                    <div className="font-medium text-[#2C2621]">JSON</div>
-                    <div className="text-xs text-[#6B5E4C]">
-                      API compatible
-                    </div>
+                  <div className="text-center flex flex-col items-center">
+                    <div className="mb-2"><FileSpreadsheet className="w-8 h-8 text-[#2C2621]" /></div>
+                    <div className="font-medium text-[#2C2621]">Excel</div>
+                    <div className="text-xs text-[#6B5E4C]">Análisis detallado</div>
                   </div>
                 </button>
 
                 <button
-                  onClick={() => setFormat("pdf")}
+                  onClick={() => setExportFormat("pdf")}
                   className={`p-4 rounded-2xl border-2 transition-all ${
-                    format === "pdf"
+                    exportFormat === "pdf"
                       ? "border-[#7C8F5C] bg-[#7C8F5C]/10"
                       : "border-[#E5DDD1] bg-white hover:border-[#7C8F5C]/50"
                   }`}
                 >
-                  <div className="text-center">
-                    <div className="text-2xl mb-1">📄</div>
+                  <div className="text-center flex flex-col items-center">
+                    <div className="mb-2"><FileText className="w-8 h-8 text-[#2C2621]" /></div>
                     <div className="font-medium text-[#2C2621]">PDF</div>
-                    <div className="text-xs text-[#6B5E4C]">
-                      Reporte imprimible
-                    </div>
+                    <div className="text-xs text-[#6B5E4C]">Imprimible</div>
                   </div>
                 </button>
               </div>
@@ -170,9 +194,14 @@ export function ExportData() {
                 variant="primary"
                 onClick={handleExport}
                 className="w-full md:w-auto px-8"
+                disabled={loading || !selectedArea}
               >
-                <Download className="w-4 h-4" />
-                Exportar Datos
+                {loading ? "Generando..." : (
+                  <>
+                    <Download className="w-4 h-4 mr-2 inline" />
+                    Exportar Datos
+                  </>
+                )}
               </PillButton>
             </div>
           </div>

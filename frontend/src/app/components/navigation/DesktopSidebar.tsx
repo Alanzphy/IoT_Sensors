@@ -1,18 +1,18 @@
-import { useState } from "react";
-import { Link, useLocation } from "react-router";
-import { 
-  LayoutDashboard, 
-  MapPin, 
-  Clock, 
-  Download, 
-  Users, 
-  Layers, 
-  Sprout,
-  Radio,
-  ChevronRight,
-  ChevronLeft,
-  LogOut
+import {
+    ChevronLeft,
+    ChevronRight,
+    Clock,
+    Download,
+    LayoutDashboard,
+    LogOut,
+    MapPin,
+    Radio,
+    Sprout,
+    Users
 } from "lucide-react";
+import { useState } from "react";
+import { useAuth } from "../../context/AuthContext";
+import { Link, useLocation } from "react-router";
 
 interface DesktopSidebarProps {
   role: "client" | "admin";
@@ -20,6 +20,7 @@ interface DesktopSidebarProps {
 
 export function DesktopSidebar({ role }: DesktopSidebarProps) {
   const [expanded, setExpanded] = useState(true);
+  const { user, logout } = useAuth();
   const location = useLocation();
 
   const clientNavItems = [
@@ -39,7 +40,7 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
   const navItems = role === "client" ? clientNavItems : adminNavItems;
 
   return (
-    <div 
+    <div
       className={`${expanded ? "w-60" : "w-20"} bg-[#F9F8F4] border-r border-[#2C2621]/10 transition-all duration-300 flex flex-col`}
     >
       {/* Logo */}
@@ -65,7 +66,7 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
       <nav className="flex-1 px-3 space-y-2">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = location.pathname === item.path || 
+          const isActive = location.pathname === item.path ||
                           (item.path !== "/" && location.pathname.startsWith(item.path));
 
           return (
@@ -89,15 +90,22 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
       <div className="p-4 border-t border-[#2C2621]/10">
         <div className={`flex items-center gap-3 ${expanded ? "" : "justify-center"}`}>
           <div className="w-10 h-10 rounded-full bg-[#6D7E5E] flex items-center justify-center text-[#F4F1EB] font-medium">
-            JL
+            {user?.nombre ? user.nombre.charAt(0).toUpperCase() : (role === "client" ? "C" : "A")}
           </div>
           {expanded && (
             <div className="flex-1">
-              <p className="font-medium text-[#2C2621]">Juan López</p>
-              <p className="text-sm text-[#6E6359]">{role === "client" ? "Agricultor" : "Admin"}</p>
+              <p className="font-medium text-[#2C2621]">{user?.nombre || "Usuario"}</p>
+              <p className="text-sm text-[#6E6359]">{role === "client" ? "Cliente" : "Admin"}</p>
             </div>
           )}
-          <button className="p-2 rounded-full hover:bg-[#E2D4B7]/50 transition-colors">
+          <button
+            onClick={() => {
+              localStorage.removeItem("token");
+              localStorage.removeItem("refreshToken");
+              window.location.href = "/";
+            }}
+            className="p-2 rounded-full hover:bg-[#E2D4B7]/50 transition-colors"
+          >
             <LogOut className="w-4 h-4 text-[#6E6359]" />
           </button>
         </div>

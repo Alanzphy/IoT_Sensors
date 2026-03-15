@@ -40,7 +40,7 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
             detail="Credenciales inválidas",
         )
 
-    token_data = {"sub": str(user.id), "rol": user.rol}
+    token_data = {"sub": str(user.id), "rol": user.rol, "nombre": user.nombre_completo}
     access_token = create_access_token(token_data)
     refresh_token = create_refresh_token(token_data)
 
@@ -85,7 +85,7 @@ def refresh(body: RefreshRequest, db: Session = Depends(get_db)):
             detail="Refresh token revocado o no encontrado",
         )
 
-    token_data = {"sub": payload["sub"], "rol": payload["rol"]}
+    token_data = {"sub": payload["sub"], "rol": payload["rol"], "nombre": payload.get("nombre", "")}
     new_access_token = create_access_token(token_data)
 
     return RefreshResponse(access_token=new_access_token)

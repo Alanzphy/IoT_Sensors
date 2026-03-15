@@ -1,17 +1,127 @@
-import { useState } from "react";
-import { Bell, ChevronDown, Droplets, Wind, Zap, Sun } from "lucide-react";
+import { Bell, ChevronDown, Droplets, Sun, Wind, Zap } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+    Area,
+    AreaChart,
+    CartesianGrid,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
+} from "recharts";
 import { BentoCard } from "../../components/BentoCard";
-import { MetricCard } from "../../components/MetricCard";
 import { FreshnessIndicator } from "../../components/FreshnessIndicator";
-import { PillButton } from "../../components/PillButton";
-import { currentReadings, generateHistoricalData } from "../../data/mockData";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts";
+import { MetricCard } from "../../components/MetricCard";
+import { useAuth } from "../../context/AuthContext";
+import { useSelection } from "../../context/SelectionContext";
 import { useIsMobile } from "../../hooks/useIsMobile";
+import { api } from "../../services/api";
 
 export function ClientDashboard() {
   const isMobile = useIsMobile();
-  const [selectedArea, setSelectedArea] = useState("Nogal Norte");
-  const historicalData = generateHistoricalData();
+  const { user } = useAuth();
+  const {
+    properties,
+    areas,
+    selectedProperty,
+    selectedArea,
+    setSelectedProperty,
+    setSelectedArea
+  } = useSelection();
+
+  const filteredAreas = selectedProperty
+    ? areas.filter(a => a.property_id === selectedProperty.id)
+    : [];
+
+  const [currentReadings, setCurrentReadings] = useState({
+    soilHumidity: 0 as number | '-',
+    waterFlow: 0 as number | '-',
+    accumulatedWater: 0 as number | '-',
+    eto: 0 as number | '-',
+    irrigationActive: false,
+    irrigationElapsedTime: "N/A",
+    soilConductivity: 0 as number | '-',
+    soilTemp: 0 as number | '-',
+    waterPotential: 0 as number | '-',
+    airTemp: 0 as number | '-',
+    relativeHumidity: 0 as number | '-',
+    windSpeed: 0 as number | '-',
+    solarRadiation: 0 as number | '-',
+    lastUpdate: new Date(),
+  });
+
+  const [historicalData, setHistoricalData] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (selectedProperty && filteredAreas.length > 0 && !selectedArea) {
+      setSelectedArea(filteredAreas[0]);
+    }
+  }, [selectedProperty, filteredAreas, selectedArea, setSelectedArea]);
+
+  useEffect(() => {
+    if (!selectedArea) return;
+
+    let isMounted = true;
+
+    const fetchData = async () => {
+      try {
+        const latestRes = await api.get(`/readings/latest?irrigation_area_id=${selectedArea.id}`);
+        const latestData = latestRes.data;
+
+        if (isMounted) {
+          if (latestData) {
+            setCurrentReadings({
+              soilHumidity: latestData.soil?.humidity ?? '-',
+              waterFlow: latestData.irrigation?.flow_per_minute ?? '-',
+              accumulatedWater: latestData.irrigation?.accumulated_liters ?? '-',
+              eto: latestData.environmental?.eto ?? '-',
+              irrigationActive: latestData.irrigation?.active ?? false,
+              irrigationElapsedTime: latestData.irrigation?.active ? "Activo" : "N/A",
+              soilConductivity: latestData.soil?.conductivity ?? '-',
+              soilTemp: latestData.soil?.temperature ?? '-',
+              waterPotential: latestData.soil?.water_potential ?? '-',
+              airTemp: latestData.environmental?.temperature ?? '-',
+              relativeHumidity: latestData.environmental?.relative_humidity ?? '-',
+              windSpeed: latestData.environmental?.wind_speed ?? '-',
+              solarRadiation: latestData.environmental?.solar_radiation ?? '-',
+              lastUpdate: new Date(latestData.timestamp + (latestData.timestamp.endsWith("Z") ? "" : "Z")),
+            });
+          } else {
+            setCurrentReadings({
+              soilHumidity: '-', waterFlow: '-', accumulatedWater: '-', eto: '-',
+              irrigationActive: false, irrigationElapsedTime: "N/A",
+              soilConductivity: '-', soilTemp: '-', waterPotential: '-',
+              airTemp: '-', relativeHumidity: '-', windSpeed: '-', solarRadiation: '-',
+              lastUpdate: new Date(),
+            });
+          }
+        }
+
+        const histRes = await api.get(`/readings?irrigation_area_id=${selectedArea.id}&per_page=12`);
+        if (isMounted && histRes.data?.data) {
+          const rawItems = histRes.data.data;
+          const chartData = rawItems.reverse().map((item: any) => {
+            const t = new Date(item.timestamp + (item.timestamp.endsWith("Z") ? "" : "Z"));
+            return {
+              time: t.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+              fullTime: t,
+              soilHumidity: item.soil?.humidity ?? 0,
+              waterFlow: item.irrigation?.flow_per_minute ?? 0,
+            };
+          });
+          setHistoricalData(chartData);
+        }
+      } catch (err) {
+        console.error("Error fetching dashboard data:", err);
+      }
+    };
+
+    fetchData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedArea]);
 
   return (
     <div className="min-h-screen p-4 md:p-6 lg:p-8 overflow-x-hidden">
@@ -19,8 +129,17 @@ export function ClientDashboard() {
       <div className="mb-6 md:mb-8">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl md:text-3xl text-[#2C2621] mb-1">Hola, Juan</h1>
-            <p className="text-[#6E6359]">{new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+            <h1 className="text-2xl md:text-3xl text-[#2C2621] mb-1">
+              Hola, {user?.nombre || 'Usuario'}
+            </h1>
+            <p className="text-[#6E6359]">
+              {new Date().toLocaleDateString("es-MX", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </p>
           </div>
           <button className="p-3 rounded-full bg-[#F9F8F4] hover:bg-[#E2D4B7]/30 transition-colors">
             <Bell className="w-5 h-5 text-[#6E6359]" />
@@ -29,28 +148,56 @@ export function ClientDashboard() {
 
         {/* Breadcrumb selectors */}
         <div className="flex flex-wrap gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#F9F8F4] text-[#2C2621] hover:bg-[#E2D4B7]/30 transition-colors">
-            <span className="font-medium">Rancho Norte</span>
-            <ChevronDown className="w-4 h-4" />
-          </button>
-          <button className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#F9F8F4] text-[#2C2621] hover:bg-[#E2D4B7]/30 transition-colors">
-            <span className="font-medium">{selectedArea}</span>
-            <ChevronDown className="w-4 h-4" />
-          </button>
+          <div className="relative">
+            <select
+              className="appearance-none flex items-center gap-2 pl-4 pr-10 py-2 rounded-full bg-[#F9F8F4] text-[#2C2621] hover:bg-[#E2D4B7]/30 transition-colors font-medium outline-none cursor-pointer"
+              value={selectedProperty?.id ?? ""}
+              onChange={(e) => {
+                const prop = properties.find(p => p.id === Number(e.target.value));
+                setSelectedProperty(prop || null);
+                setSelectedArea(null);
+              }}
+            >
+              <option value="" disabled>Seleccione predio...</option>
+              {properties.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+            <ChevronDown className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#2C2621]" />
+          </div>
+
+          {(selectedProperty || filteredAreas.length > 0) && (
+            <div className="relative">
+              <select
+                className="appearance-none flex items-center gap-2 pl-4 pr-10 py-2 rounded-full bg-[#F9F8F4] text-[#2C2621] hover:bg-[#E2D4B7]/30 transition-colors font-medium outline-none cursor-pointer"
+                value={selectedArea?.id ?? ""}
+                onChange={(e) => {
+                  const area = areas.find(a => a.id === Number(e.target.value));
+                  setSelectedArea(area || null);
+                }}
+              >
+                <option value="" disabled>Seleccione área...</option>
+                {filteredAreas.map(a => (
+                  <option key={a.id} value={a.id}>{a.name}</option>
+                ))}
+              </select>
+              <ChevronDown className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#2C2621]" />
+            </div>
+          )}
         </div>
       </div>
 
       {/* Bento Grid Layout */}
       {isMobile ? (
-        <MobileDashboard historicalData={historicalData} />
+        <MobileDashboard historicalData={historicalData} currentReadings={currentReadings} />
       ) : (
-        <DesktopDashboard historicalData={historicalData} />
+        <DesktopDashboard historicalData={historicalData} currentReadings={currentReadings} />
       )}
     </div>
   );
 }
 
-function DesktopDashboard({ historicalData }: { historicalData: any[] }) {
+function DesktopDashboard({ historicalData, currentReadings }: { historicalData: any[], currentReadings: any }) {
   return (
     <div className="grid grid-cols-12 gap-6">
       {/* Priority Data - Dark Cards (Row 1) */}
@@ -84,7 +231,7 @@ function DesktopDashboard({ historicalData }: { historicalData: any[] }) {
                 strokeWidth="8"
                 fill="none"
                 strokeDasharray={`${2 * Math.PI * 56}`}
-                strokeDashoffset={`${2 * Math.PI * 56 * (1 - currentReadings.soilHumidity / 100)}`}
+                strokeDashoffset={`${2 * Math.PI * 56 * (1 - (typeof currentReadings.soilHumidity === 'number' ? currentReadings.soilHumidity : 0) / 100)}`}
                 strokeLinecap="round"
               />
             </svg>
@@ -106,11 +253,11 @@ function DesktopDashboard({ historicalData }: { historicalData: any[] }) {
           <div className="h-16 min-h-[64px] -mx-2 mt-2">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={historicalData.slice(-12)}>
-                <Area 
-                  type="monotone" 
-                  dataKey="waterFlow" 
-                  stroke="#A68A61" 
-                  fill="#A68A61" 
+                <Area
+                  type="monotone"
+                  dataKey="waterFlow"
+                  stroke="#A68A61"
+                  fill="#A68A61"
                   fillOpacity={0.3}
                   strokeWidth={2}
                 />
@@ -135,7 +282,13 @@ function DesktopDashboard({ historicalData }: { historicalData: any[] }) {
         >
           <div className="flex items-center gap-2 mt-4">
             <div className="flex items-center gap-1 text-[#A68A61]">
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg
+                className="w-4 h-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
                 <polyline points="6 9 12 15 18 9" />
               </svg>
               <span className="text-sm">+0.3 vs ayer</span>
@@ -149,16 +302,20 @@ function DesktopDashboard({ historicalData }: { historicalData: any[] }) {
         <BentoCard variant="sand">
           <div className="flex items-start justify-between mb-4">
             <h3 className="text-lg text-[#2C2621]">Estado del Riego</h3>
-            <div className="w-3 h-3 rounded-full bg-[#6D7E5E] animate-pulse" />
+            <div className={`w-3 h-3 rounded-full ${currentReadings.irrigationActive ? 'bg-[#6D7E5E] animate-pulse' : 'bg-[#6E6359]'}`} />
           </div>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-[#6E6359]">Estado</span>
-              <span className="font-bold text-[#6D7E5E]">ACTIVO</span>
+              <span className={`font-bold ${currentReadings.irrigationActive ? 'text-[#6D7E5E]' : 'text-[#6E6359]'}`}>
+                {currentReadings.irrigationActive ? 'ACTIVO' : 'INACTIVO'}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-[#6E6359]">Tiempo transcurrido</span>
-              <span className="font-bold text-[#2C2621]">{currentReadings.irrigationElapsedTime}</span>
+              <span className="font-bold text-[#2C2621]">
+                {currentReadings.irrigationElapsedTime}
+              </span>
             </div>
           </div>
         </BentoCard>
@@ -171,15 +328,24 @@ function DesktopDashboard({ historicalData }: { historicalData: any[] }) {
           <div className="grid grid-cols-3 gap-6">
             <div>
               <p className="text-sm text-[#6E6359] mb-1">Conductividad</p>
-              <p className="text-2xl font-bold text-[#2C2621]">{currentReadings.soilConductivity} <span className="text-base text-[#6E6359]">dS/m</span></p>
+              <p className="text-2xl font-bold text-[#2C2621]">
+                {currentReadings.soilConductivity}{" "}
+                <span className="text-base text-[#6E6359]">dS/m</span>
+              </p>
             </div>
             <div>
               <p className="text-sm text-[#6E6359] mb-1">Temperatura</p>
-              <p className="text-2xl font-bold text-[#2C2621]">{currentReadings.soilTemp} <span className="text-base text-[#6E6359]">°C</span></p>
+              <p className="text-2xl font-bold text-[#2C2621]">
+                {currentReadings.soilTemp}{" "}
+                <span className="text-base text-[#6E6359]">°C</span>
+              </p>
             </div>
             <div>
               <p className="text-sm text-[#6E6359] mb-1">Potencial hídrico</p>
-              <p className="text-2xl font-bold text-[#2C2621]">{currentReadings.waterPotential} <span className="text-base text-[#6E6359]">MPa</span></p>
+              <p className="text-2xl font-bold text-[#2C2621]">
+                {currentReadings.waterPotential}{" "}
+                <span className="text-base text-[#6E6359]">MPa</span>
+              </p>
             </div>
           </div>
         </BentoCard>
@@ -188,42 +354,50 @@ function DesktopDashboard({ historicalData }: { historicalData: any[] }) {
       {/* Chart (Row 3) */}
       <div className="col-span-8 row-span-2">
         <BentoCard variant="light" className="h-full">
-          <h3 className="text-lg text-[#2C2621] mb-6">Humedad del Suelo - Últimas 24 horas</h3>
+          <h3 className="text-lg text-[#2C2621] mb-6">
+            Humedad del Suelo - Últimas 24 horas
+          </h3>
           <div className="h-[300px] min-h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={historicalData}>
                 <defs>
-                  <linearGradient id="colorHumidity" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6D7E5E" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#6D7E5E" stopOpacity={0}/>
+                  <linearGradient
+                    id="colorHumidity"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop offset="5%" stopColor="#6D7E5E" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#6D7E5E" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E6E1D8" />
-                <XAxis 
-                  dataKey="time" 
+                <XAxis
+                  dataKey="time"
                   stroke="#6E6359"
-                  style={{ fontSize: '12px' }}
+                  style={{ fontSize: "12px" }}
                   interval="preserveStartEnd"
                 />
-                <YAxis 
+                <YAxis
                   stroke="#6E6359"
-                  style={{ fontSize: '12px' }}
+                  style={{ fontSize: "12px" }}
                   domain={[30, 60]}
                 />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#F9F8F4', 
-                    border: '1px solid #E6E1D8',
-                    borderRadius: '16px',
-                    padding: '12px'
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#F9F8F4",
+                    border: "1px solid #E6E1D8",
+                    borderRadius: "16px",
+                    padding: "12px",
                   }}
                 />
-                <Area 
-                  type="monotone" 
-                  dataKey="soilHumidity" 
-                  stroke="#6D7E5E" 
+                <Area
+                  type="monotone"
+                  dataKey="soilHumidity"
+                  stroke="#6D7E5E"
                   strokeWidth={3}
-                  fill="url(#colorHumidity)" 
+                  fill="url(#colorHumidity)"
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -244,11 +418,13 @@ function DesktopDashboard({ historicalData }: { historicalData: any[] }) {
                 </div>
                 <div>
                   <p className="text-sm text-[#6E6359]">Temperatura aire</p>
-                  <p className="font-bold text-[#2C2621]">{currentReadings.airTemp} °C</p>
+                  <p className="font-bold text-[#2C2621]">
+                    {currentReadings.airTemp} °C
+                  </p>
                 </div>
               </div>
             </div>
-            
+
             <div className="flex items-center justify-between p-3 rounded-[24px] bg-[#F4F1EB]">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-[16px] bg-[#E2D4B7]">
@@ -256,7 +432,9 @@ function DesktopDashboard({ historicalData }: { historicalData: any[] }) {
                 </div>
                 <div>
                   <p className="text-sm text-[#6E6359]">Humedad relativa</p>
-                  <p className="font-bold text-[#2C2621]">{currentReadings.relativeHumidity} %</p>
+                  <p className="font-bold text-[#2C2621]">
+                    {currentReadings.relativeHumidity} %
+                  </p>
                 </div>
               </div>
             </div>
@@ -268,7 +446,9 @@ function DesktopDashboard({ historicalData }: { historicalData: any[] }) {
                 </div>
                 <div>
                   <p className="text-sm text-[#6E6359]">Viento</p>
-                  <p className="font-bold text-[#2C2621]">{currentReadings.windSpeed} km/h</p>
+                  <p className="font-bold text-[#2C2621]">
+                    {currentReadings.windSpeed} km/h
+                  </p>
                 </div>
               </div>
             </div>
@@ -280,7 +460,9 @@ function DesktopDashboard({ historicalData }: { historicalData: any[] }) {
                 </div>
                 <div>
                   <p className="text-sm text-[#6E6359]">Radiación solar</p>
-                  <p className="font-bold text-[#2C2621]">{currentReadings.solarRadiation} W/m²</p>
+                  <p className="font-bold text-[#2C2621]">
+                    {currentReadings.solarRadiation} W/m²
+                  </p>
                 </div>
               </div>
             </div>
@@ -291,7 +473,7 @@ function DesktopDashboard({ historicalData }: { historicalData: any[] }) {
   );
 }
 
-function MobileDashboard({ historicalData }: { historicalData: any[] }) {
+function MobileDashboard({ historicalData, currentReadings }: { historicalData: any[], currentReadings: any }) {
   return (
     <div className="space-y-4">
       {/* Priority cards first */}
@@ -335,27 +517,27 @@ function MobileDashboard({ historicalData }: { historicalData: any[] }) {
             <AreaChart data={historicalData}>
               <defs>
                 <linearGradient id="colorHumidity" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6D7E5E" stopOpacity={0.2}/>
-                  <stop offset="95%" stopColor="#6D7E5E" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#6D7E5E" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#6D7E5E" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <XAxis 
-                dataKey="time" 
+              <XAxis
+                dataKey="time"
                 stroke="#6E6359"
-                style={{ fontSize: '10px' }}
+                style={{ fontSize: "10px" }}
                 interval="preserveStartEnd"
               />
-              <YAxis 
+              <YAxis
                 stroke="#6E6359"
-                style={{ fontSize: '10px' }}
+                style={{ fontSize: "10px" }}
                 domain={[30, 60]}
               />
-              <Area 
-                type="monotone" 
-                dataKey="soilHumidity" 
-                stroke="#6D7E5E" 
+              <Area
+                type="monotone"
+                dataKey="soilHumidity"
+                stroke="#6D7E5E"
                 strokeWidth={2}
-                fill="url(#colorHumidity)" 
+                fill="url(#colorHumidity)"
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -366,16 +548,20 @@ function MobileDashboard({ historicalData }: { historicalData: any[] }) {
       <BentoCard variant="sand">
         <div className="flex items-start justify-between mb-4">
           <h3 className="text-lg text-[#2C2621]">Estado del Riego</h3>
-          <div className="w-3 h-3 rounded-full bg-[#6D7E5E] animate-pulse" />
+          <div className={`w-3 h-3 rounded-full ${currentReadings.irrigationActive ? 'bg-[#6D7E5E] animate-pulse' : 'bg-[#6E6359]'}`} />
         </div>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-[#6E6359]">Estado</span>
-            <span className="font-bold text-[#6D7E5E]">ACTIVO</span>
+            <span className={`font-bold ${currentReadings.irrigationActive ? 'text-[#6D7E5E]' : 'text-[#6E6359]'}`}>
+              {currentReadings.irrigationActive ? 'ACTIVO' : 'INACTIVO'}
+            </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-[#6E6359]">Tiempo transcurrido</span>
-            <span className="font-bold text-[#2C2621]">{currentReadings.irrigationElapsedTime}</span>
+            <span className="font-bold text-[#2C2621]">
+              {currentReadings.irrigationElapsedTime}
+            </span>
           </div>
         </div>
       </BentoCard>
@@ -386,15 +572,24 @@ function MobileDashboard({ historicalData }: { historicalData: any[] }) {
         <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
           <BentoCard variant="sand" className="min-w-[200px]">
             <p className="text-sm text-[#6E6359] mb-1">Conductividad</p>
-            <p className="text-2xl font-bold text-[#2C2621]">{currentReadings.soilConductivity} <span className="text-base text-[#6E6359]">dS/m</span></p>
+            <p className="text-2xl font-bold text-[#2C2621]">
+              {currentReadings.soilConductivity}{" "}
+              <span className="text-base text-[#6E6359]">dS/m</span>
+            </p>
           </BentoCard>
           <BentoCard variant="sand" className="min-w-[200px]">
             <p className="text-sm text-[#6E6359] mb-1">Temperatura</p>
-            <p className="text-2xl font-bold text-[#2C2621]">{currentReadings.soilTemp} <span className="text-base text-[#6E6359]">°C</span></p>
+            <p className="text-2xl font-bold text-[#2C2621]">
+              {currentReadings.soilTemp}{" "}
+              <span className="text-base text-[#6E6359]">°C</span>
+            </p>
           </BentoCard>
           <BentoCard variant="sand" className="min-w-[200px]">
             <p className="text-sm text-[#6E6359] mb-1">Potencial hídrico</p>
-            <p className="text-2xl font-bold text-[#2C2621]">{currentReadings.waterPotential} <span className="text-base text-[#6E6359]">MPa</span></p>
+            <p className="text-2xl font-bold text-[#2C2621]">
+              {currentReadings.waterPotential}{" "}
+              <span className="text-base text-[#6E6359]">MPa</span>
+            </p>
           </BentoCard>
         </div>
       </div>
@@ -405,19 +600,27 @@ function MobileDashboard({ historicalData }: { historicalData: any[] }) {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-[#6E6359]">Temperatura aire</span>
-            <span className="font-bold text-[#2C2621]">{currentReadings.airTemp} °C</span>
+            <span className="font-bold text-[#2C2621]">
+              {currentReadings.airTemp} °C
+            </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-[#6E6359]">Humedad relativa</span>
-            <span className="font-bold text-[#2C2621]">{currentReadings.relativeHumidity} %</span>
+            <span className="font-bold text-[#2C2621]">
+              {currentReadings.relativeHumidity} %
+            </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-[#6E6359]">Viento</span>
-            <span className="font-bold text-[#2C2621]">{currentReadings.windSpeed} km/h</span>
+            <span className="font-bold text-[#2C2621]">
+              {currentReadings.windSpeed} km/h
+            </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-[#6E6359]">Radiación solar</span>
-            <span className="font-bold text-[#2C2621]">{currentReadings.solarRadiation} W/m²</span>
+            <span className="font-bold text-[#2C2621]">
+              {currentReadings.solarRadiation} W/m²
+            </span>
           </div>
         </div>
       </BentoCard>

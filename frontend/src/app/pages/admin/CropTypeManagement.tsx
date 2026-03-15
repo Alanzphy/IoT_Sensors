@@ -1,12 +1,81 @@
-import { useState } from "react";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Edit, Leaf, Plus, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { BentoCard } from "../../components/BentoCard";
 import { PillButton } from "../../components/PillButton";
 import { cropIcons } from "../../components/icons/CropIcons";
-import { cropTypes } from "../../data/mockData";
+import { api } from "../../services/api";
+
+interface CropType {
+  id: number;
+  name: string;
+  description: string;
+}
 
 export function CropTypeManagement() {
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [cropTypes, setCropTypes] = useState<CropType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await api.get("/crop-types");
+      setCropTypes(res.data.data || res.data); // Support both formats
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Error loading crop types");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+
+    try {
+      setLoading(true);
+      await api.post("/crop-types", {
+        name,
+        description,
+      });
+      setShowCreateForm(false);
+      setName("");
+      setDescription("");
+      fetchData();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Error creating crop type");
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!window.confirm("¿Seguro que deseas eliminar este tipo de cultivo?")) return;
+    try {
+      setLoading(true);
+      await api.delete(`/crop-types/${id}`);
+      fetchData();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Error deleting crop type");
+      setLoading(false);
+    }
+  };
+
+  if (loading && cropTypes.length === 0) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <p className="text-[#6E6359]">Cargando cultivos...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen p-4 md:p-6 lg:p-8">
@@ -21,11 +90,17 @@ export function CropTypeManagement() {
         </PillButton>
       </div>
 
+      {error && (
+        <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
+          {error}
+        </div>
+      )}
+
       {/* Desktop grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {cropTypes.map((crop) => {
-          const CropIcon = cropIcons[crop.id];
-          const usageCount = Math.floor(Math.random() * 5) + 1; // Mock usage count
+          const rawName = crop.name.toLowerCase();
+          const CropIcon = cropIcons[rawName] || Leaf;
 
           return (
             <BentoCard key={crop.id} variant="light">
@@ -36,30 +111,28 @@ export function CropTypeManagement() {
                   </div>
                   <div>
                     <h3 className="font-medium text-[#2C2621]">{crop.name}</h3>
-                    <p className="text-sm text-[#6E6359]">{usageCount} área{usageCount !== 1 ? 's' : ''}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
+                  {/* Edit functionality left for future if needed */}
                   <button className="p-2 rounded-full hover:bg-[#E2D4B7]/50 transition-colors">
-                    <Edit className="w-4 h-4 text-[#6E6359]" />
+                    <Edit className="w-4 h-4 text-[#6E6359]/30" />
                   </button>
-                  <button 
+                  <button
+                    onClick={() => handleDelete(crop.id)}
                     className="p-2 rounded-full hover:bg-[#DC2626]/10 transition-colors"
-                    disabled={usageCount > 0}
                   >
-                    <Trash2 className={`w-4 h-4 ${usageCount > 0 ? 'text-[#6E6359]/30' : 'text-[#DC2626]'}`} />
+                    <Trash2 className="w-4 h-4 text-[#DC2626]" />
                   </button>
                 </div>
               </div>
               <p className="text-sm text-[#6E6359]">{crop.description}</p>
-              {usageCount > 0 && (
-                <p className="text-xs text-[#6E6359] mt-3 italic">
-                  No se puede eliminar: en uso por {usageCount} área{usageCount !== 1 ? 's' : ''}
-                </p>
-              )}
             </BentoCard>
           );
         })}
+        {cropTypes.length === 0 && !loading && (
+          <p className="text-[#6E6359]">No hay tipos de cultivo registrados.</p>
+        )}
       </div>
 
       {/* Create form */}
@@ -67,31 +140,36 @@ export function CropTypeManagement() {
         <div className="fixed inset-0 bg-[#2C2621]/50 z-50 flex items-center justify-center p-4">
           <BentoCard variant="light" className="w-full max-w-md">
             <h2 className="text-xl text-[#2C2621] mb-6">Nuevo Tipo de Cultivo</h2>
-            <form className="space-y-4">
+            <form onSubmit={handleCreate} className="space-y-4">
               <div>
                 <label className="block text-sm text-[#6E6359] mb-2">Nombre del Cultivo</label>
                 <input
                   type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   placeholder="Ej: Nogal"
                   className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm text-[#6E6359] mb-2">Descripción</label>
                 <textarea
                   rows={3}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
                   placeholder="Ej: Nogal pecanero"
                   className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E] resize-none"
                 />
               </div>
 
               <div className="flex gap-3 pt-4">
-                <PillButton variant="secondary" className="flex-1" onClick={() => setShowCreateForm(false)}>
+                <PillButton variant="secondary" type="button" className="flex-1" onClick={() => setShowCreateForm(false)}>
                   Cancelar
                 </PillButton>
-                <PillButton variant="primary" type="submit" className="flex-1">
-                  Crear Cultivo
+                <PillButton variant="primary" type="submit" className="flex-1" disabled={loading}>
+                  {loading ? 'Creando...' : 'Crear Cultivo'}
                 </PillButton>
               </div>
             </form>

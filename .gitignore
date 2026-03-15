@@ -33,3 +33,21 @@ frontend/dist/
 frontend/build/
 backups/
 docs/openapi.yaml
+
+# Scripts temporales de fix de DB
+fix_timestamps*.py
+check_dates.py
+fix_dates.sql
+
+
+# Logs y SQLite
+*.sqlite3
+*.log
+
+# Temp logs and tokens
+tok.txt
+token.txt
+fix_passwords.py
+test.cjs
+test_api.py
+

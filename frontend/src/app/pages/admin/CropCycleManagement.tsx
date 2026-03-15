@@ -1,11 +1,117 @@
-import { useState } from "react";
-import { Plus, Calendar } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Calendar, Trash2 } from "lucide-react";
 import { BentoCard } from "../../components/BentoCard";
 import { PillButton } from "../../components/PillButton";
-import { cropCycles, irrigationAreas } from "../../data/mockData";
+import { api } from "../../services/api";
+
+interface IrrigationArea {
+  id: number;
+  nombre: string;
+}
+
+interface CropCycle {
+  id: number;
+  irrigation_area_id: int;
+  start_date: string;
+  end_date: string | null;
+}
 
 export function CropCycleManagement() {
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [areas, setAreas] = useState<IrrigationArea[]>([]);
+  const [cycles, setCycles] = useState<CropCycle[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [formAreaId, setFormAreaId] = useState("");
+  const [formStartDate, setFormStartDate] = useState("");
+  const [formEndDate, setFormEndDate] = useState("");
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      // Fetch both areas and cycles
+      const [areasRes, cyclesRes] = await Promise.all([
+        api.get("/irrigation-areas/all"),
+        api.get("/crop-cycles")
+      ]);
+      setAreas(areasRes.data.data || areasRes.data);
+      setCycles(cyclesRes.data.data || cyclesRes.data);
+    } catch (err: any) {
+      // In case /irrigation-areas/all doesn't exist, we fallback to /irrigation-areas
+      if (err.response?.status === 404 && err.config.url.includes('/all')) {
+          try {
+              const [areasRes, cyclesRes] = await Promise.all([
+                  api.get("/irrigation-areas"),
+                  api.get("/crop-cycles")
+              ]);
+              setAreas(areasRes.data.data || areasRes.data);
+              setCycles(cyclesRes.data.data || cyclesRes.data);
+          } catch(err2: any) {
+             setError(err2.response?.data?.detail || "Error loading data");
+          }
+      } else {
+        setError(err.response?.data?.detail || "Error loading data");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formAreaId || !formStartDate) return;
+
+    try {
+      setLoading(true);
+      await api.post("/crop-cycles", {
+        irrigation_area_id: parseInt(formAreaId),
+        start_date: formStartDate,
+        end_date: formEndDate ? formEndDate : null,
+      });
+      setShowCreateForm(false);
+      setFormAreaId("");
+      setFormStartDate("");
+      setFormEndDate("");
+      fetchData();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Error creating crop cycle");
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!window.confirm("¿Seguro que deseas eliminar este ciclo?")) return;
+    try {
+      setLoading(true);
+      await api.delete(`/crop-cycles/${id}`);
+      fetchData();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Error deleting crop cycle");
+      setLoading(false);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  if (loading && areas.length === 0) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <p className="text-[#6E6359]">Cargando datos...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen p-4 md:p-6 lg:p-8">
@@ -20,82 +126,73 @@ export function CropCycleManagement() {
         </PillButton>
       </div>
 
+      {error && (
+        <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
+          {error}
+        </div>
+      )}
+
       {/* Timeline view */}
       <div className="space-y-6">
-        {irrigationAreas.map((area) => {
-          const areaCycles = cropCycles.filter(c => c.areaId === area.id);
+        {areas.map((area) => {
+          const areaCycles = cycles.filter(c => c.irrigation_area_id === area.id)
+            .sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime());
+
+          if (areaCycles.length === 0) return null;
 
           return (
             <BentoCard key={area.id} variant="light">
-              <h3 className="text-lg text-[#2C2621] mb-4">{area.name}</h3>
+              <h3 className="text-lg font-medium text-[#2C2621] mb-4">{area.nombre}</h3>
               
               <div className="space-y-3">
-                {areaCycles.map((cycle) => (
-                  <div 
-                    key={cycle.id} 
-                    className={`p-4 rounded-[24px] ${
-                      cycle.isActive 
-                        ? "bg-[#6D7E5E]/10 border-2 border-[#6D7E5E]" 
-                        : "bg-[#F4F1EB]"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <Calendar className="w-5 h-5 text-[#6E6359]" />
-                        <div>
-                          <p className="font-medium text-[#2C2621]">
-                            {new Date(cycle.startDate).toLocaleDateString('es-MX', { 
-                              day: '2-digit', 
-                              month: 'short', 
-                              year: 'numeric' 
-                            })}
-                            {' → '}
-                            {cycle.endDate 
-                              ? new Date(cycle.endDate).toLocaleDateString('es-MX', { 
-                                  day: '2-digit', 
-                                  month: 'short', 
-                                  year: 'numeric' 
-                                })
-                              : 'Actual'
-                            }
-                          </p>
-                          <p className="text-sm text-[#6E6359]">
-                            {cycle.endDate 
-                              ? `Duración: ${Math.floor((new Date(cycle.endDate).getTime() - new Date(cycle.startDate).getTime()) / (1000 * 60 * 60 * 24))} días`
-                              : `En curso: ${Math.floor((Date.now() - new Date(cycle.startDate).getTime()) / (1000 * 60 * 60 * 24))} días`
-                            }
-                          </p>
-                        </div>
-                      </div>
-                      {cycle.isActive && (
-                        <span className="px-3 py-1 rounded-full bg-[#6D7E5E] text-[#F4F1EB] text-xs font-medium">
-                          Activo
-                        </span>
-                      )}
-                    </div>
+                {areaCycles.map((cycle) => {
+                  const isActive = !cycle.end_date || new Date(cycle.end_date) > new Date();
 
-                    {/* Progress bar for active cycles */}
-                    {cycle.isActive && (
-                      <div className="mt-3">
-                        <div className="h-2 bg-[#E6E1D8] rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-[#6D7E5E] rounded-full transition-all"
-                            style={{ 
-                              width: `${Math.min(
-                                (Math.floor((Date.now() - new Date(cycle.startDate).getTime()) / (1000 * 60 * 60 * 24)) / 365) * 100, 
-                                100
-                              )}%` 
-                            }}
-                          />
+                  return (
+                    <div 
+                      key={cycle.id} 
+                      className={`p-4 rounded-[24px] flex items-center justify-between ${
+                        isActive 
+                          ? "bg-[#6D7E5E]/10 border-2 border-[#6D7E5E]" 
+                          : "bg-[#F4F1EB]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={`p-2 rounded-full ${isActive ? 'bg-[#6D7E5E] text-white' : 'bg-[#E2D4B7] text-[#6E6359]'}`}>
+                          <Calendar className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-[#2C2621]">
+                              {formatDate(cycle.start_date)} - {cycle.end_date ? formatDate(cycle.end_date) : 'Actual'}
+                            </span>
+                            {isActive && (
+                              <span className="px-2 py-0.5 text-xs rounded-full bg-[#6D7E5E] text-white">
+                                Activo
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    )}
-                  </div>
-                ))}
+                      <button 
+                        onClick={() => handleDelete(cycle.id)}
+                        className="p-2 rounded-full hover:bg-[#DC2626]/10 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4 text-[#DC2626]" />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </BentoCard>
           );
         })}
+        {areas.length === 0 && !loading && (
+          <p className="text-[#6E6359]">No hay áreas de riego registradas.</p>
+        )}
+        {areas.length > 0 && areas.every(a => cycles.filter(c => c.irrigation_area_id === a.id).length === 0) && !loading && (
+          <p className="text-[#6E6359]">No hay ciclos de cultivo registrados en ninguna área.</p>
+        )}
       </div>
 
       {/* Create form */}
@@ -103,13 +200,18 @@ export function CropCycleManagement() {
         <div className="fixed inset-0 bg-[#2C2621]/50 z-50 flex items-center justify-center p-4">
           <BentoCard variant="light" className="w-full max-w-md">
             <h2 className="text-xl text-[#2C2621] mb-6">Nuevo Ciclo de Cultivo</h2>
-            <form className="space-y-4">
+            <form onSubmit={handleCreate} className="space-y-4">
               <div>
                 <label className="block text-sm text-[#6E6359] mb-2">Área de Riego</label>
-                <select className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]">
+                <select 
+                  required
+                  value={formAreaId}
+                  onChange={(e) => setFormAreaId(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
+                >
                   <option value="">Seleccionar área</option>
-                  {irrigationAreas.map((area) => (
-                    <option key={area.id} value={area.id}>{area.name}</option>
+                  {areas.map((area) => (
+                    <option key={area.id} value={area.id}>{area.nombre}</option>
                   ))}
                 </select>
               </div>
@@ -118,6 +220,9 @@ export function CropCycleManagement() {
                 <label className="block text-sm text-[#6E6359] mb-2">Fecha de Inicio</label>
                 <input
                   type="date"
+                  required
+                  value={formStartDate}
+                  onChange={(e) => setFormStartDate(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
                 />
               </div>
@@ -126,23 +231,18 @@ export function CropCycleManagement() {
                 <label className="block text-sm text-[#6E6359] mb-2">Fecha de Fin (opcional)</label>
                 <input
                   type="date"
+                  value={formEndDate}
+                  onChange={(e) => setFormEndDate(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
                 />
-                <p className="text-xs text-[#6E6359] mt-1">Dejar vacío para ciclo activo sin fecha de fin</p>
-              </div>
-
-              <div className="bg-[#D97706]/10 p-4 rounded-[20px]">
-                <p className="text-sm text-[#2C2621]">
-                  ⚠️ Solo puede haber un ciclo activo por área. Al crear un nuevo ciclo activo, se finalizará el ciclo anterior automáticamente.
-                </p>
               </div>
 
               <div className="flex gap-3 pt-4">
-                <PillButton variant="secondary" className="flex-1" onClick={() => setShowCreateForm(false)}>
+                <PillButton variant="secondary" type="button" className="flex-1" onClick={() => setShowCreateForm(false)}>
                   Cancelar
                 </PillButton>
-                <PillButton variant="primary" type="submit" className="flex-1">
-                  Crear Ciclo
+                <PillButton variant="primary" type="submit" className="flex-1" disabled={loading}>
+                  {loading ? 'Guardando...' : 'Guardar Ciclo'}
                 </PillButton>
               </div>
             </form>

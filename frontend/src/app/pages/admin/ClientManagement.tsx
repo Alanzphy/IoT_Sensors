@@ -1,13 +1,83 @@
-import { useState } from "react";
-import { Plus, Search, Edit, XCircle, ChevronRight } from "lucide-react";
+import { ChevronRight, Plus, Search, XCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router";
 import { BentoCard } from "../../components/BentoCard";
 import { PillButton } from "../../components/PillButton";
-import { clients } from "../../data/mockData";
-import { Link } from "react-router";
+import { api } from "../../services/api";
+
+interface Client {
+  id: number;
+  company_name: string;
+  phone: string | null;
+  address: string | null;
+  user: {
+    email: string;
+    full_name: string;
+    is_active: boolean;
+  };
+}
 
 export function ClientManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
+
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [formData, setFormData] = useState({
+    company_name: "",
+    email: "",
+    full_name: "",
+    password: "",
+    phone: "",
+    address: "",
+  });
+
+  const fetchClients = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get("/clients?per_page=100");
+      setClients(res.data.data || []);
+      setError(null);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Error loading clients");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchClients();
+  }, []);
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await api.post("/clients", formData);
+      setShowCreateForm(false);
+      setFormData({
+        company_name: "",
+        email: "",
+        full_name: "",
+        password: "",
+        phone: "",
+        address: "",
+      });
+      fetchClients();
+    } catch (err: any) {
+      alert(err.response?.data?.detail || "Error creating client");
+    }
+  };
+
+  const filteredClients = clients.filter(c => {
+    const term = searchTerm.toLowerCase();
+    return (
+      c.company_name.toLowerCase().includes(term) ||
+      (c.user?.email || "").toLowerCase().includes(term) ||
+      (c.phone || "").toLowerCase().includes(term)
+    );
+  });
 
   return (
     <div className="min-h-screen p-4 md:p-6 lg:p-8">
@@ -22,7 +92,6 @@ export function ClientManagement() {
         </PillButton>
       </div>
 
-      {/* Search bar */}
       <BentoCard variant="light" className="mb-6">
         <div className="flex items-center gap-3">
           <Search className="w-5 h-5 text-[#6E6359]" />
@@ -36,7 +105,8 @@ export function ClientManagement() {
         </div>
       </BentoCard>
 
-      {/* Desktop table view */}
+      {error && <div className="text-red-500 mb-4">{error}</div>}
+
       <div className="hidden md:block">
         <BentoCard variant="light">
           <div className="overflow-x-auto">
@@ -44,129 +114,104 @@ export function ClientManagement() {
               <thead>
                 <tr className="border-b border-[#2C2621]/10">
                   <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Empresa</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Contacto</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Email</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Teléfono</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Predios</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Nodos</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Estado</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Acciones</th>
+                  <th className="text-right py-3 px-4 text-sm font-medium text-[#6E6359]">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {clients.map((client, i) => (
-                  <tr 
-                    key={client.id}
-                    className={i % 2 === 0 ? "bg-[#F4F1EB]/30" : ""}
-                  >
-                    <td className="py-4 px-4">
-                      <Link to={`/admin/clientes/${client.id}/predios`} className="font-medium text-[#2C2621] hover:text-[#6D7E5E]">
-                        {client.name}
-                      </Link>
-                    </td>
-                    <td className="py-4 px-4 text-sm text-[#6E6359]">{client.email}</td>
-                    <td className="py-4 px-4 text-sm text-[#6E6359]">{client.phone}</td>
-                    <td className="py-4 px-4 text-sm text-[#2C2621] font-medium">{client.properties}</td>
-                    <td className="py-4 px-4 text-sm text-[#2C2621] font-medium">{client.nodes}</td>
-                    <td className="py-4 px-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        client.status === "active" 
-                          ? "bg-[#6D7E5E]/10 text-[#6D7E5E]" 
-                          : "bg-[#6E6359]/10 text-[#6E6359]"
-                      }`}>
-                        {client.status === "active" ? "Activo" : "Inactivo"}
+                {loading ? (
+                  <tr><td colSpan={6} className="py-4 text-center">Cargando...</td></tr>
+                ) : filteredClients.map((client) => (
+                  <tr key={client.id} className="border-b border-[#2C2621]/5 last:border-0 hover:bg-[#2C2621]/5 transition-colors">
+                    <td className="py-3 px-4 text-[#2C2621]">{client.company_name}</td>
+                    <td className="py-3 px-4 text-[#2C2621]">{client.user?.full_name || "-"}</td>
+                    <td className="py-3 px-4 text-[#6E6359]">{client.user?.email || "-"}</td>
+                    <td className="py-3 px-4 text-[#6E6359]">{client.phone || "-"}</td>
+                    <td className="py-3 px-4">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${client.user?.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                        {client.user?.is_active ? "Activo" : "Inactivo"}
                       </span>
                     </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-2">
-                        <button className="p-2 rounded-full hover:bg-[#E2D4B7]/50 transition-colors">
-                          <Edit className="w-4 h-4 text-[#6E6359]" />
-                        </button>
-                        <button className="p-2 rounded-full hover:bg-[#DC2626]/10 transition-colors">
-                          <XCircle className="w-4 h-4 text-[#DC2626]" />
-                        </button>
-                      </div>
+                    <td className="py-3 px-4 flex justify-end gap-2">
+                       <Link to={`/admin/clientes/${client.id}/predios`}>
+                         <PillButton variant="outline" className="px-3 py-1 text-xs">Predios <ChevronRight className="w-3 h-3 ml-1" /></PillButton>
+                       </Link>
                     </td>
                   </tr>
                 ))}
+                {!loading && filteredClients.length === 0 && (
+                  <tr><td colSpan={6} className="py-4 text-center text-[#6E6359]">No hay clientes registrados.</td></tr>
+                )}
               </tbody>
             </table>
           </div>
         </BentoCard>
       </div>
 
-      {/* Mobile card view */}
-      <div className="md:hidden space-y-4">
-        {clients.map((client) => (
-          <Link key={client.id} to={`/admin/clientes/${client.id}/predios`}>
-            <BentoCard variant="light">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <h3 className="font-medium text-[#2C2621] mb-1">{client.name}</h3>
-                  <p className="text-sm text-[#6E6359]">{client.email}</p>
-                </div>
-                <ChevronRight className="w-5 h-5 text-[#6E6359]" />
+      <div className="grid grid-cols-1 gap-4 md:hidden">
+        {loading && <div className="text-center py-4">Cargando...</div>}
+        {!loading && filteredClients.map((client) => (
+          <BentoCard key={client.id} variant="light" className="p-4">
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <h3 className="text-[#2C2621] font-medium">{client.company_name}</h3>
+                <p className="text-sm text-[#6E6359]">{client.user?.full_name}</p>
               </div>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <p className="text-[#6E6359]">Predios</p>
-                  <p className="font-medium text-[#2C2621]">{client.properties}</p>
-                </div>
-                <div>
-                  <p className="text-[#6E6359]">Nodos</p>
-                  <p className="font-medium text-[#2C2621]">{client.nodes}</p>
-                </div>
-              </div>
-              <div className="mt-3">
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                  client.status === "active" 
-                    ? "bg-[#6D7E5E]/10 text-[#6D7E5E]" 
-                    : "bg-[#6E6359]/10 text-[#6E6359]"
-                }`}>
-                  {client.status === "active" ? "Activo" : "Inactivo"}
-                </span>
-              </div>
-            </BentoCard>
-          </Link>
+              <span className={`px-2 py-1 rounded-full text-xs ${client.user?.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                {client.user?.is_active ? "Activo" : "Inactivo"}
+              </span>
+            </div>
+            <div className="space-y-1 mb-4">
+              <p className="text-sm text-[#6E6359]">{client.user?.email}</p>
+              <p className="text-sm text-[#6E6359]">{client.phone || "Sin teléfono"}</p>
+            </div>
+            <div className="flex justify-end">
+              <Link to={`/admin/clientes/${client.id}/predios`}>
+                 <PillButton variant="outline" className="w-full justify-center">Ver Predios <ChevronRight className="w-4 h-4 ml-1" /></PillButton>
+              </Link>
+            </div>
+          </BentoCard>
         ))}
       </div>
 
-      {/* Create form drawer (simplified) */}
       {showCreateForm && (
         <div className="fixed inset-0 bg-[#2C2621]/50 z-50 flex items-center justify-center p-4">
-          <BentoCard variant="light" className="w-full max-w-md">
-            <h2 className="text-xl text-[#2C2621] mb-6">Nuevo Cliente</h2>
-            <form className="space-y-4">
+          <BentoCard variant="light" className="w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+               <h2 className="text-xl text-[#2C2621]">Nuevo Cliente</h2>
+               <button onClick={() => setShowCreateForm(false)} type="button"><XCircle className="w-6 h-6 text-[#6E6359]" /></button>
+            </div>
+            <form className="space-y-4" onSubmit={handleCreate}>
               <div>
-                <label className="block text-sm text-[#6E6359] mb-2">Nombre de la Empresa</label>
-                <input
-                  type="text"
-                  placeholder="Ej: Agrícola López"
-                  className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] placeholder:text-[#6E6359]/50 focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
-                />
+                <label className="block text-sm text-[#6E6359] mb-1">Nombre de la Empresa</label>
+                <input required type="text" value={formData.company_name} onChange={e => setFormData({...formData, company_name: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 focus:outline-none" />
               </div>
               <div>
-                <label className="block text-sm text-[#6E6359] mb-2">Email</label>
-                <input
-                  type="email"
-                  placeholder="contacto@ejemplo.mx"
-                  className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] placeholder:text-[#6E6359]/50 focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
-                />
+                <label className="block text-sm text-[#6E6359] mb-1">Nombre de Contacto</label>
+                <input required type="text" value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 focus:outline-none" />
               </div>
               <div>
-                <label className="block text-sm text-[#6E6359] mb-2">Teléfono</label>
-                <input
-                  type="tel"
-                  placeholder="+52 656 123 4567"
-                  className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] placeholder:text-[#6E6359]/50 focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
-                />
+                <label className="block text-sm text-[#6E6359] mb-1">Email</label>
+                <input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm text-[#6E6359] mb-1">Contraseña (Temporal)</label>
+                <input required type="password" minLength={6} value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm text-[#6E6359] mb-1">Teléfono</label>
+                <input type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm text-[#6E6359] mb-1">Dirección (Opcional)</label>
+                <input type="text" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 focus:outline-none" />
               </div>
               <div className="flex gap-3 pt-4">
-                <PillButton variant="secondary" className="flex-1" onClick={() => setShowCreateForm(false)}>
-                  Cancelar
-                </PillButton>
-                <PillButton variant="primary" type="submit" className="flex-1">
-                  Crear Cliente
-                </PillButton>
+                <PillButton variant="outline" className="flex-1 justify-center" onClick={() => setShowCreateForm(false)} type="button">Cancelar</PillButton>
+                <PillButton variant="primary" className="flex-1 justify-center" type="submit">Guardar</PillButton>
               </div>
             </form>
           </BentoCard>

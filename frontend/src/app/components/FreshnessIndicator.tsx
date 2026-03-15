@@ -4,7 +4,8 @@ interface FreshnessIndicatorProps {
 }
 
 export function FreshnessIndicator({ lastUpdate, variant = "light" }: FreshnessIndicatorProps) {
-  const minutesAgo = Math.floor((Date.now() - lastUpdate.getTime()) / (1000 * 60));
+  let minutesAgo = Math.floor((Date.now() - lastUpdate.getTime()) / (1000 * 60));
+  if (minutesAgo < 0) minutesAgo = 0;
   
   let status: "recent" | "warning" | "error";
   let dotColor: string;
