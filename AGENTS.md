@@ -63,7 +63,7 @@ Los siguientes datos son los de mayor importancia para el cliente y deben tener 
 - **Backend:** Python 3.11+ con **FastAPI** (async, tipado estricto, documentación automática Swagger/OpenAPI).
 - **Frontend:** **React** (SPA desacoplada que consume la API REST).
 - **Base de Datos:** **MySQL 8** (puerto 3306). ORM: **SQLAlchemy** con **Alembic** para migraciones.
-- **Deployment:** **Docker + Docker Compose** en la VPS Linux. Contenedores: MySQL, Backend (FastAPI + Uvicorn), Frontend (Nginx sirviendo el build estático). **Nginx** como reverse proxy público (puertos 80/443) redirigiendo al backend (5050) y frontend.
+- **Deployment:** **Docker + Docker Compose** en la VPS Linux gestionado vía **Dokploy**. Contenedores: MySQL, Backend (FastAPI + Uvicorn), Frontend (Build estático servido por Nginx interno). **Traefik (Dokploy)** actúa como reverse proxy público y service discovery, ruteando `/api/*` al backend y `/` al frontend, además de gestionar los certificados SSL automáticamente.
 
 **Autenticación y Seguridad:**
 - **Usuarios (Admin/Cliente):** JWT (JSON Web Tokens). Login retorna access token + refresh token. El frontend envía el token en el header `Authorization: Bearer <token>`.

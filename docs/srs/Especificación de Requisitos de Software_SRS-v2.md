@@ -204,7 +204,7 @@ El resto del documento se organiza de la siguiente manera:
 
 El producto es una plataforma web de monitoreo agrícola basada en datos IoT que permite visualizar en tiempo cuasi-real el estado de las áreas de riego de un cliente. El sistema sigue una arquitectura cliente-servidor desacoplada, separando la recolección de datos, el backend y el frontend.
 
-● **Infraestructura:** Todo el entorno de servidor (“Servidor Grogu”) está montado en una VPS con Linux. El despliegue se realiza mediante **Docker Compose** con tres contenedores: MySQL 8 (puerto 3306), Backend (FastAPI \+ Uvicorn, puerto 5050\) y Frontend (React servido por Nginx). **Nginx** actúa como reverse proxy público (puertos 80/443).
+● **Infraestructura:** Todo el entorno de servidor (“Servidor Grogu”) está montado en una VPS con Linux. El despliegue se realiza mediante **Docker Compose** con tres contenedores: MySQL 8 (puerto 3306), Backend (FastAPI \+ Uvicorn, puerto 5050\) y Frontend (React servido por Nginx interno). **Traefik (Dokploy)** actúa como reverse proxy público (puertos 80/443) y descubrimiento de servicios automáticos.
 
 ● **Módulo de Control (Simulador de Hardware):** No se tiene acceso físico a los sensores reales. Una PC local actúa como simulador, ejecutando un script que envía peticiones **HTTP POST** cada 10 minutos al servidor, simulando el envío de lecturas de sensores (144 lecturas diarias por nodo). Cada petición envía un payload JSON unificado con 3 categorías dinámicas de datos (Suelo, Riego, Ambiental).
 
@@ -290,9 +290,9 @@ El sistema ofrecerá una interfaz web (SPA en React) accesible desde navegador:
 
 **Backend API:** **FastAPI** (Python 3.11+, async, tipado estricto) con documentación automática Swagger/OpenAPI. Desplegado con **Uvicorn** en el puerto 5050\.
 
-**Frontend:** **React** (SPA desacoplada) servido como build estático por **Nginx**, que también actúa como reverse proxy público (puertos 80/443) redirigiendo al backend.
+**Frontend:** **React** (SPA desacoplada) servido como build estático por un servidor **Nginx** interno.
 
-**Despliegue:** **Docker Compose** en VPS Linux. Tres contenedores: MySQL, Backend (FastAPI \+ Uvicorn) y Frontend (Nginx).
+**Despliegue:** **Docker Compose** en VPS Linux a través de **Dokploy**. Tres contenedores: MySQL, Backend (FastAPI \+ Uvicorn) y Frontend. El tráfico público entra por **Traefik** (puertos 80/443) que redirige SSL automáticamente.
 
 **Fase 2:** Integración con API de mapas (Google Maps u otra) para renderizar ubicación de predios.
 
@@ -412,7 +412,7 @@ Campo timestamp obligatorio (ISO 8601 UTC). Campos no disponibles se envían com
 
 ## 3.4 Restricciones de Diseño {#3.4-restricciones-de-diseño}
 
-**REQ-Diseño-01:** La arquitectura se basa en un **VPS Linux** ("Servidor Grogu") con **Docker Compose** para facilitar el acceso remoto y el despliegue reproducible. Contenedores: MySQL 8, Backend (FastAPI \+ Uvicorn) y Frontend (Nginx como reverse proxy en puertos 80/443).
+**REQ-Diseño-01:** La arquitectura se basa en un **VPS Linux** ("Servidor Grogu") administrado por **Dokploy** con **Docker Compose** para facilitar el acceso remoto y el despliegue reproducible. Contenedores: MySQL 8, Backend (FastAPI \+ Uvicorn) y Frontend (Nginx embebido). **Traefik** como reverse proxy público en puertos 80/443.
 
 **REQ-Diseño-02:** La base de datos (**MySQL 8** relacional) debe optimizarse para consultas por rango de tiempo mediante índices compuestos (nodo\_id, marca\_tiempo) y un índice simple (marca\_tiempo) para extracciones masivas futuras. Se contempla particionamiento por rango de marca\_tiempo (mensual o trimestral) cuando el volumen crezca significativamente.
 
@@ -422,7 +422,7 @@ Campo timestamp obligatorio (ISO 8601 UTC). Campos no disponibles se envían com
 
 ## 3.5 Atributos del Sistema Software {#3.5-atributos-del-sistema-software}
 
-**3.5.1 Seguridad:** Autenticación mediante **JWT** (access token \+ refresh token) para usuarios web y **API Key** (X-API-Key header) para nodos IoT. Contraseñas almacenadas con hash **bcrypt**. Encriptación de datos en tránsito mediante **HTTPS** (Nginx como reverse proxy con puertos 80/443). Los refresh tokens se almacenan en BD y pueden revocarse (tabla tokens\_refresco).
+**3.5.1 Seguridad:** Autenticación mediante **JWT** (access token \+ refresh token) para usuarios web y **API Key** (X-API-Key header) para nodos IoT. Contraseñas almacenadas con hash **bcrypt**. Encriptación de datos en tránsito mediante **HTTPS** (Traefik gestionando Let's Encrypt automáticamente). Los refresh tokens se almacenan en BD y pueden revocarse (tabla tokens\_refresco).
 
 **3.5.2 Mantenibilidad:** El sistema sigue una arquitectura modular con separación clara: backend (FastAPI — API REST y lógica de negocio), frontend (React — SPA desacoplada) y base de datos (MySQL 8 vía SQLAlchemy ORM). Cada componente corre en su propio contenedor Docker. Las migraciones de esquema se gestionan con Alembic. El ingesta de lecturas usa **transacciones atómicas** (1 INSERT parent \+ 3 INSERTs de categoría en un solo commit — si uno falla, se revierten todos).
 

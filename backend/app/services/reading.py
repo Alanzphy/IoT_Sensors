@@ -321,17 +321,8 @@ def export_readings_pdf(
     )
     readings = list(
         db.execute(
-            select(Reading)
-            .options(
-                joinedload(Reading.soil),
-                joinedload(Reading.irrigation),
-                joinedload(Reading.environmental),
-            )
-            .where(*conditions)
-            .order_by(Reading.marca_tiempo.asc())
-        )
-        .unique()
-        .scalars()
+            select(Reading).where(*conditions).order_by(Reading.marca_tiempo.asc())
+        ).scalars()
     )
 
     buf = io.BytesIO()
@@ -354,25 +345,22 @@ def export_readings_pdf(
     ]
     table_data = [headers]
     for r in readings:
-        s = r.soil
-        irr = r.irrigation
-        e = r.environmental
         table_data.append(
             [
                 r.marca_tiempo.strftime("%Y-%m-%d %H:%M"),
                 r.nodo_id,
-                s.conductividad if s else "",
-                s.temperatura if s else "",
-                s.humedad if s else "",
-                s.potencial_hidrico if s else "",
-                "On" if (irr and irr.activo) else "Off" if irr else "",
-                irr.litros_acumulados if irr else "",
-                irr.flujo_por_minuto if irr else "",
-                e.temperatura if e else "",
-                e.humedad_relativa if e else "",
-                e.velocidad_viento if e else "",
-                e.radiacion_solar if e else "",
-                e.eto if e else "",
+                r.suelo_conductividad if r.suelo_conductividad is not None else "",
+                r.suelo_temperatura if r.suelo_temperatura is not None else "",
+                r.suelo_humedad if r.suelo_humedad is not None else "",
+                r.suelo_potencial_hidrico if r.suelo_potencial_hidrico is not None else "",
+                "On" if r.riego_activo else "Off",
+                r.riego_litros_acumulados if r.riego_litros_acumulados is not None else "",
+                r.riego_flujo_por_minuto if r.riego_flujo_por_minuto is not None else "",
+                r.ambiental_temperatura if r.ambiental_temperatura is not None else "",
+                r.ambiental_humedad_relativa if r.ambiental_humedad_relativa is not None else "",
+                r.ambiental_velocidad_viento if r.ambiental_velocidad_viento is not None else "",
+                r.ambiental_radiacion_solar if r.ambiental_radiacion_solar is not None else "",
+                r.ambiental_eto if r.ambiental_eto is not None else "",
             ]
         )
 

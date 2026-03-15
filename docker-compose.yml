@@ -1,11 +1,37 @@
+# =============================================================
+# Docker Compose — Sistema IoT de Riego Agrícola (MVP)
+# =============================================================
+# Servicios:
+#   1. mysql     — Base de datos MySQL 8
+#   2. backend   — FastAPI + Uvicorn (puerto 5050)
+#   3. frontend  — React SPA (Nginx interno sirviendo build estático)
+#
+# Deployment:
+#   - En Dokploy: Traefik maneja el ruteo público y SSL automático.
+#     Las labels de Traefik están configuradas para rutear:
+#       /api/*   → backend:5050
+#       /*       → frontend:80
+#   - Local: Usa los ports mapeados directamente.
+#
+# Uso local:
+#   docker compose up -d --build
+#   → Backend: http://localhost:5050
+#   → Frontend: http://localhost:3000
+#
+# Uso en Dokploy:
+#   Conectar repo → Dokploy lee este archivo y Traefik rutea automáticamente.
+#   Cambiar "sensores.tudominio.com" por tu dominio real.
+# =============================================================
+
 services:
+  # --- Base de Datos ---
   mysql:
     image: mysql:8.0
     container_name: sensores_mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: rootpass
-      MYSQL_DATABASE: sensores_riego
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-rootpass}
+      MYSQL_DATABASE: ${DB_NAME:-sensores_riego}
       MYSQL_CHARACTER_SET_SERVER: utf8mb4
       MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
     ports:
@@ -17,6 +43,67 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # --- Backend (FastAPI) ---
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sensores_backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=${DB_USER:-root}
+      - DB_PASSWORD=${DB_PASSWORD:-rootpass}
+      - DB_NAME=${DB_NAME:-sensores_riego}
+      - SECRET_KEY=${SECRET_KEY:-dev-only-change-me-in-production-abc123xyz}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      - REFRESH_TOKEN_EXPIRE_DAYS=${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      - DEBUG=${DEBUG:-false}
+    ports:
+      - "5050:5050"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5050/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    labels:
+      # --- Traefik (Dokploy) ---
+      - "traefik.enable=true"
+      # Rutea /api/* y /health al backend
+      - "traefik.http.routers.sensores-backend.rule=Host(`${DOMAIN:-sensores.tudominio.com}`) && (PathPrefix(`/api`) || PathPrefix(`/health`))"
+      - "traefik.http.routers.sensores-backend.entrypoints=websecure"
+      - "traefik.http.routers.sensores-backend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.sensores-backend.loadbalancer.server.port=5050"
+
+  # --- Frontend (React + Nginx interno para SPA) ---
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sensores_frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "3000:80"
+    labels:
+      # --- Traefik (Dokploy) ---
+      - "traefik.enable=true"
+      # Todo lo demás va al frontend
+      - "traefik.http.routers.sensores-frontend.rule=Host(`${DOMAIN:-sensores.tudominio.com}`)"
+      - "traefik.http.routers.sensores-frontend.entrypoints=websecure"
+      - "traefik.http.routers.sensores-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.sensores-frontend.loadbalancer.server.port=80"
+      # Prioridad más baja que el backend (Traefik usa la ruta más específica primero)
+      - "traefik.http.routers.sensores-frontend.priority=1"
 
 volumes:
   mysql_data:

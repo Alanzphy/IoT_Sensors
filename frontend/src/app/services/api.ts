@@ -1,8 +1,10 @@
 import axios from "axios";
 
 // Create Axios Instance
+// In Docker (behind Nginx): VITE_API_BASE_URL="/api/v1"
+// In local dev: defaults to "http://localhost:5050/api/v1"
 export const api = axios.create({
-  baseURL: "http://localhost:5050/api/v1", // Using local backend by default
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5050/api/v1",
   headers: {
     "Content-Type": "application/json",
   },

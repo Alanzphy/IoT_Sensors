@@ -1,0 +1,2476 @@
+openapi: 3.1.0
+info:
+  title: "Sistema IoT Riego Agr\xEDcola"
+  version: 0.1.0
+paths:
+  /api/v1/auth/login:
+    post:
+      tags:
+      - Auth
+      summary: Login
+      description: Authenticate user and return access + refresh tokens.
+      operationId: login_api_v1_auth_login_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/refresh:
+    post:
+      tags:
+      - Auth
+      summary: Refresh
+      description: Issue a new access token using a valid refresh token.
+      operationId: refresh_api_v1_auth_refresh_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/logout:
+    post:
+      tags:
+      - Auth
+      summary: Logout
+      description: Revoke a refresh token (logout).
+      operationId: logout_api_v1_auth_logout_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/users:
+    get:
+      tags:
+      - Users
+      summary: List Users
+      operationId: list_users_api_v1_users_get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 50
+          title: Per Page
+      - name: role
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Role
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse_UserResponse_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      tags:
+      - Users
+      summary: Create User
+      operationId: create_user_api_v1_users_post
+      security:
+      - OAuth2PasswordBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/users/{user_id}:
+    get:
+      tags:
+      - Users
+      summary: Get User
+      operationId: get_user_api_v1_users__user_id__get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: User Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    put:
+      tags:
+      - Users
+      summary: Update User
+      operationId: update_user_api_v1_users__user_id__put
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: User Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - Users
+      summary: Delete User
+      operationId: delete_user_api_v1_users__user_id__delete
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: User Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/clients:
+    get:
+      tags:
+      - Clients
+      summary: List Clients
+      operationId: list_clients_api_v1_clients_get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 50
+          title: Per Page
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse_ClientResponse_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      tags:
+      - Clients
+      summary: Create Client
+      operationId: create_client_api_v1_clients_post
+      security:
+      - OAuth2PasswordBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/clients/{client_id}:
+    get:
+      tags:
+      - Clients
+      summary: Get Client
+      operationId: get_client_api_v1_clients__client_id__get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: client_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Client Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    put:
+      tags:
+      - Clients
+      summary: Update Client
+      operationId: update_client_api_v1_clients__client_id__put
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: client_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Client Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - Clients
+      summary: Delete Client
+      operationId: delete_client_api_v1_clients__client_id__delete
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: client_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Client Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/properties:
+    get:
+      tags:
+      - Properties
+      summary: List Properties
+      operationId: list_properties_api_v1_properties_get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 50
+          title: Per Page
+      - name: client_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Client Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse_PropertyResponse_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      tags:
+      - Properties
+      summary: Create Property
+      operationId: create_property_api_v1_properties_post
+      security:
+      - OAuth2PasswordBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PropertyCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PropertyResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/properties/{property_id}:
+    get:
+      tags:
+      - Properties
+      summary: Get Property
+      operationId: get_property_api_v1_properties__property_id__get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: property_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Property Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PropertyResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    put:
+      tags:
+      - Properties
+      summary: Update Property
+      operationId: update_property_api_v1_properties__property_id__put
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: property_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Property Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PropertyUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PropertyResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - Properties
+      summary: Delete Property
+      operationId: delete_property_api_v1_properties__property_id__delete
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: property_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Property Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PropertyResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/crop-types:
+    get:
+      tags:
+      - Crop Types
+      summary: List Crop Types
+      operationId: list_crop_types_api_v1_crop_types_get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 50
+          title: Per Page
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse_CropTypeResponse_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      tags:
+      - Crop Types
+      summary: Create Crop Type
+      operationId: create_crop_type_api_v1_crop_types_post
+      security:
+      - OAuth2PasswordBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CropTypeCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CropTypeResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/crop-types/{crop_type_id}:
+    get:
+      tags:
+      - Crop Types
+      summary: Get Crop Type
+      operationId: get_crop_type_api_v1_crop_types__crop_type_id__get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: crop_type_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Crop Type Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CropTypeResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    put:
+      tags:
+      - Crop Types
+      summary: Update Crop Type
+      operationId: update_crop_type_api_v1_crop_types__crop_type_id__put
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: crop_type_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Crop Type Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CropTypeUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CropTypeResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - Crop Types
+      summary: Delete Crop Type
+      operationId: delete_crop_type_api_v1_crop_types__crop_type_id__delete
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: crop_type_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Crop Type Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CropTypeResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/irrigation-areas:
+    get:
+      tags:
+      - Irrigation Areas
+      summary: List Irrigation Areas
+      operationId: list_irrigation_areas_api_v1_irrigation_areas_get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 50
+          title: Per Page
+      - name: property_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Property Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse_IrrigationAreaResponse_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      tags:
+      - Irrigation Areas
+      summary: Create Irrigation Area
+      operationId: create_irrigation_area_api_v1_irrigation_areas_post
+      security:
+      - OAuth2PasswordBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IrrigationAreaCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IrrigationAreaResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/irrigation-areas/{area_id}:
+    get:
+      tags:
+      - Irrigation Areas
+      summary: Get Irrigation Area
+      operationId: get_irrigation_area_api_v1_irrigation_areas__area_id__get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: area_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Area Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IrrigationAreaResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    put:
+      tags:
+      - Irrigation Areas
+      summary: Update Irrigation Area
+      operationId: update_irrigation_area_api_v1_irrigation_areas__area_id__put
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: area_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Area Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IrrigationAreaUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IrrigationAreaResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - Irrigation Areas
+      summary: Delete Irrigation Area
+      operationId: delete_irrigation_area_api_v1_irrigation_areas__area_id__delete
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: area_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Area Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IrrigationAreaResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/crop-cycles:
+    get:
+      tags:
+      - Crop Cycles
+      summary: List Crop Cycles
+      operationId: list_crop_cycles_api_v1_crop_cycles_get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 50
+          title: Per Page
+      - name: irrigation_area_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Irrigation Area Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse_CropCycleResponse_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      tags:
+      - Crop Cycles
+      summary: Create Crop Cycle
+      operationId: create_crop_cycle_api_v1_crop_cycles_post
+      security:
+      - OAuth2PasswordBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CropCycleCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CropCycleResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/crop-cycles/{cycle_id}:
+    get:
+      tags:
+      - Crop Cycles
+      summary: Get Crop Cycle
+      operationId: get_crop_cycle_api_v1_crop_cycles__cycle_id__get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: cycle_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Cycle Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CropCycleResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    put:
+      tags:
+      - Crop Cycles
+      summary: Update Crop Cycle
+      operationId: update_crop_cycle_api_v1_crop_cycles__cycle_id__put
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: cycle_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Cycle Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CropCycleUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CropCycleResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - Crop Cycles
+      summary: Delete Crop Cycle
+      operationId: delete_crop_cycle_api_v1_crop_cycles__cycle_id__delete
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: cycle_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Cycle Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CropCycleResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/nodes:
+    get:
+      tags:
+      - Nodes
+      summary: List Nodes
+      operationId: list_nodes_api_v1_nodes_get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 50
+          title: Per Page
+      - name: irrigation_area_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Irrigation Area Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse_NodeResponse_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      tags:
+      - Nodes
+      summary: Create Node
+      operationId: create_node_api_v1_nodes_post
+      security:
+      - OAuth2PasswordBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NodeCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NodeResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/nodes/{node_id}:
+    get:
+      tags:
+      - Nodes
+      summary: Get Node
+      operationId: get_node_api_v1_nodes__node_id__get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: node_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Node Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NodeResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    put:
+      tags:
+      - Nodes
+      summary: Update Node
+      operationId: update_node_api_v1_nodes__node_id__put
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: node_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Node Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NodeUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NodeResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - Nodes
+      summary: Delete Node
+      operationId: delete_node_api_v1_nodes__node_id__delete
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: node_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Node Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NodeResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/readings:
+    post:
+      tags:
+      - Readings
+      summary: Create Reading
+      operationId: create_reading_api_v1_readings_post
+      parameters:
+      - name: X-API-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          title: X-Api-Key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReadingCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadingCreateResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - Readings
+      summary: List Readings
+      operationId: list_readings_api_v1_readings_get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 50
+          title: Per Page
+      - name: irrigation_area_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Irrigation Area Id
+      - name: start_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Start Date
+      - name: end_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: End Date
+      - name: crop_cycle_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Crop Cycle Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse_ReadingResponse_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/readings/latest:
+    get:
+      tags:
+      - Readings
+      summary: Get Latest Reading
+      operationId: get_latest_reading_api_v1_readings_latest_get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: irrigation_area_id
+        in: query
+        required: true
+        schema:
+          type: integer
+          title: Irrigation Area Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/ReadingResponse'
+                - type: 'null'
+                title: Response Get Latest Reading Api V1 Readings Latest Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/readings/export:
+    get:
+      tags:
+      - Readings
+      summary: Export Readings
+      operationId: export_readings_api_v1_readings_export_get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: format
+        in: query
+        required: true
+        schema:
+          type: string
+          pattern: ^(csv|xlsx|pdf)$
+          title: Format
+      - name: irrigation_area_id
+        in: query
+        required: true
+        schema:
+          type: integer
+          title: Irrigation Area Id
+      - name: start_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Start Date
+      - name: end_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: End Date
+      - name: crop_cycle_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Crop Cycle Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /health:
+    get:
+      summary: Health Check
+      operationId: health_check_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+components:
+  schemas:
+    ClientCreate:
+      properties:
+        email:
+          type: string
+          title: Email
+        password:
+          type: string
+          title: Password
+        full_name:
+          type: string
+          title: Full Name
+        company_name:
+          type: string
+          title: Company Name
+        phone:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Phone
+        address:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Address
+      type: object
+      required:
+      - email
+      - password
+      - full_name
+      - company_name
+      title: ClientCreate
+    ClientResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        user_id:
+          type: integer
+          title: User Id
+        company_name:
+          type: string
+          title: Company Name
+        phone:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Phone
+        address:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Address
+        user:
+          anyOf:
+          - $ref: '#/components/schemas/UserResponse'
+          - type: 'null'
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - id
+      - user_id
+      - company_name
+      - created_at
+      - updated_at
+      title: ClientResponse
+    ClientUpdate:
+      properties:
+        company_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Company Name
+        phone:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Phone
+        address:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Address
+      type: object
+      title: ClientUpdate
+    CropCycleCreate:
+      properties:
+        irrigation_area_id:
+          type: integer
+          title: Irrigation Area Id
+        start_date:
+          type: string
+          format: date
+          title: Start Date
+        end_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: End Date
+      type: object
+      required:
+      - irrigation_area_id
+      - start_date
+      title: CropCycleCreate
+    CropCycleResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        irrigation_area_id:
+          type: integer
+          title: Irrigation Area Id
+        start_date:
+          type: string
+          format: date
+          title: Start Date
+        end_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: End Date
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - id
+      - irrigation_area_id
+      - start_date
+      - created_at
+      - updated_at
+      title: CropCycleResponse
+    CropCycleUpdate:
+      properties:
+        start_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Start Date
+        end_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: End Date
+      type: object
+      title: CropCycleUpdate
+    CropTypeBrief:
+      properties:
+        id:
+          type: integer
+          title: Id
+        name:
+          type: string
+          title: Name
+      type: object
+      required:
+      - id
+      - name
+      title: CropTypeBrief
+      description: Minimal crop type info for embedding in other responses.
+    CropTypeCreate:
+      properties:
+        name:
+          type: string
+          title: Name
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+      type: object
+      required:
+      - name
+      title: CropTypeCreate
+    CropTypeResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        name:
+          type: string
+          title: Name
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - id
+      - name
+      - created_at
+      - updated_at
+      title: CropTypeResponse
+    CropTypeUpdate:
+      properties:
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+      type: object
+      title: CropTypeUpdate
+    EnvironmentalData:
+      properties:
+        temperature:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Temperature
+        relative_humidity:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Relative Humidity
+        wind_speed:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Wind Speed
+        solar_radiation:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Solar Radiation
+        eto:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Eto
+      type: object
+      title: EnvironmentalData
+    EnvironmentalResponse:
+      properties:
+        temperature:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Temperature
+        relative_humidity:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Relative Humidity
+        wind_speed:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Wind Speed
+        solar_radiation:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Solar Radiation
+        eto:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Eto
+      type: object
+      title: EnvironmentalResponse
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    IrrigationAreaCreate:
+      properties:
+        property_id:
+          type: integer
+          title: Property Id
+        crop_type_id:
+          type: integer
+          title: Crop Type Id
+        name:
+          type: string
+          title: Name
+        area_size:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Area Size
+      type: object
+      required:
+      - property_id
+      - crop_type_id
+      - name
+      title: IrrigationAreaCreate
+    IrrigationAreaResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        property_id:
+          type: integer
+          title: Property Id
+        crop_type_id:
+          type: integer
+          title: Crop Type Id
+        name:
+          type: string
+          title: Name
+        area_size:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Area Size
+        crop_type:
+          anyOf:
+          - $ref: '#/components/schemas/CropTypeBrief'
+          - type: 'null'
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - id
+      - property_id
+      - crop_type_id
+      - name
+      - created_at
+      - updated_at
+      title: IrrigationAreaResponse
+    IrrigationAreaUpdate:
+      properties:
+        crop_type_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Crop Type Id
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
+        area_size:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Area Size
+      type: object
+      title: IrrigationAreaUpdate
+    IrrigationData:
+      properties:
+        active:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Active
+        accumulated_liters:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Accumulated Liters
+        flow_per_minute:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Flow Per Minute
+      type: object
+      title: IrrigationData
+    IrrigationResponse:
+      properties:
+        active:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Active
+        accumulated_liters:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Accumulated Liters
+        flow_per_minute:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Flow Per Minute
+      type: object
+      title: IrrigationResponse
+    LoginRequest:
+      properties:
+        email:
+          type: string
+          title: Email
+        password:
+          type: string
+          title: Password
+      type: object
+      required:
+      - email
+      - password
+      title: LoginRequest
+    NodeCreate:
+      properties:
+        irrigation_area_id:
+          type: integer
+          title: Irrigation Area Id
+        serial_number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Serial Number
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
+        latitude:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Latitude
+        longitude:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Longitude
+        is_active:
+          type: boolean
+          title: Is Active
+          default: true
+      type: object
+      required:
+      - irrigation_area_id
+      title: NodeCreate
+    NodeResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        irrigation_area_id:
+          type: integer
+          title: Irrigation Area Id
+        api_key:
+          type: string
+          title: Api Key
+        serial_number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Serial Number
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
+        latitude:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Latitude
+        longitude:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Longitude
+        is_active:
+          type: boolean
+          title: Is Active
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - id
+      - irrigation_area_id
+      - api_key
+      - is_active
+      - created_at
+      - updated_at
+      title: NodeResponse
+    NodeUpdate:
+      properties:
+        serial_number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Serial Number
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
+        latitude:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Latitude
+        longitude:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Longitude
+        is_active:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Is Active
+      type: object
+      title: NodeUpdate
+    PaginatedResponse_ClientResponse_:
+      properties:
+        page:
+          type: integer
+          title: Page
+        per_page:
+          type: integer
+          title: Per Page
+        total:
+          type: integer
+          title: Total
+        data:
+          items:
+            $ref: '#/components/schemas/ClientResponse'
+          type: array
+          title: Data
+      type: object
+      required:
+      - page
+      - per_page
+      - total
+      - data
+      title: PaginatedResponse[ClientResponse]
+    PaginatedResponse_CropCycleResponse_:
+      properties:
+        page:
+          type: integer
+          title: Page
+        per_page:
+          type: integer
+          title: Per Page
+        total:
+          type: integer
+          title: Total
+        data:
+          items:
+            $ref: '#/components/schemas/CropCycleResponse'
+          type: array
+          title: Data
+      type: object
+      required:
+      - page
+      - per_page
+      - total
+      - data
+      title: PaginatedResponse[CropCycleResponse]
+    PaginatedResponse_CropTypeResponse_:
+      properties:
+        page:
+          type: integer
+          title: Page
+        per_page:
+          type: integer
+          title: Per Page
+        total:
+          type: integer
+          title: Total
+        data:
+          items:
+            $ref: '#/components/schemas/CropTypeResponse'
+          type: array
+          title: Data
+      type: object
+      required:
+      - page
+      - per_page
+      - total
+      - data
+      title: PaginatedResponse[CropTypeResponse]
+    PaginatedResponse_IrrigationAreaResponse_:
+      properties:
+        page:
+          type: integer
+          title: Page
+        per_page:
+          type: integer
+          title: Per Page
+        total:
+          type: integer
+          title: Total
+        data:
+          items:
+            $ref: '#/components/schemas/IrrigationAreaResponse'
+          type: array
+          title: Data
+      type: object
+      required:
+      - page
+      - per_page
+      - total
+      - data
+      title: PaginatedResponse[IrrigationAreaResponse]
+    PaginatedResponse_NodeResponse_:
+      properties:
+        page:
+          type: integer
+          title: Page
+        per_page:
+          type: integer
+          title: Per Page
+        total:
+          type: integer
+          title: Total
+        data:
+          items:
+            $ref: '#/components/schemas/NodeResponse'
+          type: array
+          title: Data
+      type: object
+      required:
+      - page
+      - per_page
+      - total
+      - data
+      title: PaginatedResponse[NodeResponse]
+    PaginatedResponse_PropertyResponse_:
+      properties:
+        page:
+          type: integer
+          title: Page
+        per_page:
+          type: integer
+          title: Per Page
+        total:
+          type: integer
+          title: Total
+        data:
+          items:
+            $ref: '#/components/schemas/PropertyResponse'
+          type: array
+          title: Data
+      type: object
+      required:
+      - page
+      - per_page
+      - total
+      - data
+      title: PaginatedResponse[PropertyResponse]
+    PaginatedResponse_ReadingResponse_:
+      properties:
+        page:
+          type: integer
+          title: Page
+        per_page:
+          type: integer
+          title: Per Page
+        total:
+          type: integer
+          title: Total
+        data:
+          items:
+            $ref: '#/components/schemas/ReadingResponse'
+          type: array
+          title: Data
+      type: object
+      required:
+      - page
+      - per_page
+      - total
+      - data
+      title: PaginatedResponse[ReadingResponse]
+    PaginatedResponse_UserResponse_:
+      properties:
+        page:
+          type: integer
+          title: Page
+        per_page:
+          type: integer
+          title: Per Page
+        total:
+          type: integer
+          title: Total
+        data:
+          items:
+            $ref: '#/components/schemas/UserResponse'
+          type: array
+          title: Data
+      type: object
+      required:
+      - page
+      - per_page
+      - total
+      - data
+      title: PaginatedResponse[UserResponse]
+    PropertyCreate:
+      properties:
+        client_id:
+          type: integer
+          title: Client Id
+        name:
+          type: string
+          title: Name
+        location:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Location
+      type: object
+      required:
+      - client_id
+      - name
+      title: PropertyCreate
+    PropertyResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        client_id:
+          type: integer
+          title: Client Id
+        name:
+          type: string
+          title: Name
+        location:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Location
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - id
+      - client_id
+      - name
+      - created_at
+      - updated_at
+      title: PropertyResponse
+    PropertyUpdate:
+      properties:
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
+        location:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Location
+      type: object
+      title: PropertyUpdate
+    ReadingCreate:
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          title: Timestamp
+        soil:
+          $ref: '#/components/schemas/SoilData'
+        irrigation:
+          $ref: '#/components/schemas/IrrigationData'
+        environmental:
+          $ref: '#/components/schemas/EnvironmentalData'
+      type: object
+      required:
+      - timestamp
+      - soil
+      - irrigation
+      - environmental
+      title: ReadingCreate
+    ReadingCreateResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        node_id:
+          type: integer
+          title: Node Id
+        timestamp:
+          type: string
+          format: date-time
+          title: Timestamp
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+      type: object
+      required:
+      - id
+      - node_id
+      - timestamp
+      - created_at
+      title: ReadingCreateResponse
+      description: Returned after a successful sensor POST.
+    ReadingResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        node_id:
+          type: integer
+          title: Node Id
+        timestamp:
+          type: string
+          format: date-time
+          title: Timestamp
+        soil:
+          anyOf:
+          - $ref: '#/components/schemas/SoilResponse'
+          - type: 'null'
+        irrigation:
+          anyOf:
+          - $ref: '#/components/schemas/IrrigationResponse'
+          - type: 'null'
+        environmental:
+          anyOf:
+          - $ref: '#/components/schemas/EnvironmentalResponse'
+          - type: 'null'
+      type: object
+      required:
+      - id
+      - node_id
+      - timestamp
+      title: ReadingResponse
+      description: Full reading with nested categories (for history/latest).
+    RefreshRequest:
+      properties:
+        refresh_token:
+          type: string
+          title: Refresh Token
+      type: object
+      required:
+      - refresh_token
+      title: RefreshRequest
+    RefreshResponse:
+      properties:
+        access_token:
+          type: string
+          title: Access Token
+        token_type:
+          type: string
+          title: Token Type
+          default: bearer
+      type: object
+      required:
+      - access_token
+      title: RefreshResponse
+    SoilData:
+      properties:
+        conductivity:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Conductivity
+        temperature:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Temperature
+        humidity:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Humidity
+        water_potential:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Water Potential
+      type: object
+      title: SoilData
+    SoilResponse:
+      properties:
+        conductivity:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Conductivity
+        temperature:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Temperature
+        humidity:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Humidity
+        water_potential:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Water Potential
+      type: object
+      title: SoilResponse
+    TokenResponse:
+      properties:
+        access_token:
+          type: string
+          title: Access Token
+        refresh_token:
+          type: string
+          title: Refresh Token
+        token_type:
+          type: string
+          title: Token Type
+          default: bearer
+      type: object
+      required:
+      - access_token
+      - refresh_token
+      title: TokenResponse
+    UserCreate:
+      properties:
+        email:
+          type: string
+          title: Email
+        password:
+          type: string
+          title: Password
+        full_name:
+          type: string
+          title: Full Name
+        role:
+          type: string
+          pattern: ^(admin|cliente)$
+          title: Role
+        is_active:
+          type: boolean
+          title: Is Active
+          default: true
+      type: object
+      required:
+      - email
+      - password
+      - full_name
+      - role
+      title: UserCreate
+    UserResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        email:
+          type: string
+          title: Email
+        full_name:
+          type: string
+          title: Full Name
+        role:
+          type: string
+          title: Role
+        is_active:
+          type: boolean
+          title: Is Active
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - id
+      - email
+      - full_name
+      - role
+      - is_active
+      - created_at
+      - updated_at
+      title: UserResponse
+    UserUpdate:
+      properties:
+        email:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Email
+        password:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Password
+        full_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Full Name
+        role:
+          anyOf:
+          - type: string
+            pattern: ^(admin|cliente)$
+          - type: 'null'
+          title: Role
+        is_active:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Is Active
+      type: object
+      title: UserUpdate
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+  securitySchemes:
+    OAuth2PasswordBearer:
+      type: oauth2
+      flows:
+        password:
+          scopes: {}
+          tokenUrl: /api/v1/auth/login

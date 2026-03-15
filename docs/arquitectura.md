@@ -279,9 +279,36 @@ graph TD
 - Exportación: `GET /api/v1/readings/export?format=csv|xlsx|pdf`
 
 ---
+
+## 6. Decisiones de Arquitectura: Docker y Deployment
+
+El sistema ha sido estructurado para un despliegue moderno, ligero y seguro utilizando contenedores y un orquestador estilo PaaS (Dokploy).
+
+### 6.1 Desacoplamiento de Servicios
+En lugar de tener un servidor monolítico, la arquitectura divide las responsabilidades en 3 contenedores aislados:
+1. **Base de Datos (MySQL):** Aislada de la lógica de negocio. Sus datos persisten en un "Volume" independiente, garantizando que el contenedor pueda ser destruido o actualizado sin pérdida temporal ni permanente de las lecturas de los sensores.
+2. **Backend (FastAPI):** Se encarga únicamente del cálculo, ingesta de datos y consultas a la BD. Delega el alojamiento de páginas web a Nginx. Usa `uv` en su build para una gestión de dependencias estricta y extremadamente rápida.
+3. **Frontend (React + Nginx Interno):** Dedicado en exclusiva a servir la interfaz de usuario.
+
+### 6.2 Multi-stage Build del Frontend (React -> Nginx)
+Una de las decisiones clave de optimización fue el uso de un patrón "Multi-stage" en el `Dockerfile` del Frontend. 
+
+En desarrollo habitual utilizamos Node.js (`npm run dev`), pero en producción esto es ineficiente y expone una superficie de ataque. La arquitectura establece que:
+- **Stage 1 (Construcción):** Un contenedor temporal levanta Node.js, descarga las librerías NPM, transpila React/TypeScript y genera los activos puros estáticos (Paso de empaquetado).
+- **Stage 2 (Servicio):** El contenedor final **descarta** Node.js. En su lugar, utiliza un servidor **Nginx base de 30MB** al que se le copian solo los archivos estáticos resultantes.
+- **Por qué:** Nginx es nativamente más rápido, requiere de ~10MB de RAM (contra los ~300MB de un framework JS en ejecución), reduce enormemente el tamaño de la imagen Docker final y blinda el código fuente original.
+
+### 6.3 Routing y Proxy a través de Traefik (Dokploy)
+Se confió la entrada pública del tráfico a **Traefik**, integrado naturalmente por el gestor de VPS, Dokploy. 
+
+- **Por qué Traefik sobre Nginx perimetral manual:** Traefik ofrece "Service Discovery". En lugar de cablear las rutas manualmente en un archivo complejo, los contenedores declaran sus rutas como "etiquetas" (labels) en el archivo `docker-compose.yml`. Al arrancar, Traefik lee estas etiquetas y auto-configura el ruteo.
+- **Let's Encrypt nativo:** Traefik intercepta el dominio asignado y genera un certificado SSL HTTPS en el acto antes de que el tráfico toque nuestros contenedores, haciendo innecesaria una configuración criptográfica en FastAPI o en el Frontend.
+- Todas las peticiones al dominio raíz son derivadas al **Paso 6.2 (Frontend/Nginx estático)**, excepto si la URL contiene el bloque `/api/*`, en cuyo caso es derivada directamente al puerto 5050 del **Paso 6.1 (Backend/FastAPI)**.
+
+---
 ---
 
-## 6. FASE 2 — Expansión de Arquitectura (pre-redactada)
+## 7. FASE 2 — Expansión de Arquitectura (pre-redactada)
 
 > ⏳ **ESTA SECCIÓN NO ESTÁ IMPLEMENTADA.** Está pre-redactada para que, al iniciar la Fase 2, solo haya que activar los componentes — no redactar desde cero. Cada sub-sección incluye el diagrama, las tablas y los endpoints listos para integrar.
 

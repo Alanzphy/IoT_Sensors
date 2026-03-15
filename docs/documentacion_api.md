@@ -46,7 +46,7 @@ El sistema tiene 4 componentes que se comunican a través de la API REST del bac
 └──────────────────┘  JSON   │  └─────────────────────────────┘  │
                              └──────────────────────────────────┘
                                         ▲
-                                        │ Nginx reverse proxy
+                                        │ Traefik (Dokploy) reverse proxy
                                         │ puertos 80/443
                                         ▼
                                     INTERNET
@@ -62,7 +62,7 @@ El sistema tiene 4 componentes que se comunican a través de la API REST del bac
 
 **El backend (puerto 5050)** es el único punto de contacto con la base de datos. Ni el frontend ni el simulador hablan directamente con MySQL — todo pasa por la API.
 
-**Nginx** actúa como reverse proxy público: recibe tráfico en puertos 80/443 y lo redirige al backend (5050) o al frontend estático según la URL.
+**Traefik (vía Dokploy)** actúa como reverse proxy público: recibe tráfico en puertos 80/443 y lo redirige al backend (5050) o al frontend (80) según la URL y configuraciones de subdominios, gestionando automáticamente los certificados SSL.
 
 ---
 
