@@ -105,7 +105,7 @@ export function ClientManagement() {
         </div>
       </BentoCard>
 
-      {error && <div className="text-red-500 mb-4">{error}</div>}
+      {error && <div className="text-red-500 mb-4">{typeof error === 'string' ? error : JSON.stringify(error)}</div>}
 
       <div className="hidden md:block">
         <BentoCard variant="light">

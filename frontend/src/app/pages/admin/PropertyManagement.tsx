@@ -98,7 +98,7 @@ export function PropertyManagement() {
                   <td className="py-3 px-4 text-[#2C2621]">{prop.name}</td>
                   <td className="py-3 px-4 text-[#6E6359]">{prop.location || "-"}</td>
                   <td className="py-3 px-4 flex justify-end gap-2">
-                    <Link to={`/admin/properties/${prop.id}/areas`}>
+                    <Link to={`/admin/predios/${prop.id}/areas`}>
                       <PillButton variant="outline" className="px-3 py-1 text-xs">Áreas de Riego <ChevronRight className="w-3 h-3 ml-1" /></PillButton>
                     </Link>
                   </td>
@@ -118,7 +118,7 @@ export function PropertyManagement() {
           <BentoCard key={prop.id} variant="light" className="p-4">
             <h3 className="text-[#2C2621] font-medium mb-1">{prop.name}</h3>
             <p className="text-sm text-[#6E6359] mb-4">{prop.location || "Sin ubicación"}</p>
-            <Link to={`/admin/properties/${prop.id}/areas`}>
+            <Link to={`/admin/predios/${prop.id}/areas`}>
                <PillButton variant="outline" className="w-full justify-center">Ver Áreas de Riego <ChevronRight className="w-4 h-4 ml-1" /></PillButton>
             </Link>
           </BentoCard>
