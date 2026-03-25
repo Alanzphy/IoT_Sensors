@@ -54,24 +54,44 @@ sensorestest/
 
 ## Desarrollo Local
 
-Para correr el sistema localmente para desarrollo o pruebas rápidas:
+Para correr el sistema localmente para desarrollo o pruebas rápidas.
 
-**1. Levantar la Base de Datos:**
-```bash
-docker-compose up -d mysql
-```
+**Prerequisitos:** Tener [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado y corriendo.
 
-**2. Backend (FastAPI):**
+---
+
+**Paso 0 — Configurar variables de entorno del backend:**
+
+> ⚠️ **Este paso es obligatorio.** Sin el `.env`, Alembic y FastAPI no pueden conectarse a la base de datos.
+
 ```bash
 cd backend
-uv sync                     # Instala dependencias
-uv run alembic upgrade head # Ejecuta migraciones de BD
+cp .env.example .env
+```
+
+El archivo `.env` ya viene con los valores correctos para desarrollo local (la contraseña `rootpass` coincide con la que usa Docker).  
+Si cambiaste `DB_PASSWORD` en el `docker-compose.yml`, actualízala también en `.env`.
+
+---
+
+**Paso 1 — Levantar la Base de Datos:**
+```bash
+# Desde la raíz del proyecto
+docker compose up -d mysql
+```
+Espera unos segundos a que MySQL termine de iniciar (puedes verificar con `docker ps`).
+
+**Paso 2 — Backend (FastAPI):**
+```bash
+cd backend
+uv sync                      # Instala dependencias del proyecto
+uv run alembic upgrade head  # Aplica migraciones a la BD
 uv run uvicorn app.main:app --reload --port 5050
 ```
-La API estará en `http://localhost:5050` (docs en `/docs`).
+La API estará en `http://localhost:5050` (docs interactivos en `/docs`).
 
-**3. Frontend (React/Vite):**
-En otra terminal nueva:
+**Paso 3 — Frontend (React/Vite):**
+En otra terminal:
 ```bash
 cd frontend
 npm install
@@ -79,13 +99,21 @@ npm run dev
 ```
 La aplicación web estará en `http://localhost:5173`.
 
-**4. Simulador IoT:**
-Para inyectar datos falsos en tiempo real:
+**Paso 4 — Simulador IoT:**
+Para inyectar lecturas de sensor en tiempo real:
 ```bash
 cd simulator
-#El script usa librerías estándar, no requiere un venv
+# El script usa librerías estándar, no requiere un venv
 python3 simulator.py
 ```
+
+### Troubleshooting
+
+| Error | Causa probable | Solución |
+|-------|---------------|----------|
+| `Access denied for user 'root'` | Falta el `.env` o `DB_PASSWORD` está vacío | Ejecutar el **Paso 0** |
+| `Can't connect to MySQL server` | El contenedor de MySQL no está listo | Esperar ~10s y reintentar, o `docker compose logs mysql` |
+| `Connection refused` (localhost) | Problema de socket en Windows/WSL | Cambiar `DB_HOST=localhost` a `DB_HOST=127.0.0.1` en `.env` |
 
 ## Guía de Despliegue (Producción)
 
