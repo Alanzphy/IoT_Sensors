@@ -84,11 +84,15 @@ Espera unos segundos a que MySQL termine de iniciar (puedes verificar con `docke
 **Paso 2 — Backend (FastAPI):**
 ```bash
 cd backend
-uv sync                      # Instala dependencias del proyecto
-uv run alembic upgrade head  # Aplica migraciones a la BD
+uv sync                          # Instala dependencias del proyecto
+uv run alembic upgrade head      # Crea las tablas en la BD
+uv run python -m app.db.seed     # Inserta datos de prueba (usuarios, nodos, API Keys)
 uv run uvicorn app.main:app --reload --port 5050
 ```
 La API estará en `http://localhost:5050` (docs interactivos en `/docs`).
+
+> El seed crea el admin, el cliente de prueba y los nodos con sus API Keys.
+> Es seguro ejecutarlo varias veces — solo inserta lo que no existe.
 
 **Paso 3 — Frontend (React/Vite):**
 En otra terminal:
