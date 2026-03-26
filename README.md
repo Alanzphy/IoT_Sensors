@@ -100,12 +100,21 @@ npm run dev
 La aplicación web estará en `http://localhost:5173`.
 
 **Paso 4 — Simulador IoT:**
-Para inyectar lecturas de sensor en tiempo real:
+El simulador requiere una API Key de nodo. Las keys de prueba están en [`TEST_DATA.md`](TEST_DATA.md).
 ```bash
 cd simulator
 # El script usa librerías estándar, no requiere un venv
-python3 simulator.py
+
+# Uso básico (una lectura cada 10 minutos, comportamiento real):
+python3 simulator.py --api-key 99189486-8181-4e8c-8c6d-b3da66e6712b
+
+# Para pruebas rápidas — enviar cada 30 segundos:
+python3 simulator.py --api-key 99189486-8181-4e8c-8c6d-b3da66e6712b --interval 30
+
+# Generar historial de los últimos 7 días de golpe:
+python3 simulator.py --api-key 99189486-8181-4e8c-8c6d-b3da66e6712b --backfill 7
 ```
+La key del ejemplo corresponde al **Nodo Nogal Norte**, vinculado al usuario `cliente@sensores.com`.
 
 ### Troubleshooting
 
