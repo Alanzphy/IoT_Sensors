@@ -1,0 +1,206 @@
+"""Tests de integración para /api/v1/readings (POST ingesta + GET historia + export)."""
+
+from datetime import datetime, timezone
+
+import pytest
+
+
+SENSOR_PAYLOAD = {
+    "timestamp": "2026-04-01T10:00:00Z",
+    "soil": {
+        "conductivity": 2.5,
+        "temperature": 22.3,
+        "humidity": 45.6,
+        "water_potential": -0.8,
+    },
+    "irrigation": {
+        "active": True,
+        "accumulated_liters": 1250.0,
+        "flow_per_minute": 8.3,
+    },
+    "environmental": {
+        "temperature": 28.1,
+        "relative_humidity": 55.0,
+        "wind_speed": 12.5,
+        "solar_radiation": 650.0,
+        "eto": 5.2,
+    },
+}
+
+
+class TestPostReading:
+    def test_ingest_reading_valid_api_key(self, client, sample_node, node_headers):
+        resp = client.post("/api/v1/readings", json=SENSOR_PAYLOAD, headers=node_headers)
+        assert resp.status_code == 201
+        data = resp.json()
+        assert "id" in data
+        assert data["node_id"] == sample_node.id
+
+    def test_ingest_reading_invalid_api_key_returns_401(self, client):
+        resp = client.post(
+            "/api/v1/readings",
+            json=SENSOR_PAYLOAD,
+            headers={"X-API-Key": "invalid_key_xyz"},
+        )
+        assert resp.status_code == 401
+
+    def test_ingest_reading_missing_api_key_returns_422(self, client):
+        resp = client.post("/api/v1/readings", json=SENSOR_PAYLOAD)
+        assert resp.status_code == 422
+
+    def test_ingest_reading_missing_timestamp_returns_422(self, client, node_headers):
+        payload = {k: v for k, v in SENSOR_PAYLOAD.items() if k != "timestamp"}
+        resp = client.post("/api/v1/readings", json=payload, headers=node_headers)
+        assert resp.status_code == 422
+
+    def test_ingest_reading_null_optional_fields(self, client, node_headers):
+        payload = {
+            **SENSOR_PAYLOAD,
+            "timestamp": "2026-04-01T11:00:00Z",
+            "soil": {"conductivity": None, "temperature": None, "humidity": None, "water_potential": None},
+            "environmental": {"temperature": None, "relative_humidity": None, "wind_speed": None, "solar_radiation": None, "eto": None},
+        }
+        resp = client.post("/api/v1/readings", json=payload, headers=node_headers)
+        assert resp.status_code == 201
+
+    def test_ingest_returns_timestamp_and_created_at(self, client, node_headers):
+        resp = client.post(
+            "/api/v1/readings",
+            json={**SENSOR_PAYLOAD, "timestamp": "2026-04-02T09:00:00Z"},
+            headers=node_headers,
+        )
+        data = resp.json()
+        assert "timestamp" in data
+        assert "created_at" in data
+
+
+class TestGetReadings:
+    def _ingest(self, client, node_headers, timestamp="2026-04-01T10:00:00Z"):
+        return client.post(
+            "/api/v1/readings",
+            json={**SENSOR_PAYLOAD, "timestamp": timestamp},
+            headers=node_headers,
+        )
+
+    def test_list_readings_requires_auth(self, client, sample_node, node_headers):
+        self._ingest(client, node_headers)
+        resp = client.get("/api/v1/readings")
+        assert resp.status_code == 401
+
+    def test_list_readings_with_auth(self, client, sample_node, node_headers, admin_headers):
+        self._ingest(client, node_headers)
+        resp = client.get("/api/v1/readings", headers=admin_headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "data" in data
+        assert "total" in data
+        assert "page" in data
+
+    def test_list_readings_pagination(self, client, node_headers, admin_headers, sample_node):
+        for i in range(3):
+            self._ingest(client, node_headers, f"2026-04-0{i+1}T10:00:00Z")
+        resp = client.get("/api/v1/readings?page=1&per_page=2", headers=admin_headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["data"]) <= 2
+
+    def test_list_filter_by_irrigation_area(
+        self, client, node_headers, admin_headers, sample_node, sample_irrigation_area
+    ):
+        self._ingest(client, node_headers)
+        resp = client.get(
+            f"/api/v1/readings?irrigation_area_id={sample_irrigation_area.id}",
+            headers=admin_headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total"] >= 1
+
+
+class TestGetLatestReading:
+    def test_latest_requires_auth(self, client, sample_irrigation_area):
+        resp = client.get(f"/api/v1/readings/latest?irrigation_area_id={sample_irrigation_area.id}")
+        assert resp.status_code == 401
+
+    def test_latest_returns_none_when_no_readings(
+        self, client, admin_headers, sample_irrigation_area, sample_node
+    ):
+        """Área con nodo pero sin lecturas devuelve 200 con null."""
+        resp = client.get(
+            f"/api/v1/readings/latest?irrigation_area_id={sample_irrigation_area.id}",
+            headers=admin_headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json() is None
+
+    def test_latest_returns_most_recent(
+        self, client, admin_headers, node_headers, sample_node, sample_irrigation_area
+    ):
+        client.post(
+            "/api/v1/readings",
+            json={**SENSOR_PAYLOAD, "timestamp": "2026-04-01T08:00:00Z"},
+            headers=node_headers,
+        )
+        client.post(
+            "/api/v1/readings",
+            json={**SENSOR_PAYLOAD, "timestamp": "2026-04-01T10:00:00Z"},
+            headers=node_headers,
+        )
+        resp = client.get(
+            f"/api/v1/readings/latest?irrigation_area_id={sample_irrigation_area.id}",
+            headers=admin_headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data is not None
+        assert "2026-04-01T10:00" in data["timestamp"]
+
+
+class TestExportReadings:
+    def _ingest_one(self, client, node_headers):
+        return client.post("/api/v1/readings", json=SENSOR_PAYLOAD, headers=node_headers)
+
+    def test_export_csv(
+        self, client, admin_headers, node_headers, sample_node, sample_irrigation_area
+    ):
+        self._ingest_one(client, node_headers)
+        resp = client.get(
+            f"/api/v1/readings/export?format=csv&irrigation_area_id={sample_irrigation_area.id}",
+            headers=admin_headers,
+        )
+        assert resp.status_code == 200
+        assert "text/csv" in resp.headers["content-type"]
+        assert b"timestamp" in resp.content
+
+    def test_export_xlsx(
+        self, client, admin_headers, node_headers, sample_node, sample_irrigation_area
+    ):
+        self._ingest_one(client, node_headers)
+        resp = client.get(
+            f"/api/v1/readings/export?format=xlsx&irrigation_area_id={sample_irrigation_area.id}",
+            headers=admin_headers,
+        )
+        assert resp.status_code == 200
+        assert "spreadsheetml" in resp.headers["content-type"]
+        assert resp.content[:2] == b"PK"
+
+    def test_export_pdf(
+        self, client, admin_headers, node_headers, sample_node, sample_irrigation_area
+    ):
+        self._ingest_one(client, node_headers)
+        resp = client.get(
+            f"/api/v1/readings/export?format=pdf&irrigation_area_id={sample_irrigation_area.id}",
+            headers=admin_headers,
+        )
+        assert resp.status_code == 200
+        assert "pdf" in resp.headers["content-type"]
+        assert resp.content[:4] == b"%PDF"
+
+    def test_export_invalid_format_returns_422(
+        self, client, admin_headers, sample_irrigation_area
+    ):
+        resp = client.get(
+            f"/api/v1/readings/export?format=json&irrigation_area_id={sample_irrigation_area.id}",
+            headers=admin_headers,
+        )
+        assert resp.status_code == 422
