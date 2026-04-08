@@ -680,3 +680,42 @@ def test_mi_test(self, db, sample_node):
 - **Tests de `crop_cycles.py` endpoints** con filtro temporal
 - **Test de carga**: verificar rendimiento con 144 lecturas/nodo/día × N nodos
 - **Fixtures parametrizadas** para cubrir múltiples nodos/áreas en un solo test
+
+---
+
+## Testing del Frontend (E2E)
+
+Se realizaron pruebas End-to-End funcionales en el navegador interactivo automatizado (Browser Subagent).
+
+### Resumen de Ejecución
+- **Entorno:** `http://localhost:5173/` (Servidor Vite Local)
+- **Roles probados:** Cliente y Administrador (Credenciales de prueba)
+- **Simulador en ejecución:** Script `simulator.py` enviando peticiones cada 10s.
+
+### 1. Vista de Cliente (`cliente@sensores.com`)
+Se validó con éxito el flujo principal del cliente final:
+- **Autenticación:** El inicio de sesión y la redirección automática al dashboard suceden correctamente.
+- **Dashboard y Renderizado en Tiempo Real:**
+  - Identificación del usuario ("Hola, Juan Perez") y navegación ("Rancho Norte" → "Nogal Norte").
+  - Los **indicadores prioritarios** se resaltan de forma funcional: Humedad del Suelo (%), Flujo de Agua (L/min) y Evapotranspiración (E.T.O).
+  - El **Indicador de Frescura** está operativo (ej. actualizándose a "hace 0 min" al recibir la lectura inyectada por el tracker).
+  - Las 3 categorías dinámicas (Suelo, Riego y Ambiental) interpretan efectivamente las propiedades y renderizan con sus unidades precisas.
+  - El gráfico de humedad histórico se refleja dinámicamente frente a las inyecciones continuas.
+- **Cierre de sesión:** El método de logout en la barra lateral destruye los tokens y redirige adecuadamente.
+
+### 2. Vista de Administrador (`admin@sensores.com`)
+Se validó las vistas de gestión internas:
+- **Panel Summary:**
+  - Tarjetas de resumen cargan totales correctos (2 Clientes, 1 Predio, 4/4 Nodos en línea).
+- **Formatos Tabulares:**
+  - **Clientes:** Se constató la visualización de tabla relacional de clientes actuales.
+  - **Catálogo:** Los tipos de cultivo preestablecidos están íntegros en una vista manipulable.
+
+### 3. Defectos y Casos de Fallo (Bugs)
+
+**✅ RESUELTO: ERROR CRÍTICO (ADMIN): Navegación a "Nodos IoT"**
+*Problema Original:* Al intentar acceder a la ruta `/admin/nodos`, la aplicación fallaba y levantaba una pantalla blanca de crash (React Error) con el mensaje `Objects are not valid as a React child`. Esto ocurría porque se intentaba recuperar la lista de áreas de riego usando el ID "all" hacia al backend (`/irrigation-areas/all`), lo cual generaba un `422 Unprocessable Entity` de validación Pydantic que React trataba de inyectar al DOM como un objeto.
+*Estado Actual:* **Solucionado**. Se actualizó el endpoint respectivo para llamar a los arreglos paginados (e.g. `?per_page=100`) y se introdujo serialización estricta de variables de error en el Frontend, impidiendo crasheos. Los 4 Nodos de prueba cargan sus registros intactos en esta vista sin problema alguno.
+
+### Conclusión General
+El MVP de visualización (la UI principal consumida por los Clientes) funciona fluidamente con excelentes componentes adaptativos y lecturas a tiempo real. La interfaz de gestión del Administrador se encuentra probada operativamente y estable tras resolverse el inconveniente de paginación en el panel de Nodos, entregando la funcionalidad prometida.
