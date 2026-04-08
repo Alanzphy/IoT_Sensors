@@ -19,3 +19,10 @@ dependencies = [
     "sqlalchemy>=2.0.48",
     "uvicorn[standard]>=0.41.0",
 ]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.0",
+    "pytest>=8.3.0",
+    "pytest-cov>=6.0.0",
+]

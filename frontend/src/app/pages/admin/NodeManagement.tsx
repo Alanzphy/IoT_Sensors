@@ -43,22 +43,22 @@ export function NodeManagement() {
       setLoading(true);
       setError(null);
       
-      const nodesRes = await api.get("/nodes");
-      let areasRes;
-      try {
-        areasRes = await api.get("/irrigation-areas/all");
-      } catch (e: any) {
-        if (e.response?.status === 404) {
-          areasRes = await api.get("/irrigation-areas");
-        } else {
-          throw e;
-        }
-      }
+      const nodesRes = await api.get("/nodes?per_page=100");
+      const areasRes = await api.get("/irrigation-areas?per_page=100");
 
       setNodes(nodesRes.data.data || nodesRes.data);
       setAreas(areasRes.data.data || areasRes.data);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Error loading nodes");
+      const errorDetail = err.response?.data?.detail;
+      let errorMessage = "Error loading nodes";
+      if (typeof errorDetail === "string") {
+        errorMessage = errorDetail;
+      } else if (Array.isArray(errorDetail)) {
+        errorMessage = errorDetail.map((e: any) => e.msg || JSON.stringify(e)).join(", ");
+      } else if (errorDetail) {
+        errorMessage = JSON.stringify(errorDetail);
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
