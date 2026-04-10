@@ -118,10 +118,19 @@ export function ClientDashboard() {
 
     fetchData();
 
+    // Auto-refresh interval set to 2 seconds for real-time visualization
+    const intervalId = setInterval(() => {
+      if (isMounted) {
+        fetchData();
+      }
+    }, 2000);
+
     return () => {
       isMounted = false;
+      clearInterval(intervalId);
     };
   }, [selectedArea]);
+
 
   return (
     <div className="min-h-screen p-4 md:p-6 lg:p-8 overflow-x-hidden">
