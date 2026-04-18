@@ -932,7 +932,7 @@ Los datos de los sensores. Tiene 5 operaciones con comportamientos diferentes:
 
 | Param | Tipo | Requerido | Notas |
 |-------|------|-----------|-------|
-| `irrigation_area_id` | integer | Sí* | Filtra por área. *El cliente debe especificarlo; el admin puede omitirlo. |
+| `irrigation_area_id` | integer | No | Filtra por área. Si el cliente lo omite, el backend aplica alcance automático a sus nodos/áreas. |
 | `start_date` | string (date) | No | Inicio del rango |
 | `end_date` | string (date) | No | Fin del rango |
 | `crop_cycle_id` | integer | No | Filtra usando las fechas del ciclo (alternativa a start_date/end_date) |
@@ -1049,7 +1049,7 @@ Este endpoint devuelve metadatos para habilitar selectores de fecha en frontend 
 | Param | Tipo | Requerido | Notas |
 |-------|------|-----------|-------|
 | `format` | string | Sí | `"csv"`, `"xlsx"` o `"pdf"` |
-| `irrigation_area_id` | integer | Sí* | Misma lógica que histórico |
+| `irrigation_area_id` | integer | Sí | Área objetivo para exportación (requerido para Admin y Cliente). |
 | `start_date` | string (date) | No | Inicio del rango |
 | `end_date` | string (date) | No | Fin del rango |
 | `crop_cycle_id` | integer | No | Alternativa a start/end date |
@@ -1689,7 +1689,7 @@ Header: Authorization: Bearer eyJ...(cliente)...
 | PUT | `/api/v1/thresholds/{id}` | Actualizar |
 | DELETE | `/api/v1/thresholds/{id}` | Eliminar lógico |
 
-### Alerts (4 endpoints) — Admin/Cliente (según ownership)
+### Alerts (5 endpoints) — Admin/Cliente (según ownership)
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
@@ -1697,5 +1697,28 @@ Header: Authorization: Bearer eyJ...(cliente)...
 | GET | `/api/v1/alerts/{id}` | Detalle |
 | PATCH | `/api/v1/alerts/{id}/read` | Marcar leída/no leída |
 | POST | `/api/v1/alerts/scan-inactivity` | Escanear nodos inactivos (Admin) |
+| POST | `/api/v1/alerts/dispatch-notifications` | Despachar notificaciones externas (Admin) |
 
-**Total: 52 endpoints.**
+### Notification Preferences (4 endpoints)
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/api/v1/clients/me/notification-settings` | Ver switch global de notificaciones |
+| PATCH | `/api/v1/clients/me/notification-settings` | Actualizar switch global de notificaciones |
+| GET | `/api/v1/notification-preferences` | Listar preferencias (paginado y filtros) |
+| PUT | `/api/v1/notification-preferences/bulk` | Upsert masivo de preferencias |
+
+### Audit Logs (2 endpoints) — Admin only
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/api/v1/audit-logs` | Listar eventos (paginado y filtros) |
+| GET | `/api/v1/audit-logs/{audit_log_id}` | Detalle de evento |
+
+### Health (1 endpoint)
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/health` | Verificación de estado del servicio |
+
+**Total: 62 endpoints.**

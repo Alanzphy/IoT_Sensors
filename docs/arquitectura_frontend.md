@@ -25,7 +25,7 @@ src/app/
 │   ├── navigation/   # Menús (DesktopSidebar.tsx, MobileTabBar.tsx)
 │   ├── notifications/ # Alertas en UI (AlertsPopover)
 │   └── ProtectedRoute.tsx # HOC para blindar rutas según el Rol y JWT.
-├── context/          # React Context API para estado global (AuthContext)
+├── context/          # React Context API para estado global (AuthContext, SelectionContext)
 ├── data/             # (Deprecado/Migración) Datos estáticos 'mockData'. Se eliminarán.
 ├── hooks/            # Custom hooks (e.g., useIsMobile.ts, useAuth.ts)
 ├── layouts/          # Envoltorios de interfaz (RootLayout, AdminLayout, ClientLayout)
@@ -67,6 +67,7 @@ Actualmente el frontend está en fase de **transición de datos estáticos hacia
 - `pages/admin/ThresholdManagement.tsx`: CRUD de umbrales por área/parámetro/severidad (reutilizado para ambos roles).
 - `services/thresholds.ts`: cliente HTTP para `/api/v1/thresholds`.
 - Rutas protegidas: `/admin/umbrales` y `/cliente/umbrales`.
+- En vista cliente, el filtro de área y el formulario de alta toman por defecto el `selectedArea` del `SelectionContext` para reducir fricción operativa.
 
 ### 3.4 Semáforos de Prioridad en Dashboard Cliente (Activo)
 
