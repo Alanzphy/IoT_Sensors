@@ -7,11 +7,11 @@ múltiples veces.
 Datos creados:
   Usuarios:
     - admin@sensores.com / admin123          (Administrador)
-    - cliente@sensores.com / cliente123      (Cliente de prueba)
+        - alan2203mx@gmail.com / 123             (Cliente de prueba principal)
     - jlopez@test.com / admin123             (Cliente sin predios)
 
   Jerarquía de prueba:
-    Cliente: Juan Perez
+        Cliente: alan2203mx@gmail.com
       └─ Predio: Rancho Norte
            ├─ Área: Nogal Norte   → Nodo Nogal Norte   (API Key: 99189486-...)
            ├─ Área: Alfalfa Este  → Nodo Alfalfa Este  (API Key: c1f5cd79-...)
@@ -35,6 +35,7 @@ from app.models.user import User
 # ---------------------------------------------------------------------------
 
 CROP_TYPES = ["Nogal", "Alfalfa", "Manzana", "Maíz", "Chile", "Algodón"]
+PRIMARY_TEST_CLIENT_EMAIL = "alan2203mx@gmail.com"
 
 USERS = [
     {
@@ -44,11 +45,11 @@ USERS = [
         "rol": "admin",
     },
     {
-        "correo": "cliente@sensores.com",
-        "password": "cliente123",
-        "nombre": "Juan Perez",
+        "correo": "alan2203mx@gmail.com",
+        "password": "123",
+        "nombre": "Alan Test",
         "rol": "cliente",
-        "empresa": "Rancho Norte S.A.",
+        "empresa": "Agricola del Norte",
     },
     {
         "correo": "jlopez@test.com",
@@ -59,7 +60,7 @@ USERS = [
     },
 ]
 
-# Áreas y nodos asociados al cliente de prueba (cliente@sensores.com)
+# Áreas y nodos asociados al cliente de prueba principal (alan2203mx@gmail.com)
 # API Keys deben coincidir exactamente con TEST_DATA.md
 AREAS_Y_NODOS = [
     {
@@ -105,15 +106,14 @@ AREAS_Y_NODOS = [
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def hash_password(plain: str) -> str:
     return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def get_or_create(db, model, filter_kwargs, create_kwargs=None):
     """Fetch existing record or create it. Returns (instance, created: bool)."""
-    obj = db.execute(
-        select(model).filter_by(**filter_kwargs)
-    ).scalar_one_or_none()
+    obj = db.execute(select(model).filter_by(**filter_kwargs)).scalar_one_or_none()
     if obj:
         return obj, False
     obj = model(**(filter_kwargs | (create_kwargs or {})))
@@ -125,6 +125,7 @@ def get_or_create(db, model, filter_kwargs, create_kwargs=None):
 # ---------------------------------------------------------------------------
 # Seed
 # ---------------------------------------------------------------------------
+
 
 def seed():
     db = SessionLocal()
@@ -151,20 +152,30 @@ def seed():
                     "rol": u["rol"],
                 },
             )
+
+            # Mantener datos del seed en sincronía aunque el usuario ya exista.
+            user.contrasena_hash = hash_password(u["password"])
+            user.nombre_completo = u["nombre"]
+            user.rol = u["rol"]
+            user.activo = True
+
             user_map[u["correo"]] = user
-            print(f"    {'+ Creado' if created else '✓ Ya existe'}: {u['correo']} ({u['rol']})")
+            print(
+                f"    {'+ Creado' if created else '✓ Ya existe'}: {u['correo']} ({u['rol']})"
+            )
 
             # Crear registro de cliente para usuarios con rol 'cliente'
             if u["rol"] == "cliente":
-                get_or_create(
+                client_record, _ = get_or_create(
                     db,
                     Client,
                     {"usuario_id": user.id},
                     {"nombre_empresa": u.get("empresa", u["nombre"])},
                 )
+                client_record.nombre_empresa = u.get("empresa", u["nombre"])
 
         # 3. Jerarquía de prueba: Predio + Áreas + Nodos
-        cliente_user = user_map["cliente@sensores.com"]
+        cliente_user = user_map[PRIMARY_TEST_CLIENT_EMAIL]
         cliente_record = db.execute(
             select(Client).where(Client.usuario_id == cliente_user.id)
         ).scalar_one()
@@ -192,7 +203,11 @@ def seed():
                 {"predio_id": predio.id, "nombre": item["area_nombre"]},
                 {"tipo_cultivo_id": cultivo.id, "tamano_area": item["tamano"]},
             )
-            print(f"    {'+ Creada' if area_created else '✓ Ya existe'}: {item['area_nombre']}")
+            area.tipo_cultivo_id = cultivo.id
+            area.tamano_area = item["tamano"]
+            print(
+                f"    {'+ Creada' if area_created else '✓ Ya existe'}: {item['area_nombre']}"
+            )
 
             # Nodo
             node, node_created = get_or_create(
@@ -207,14 +222,26 @@ def seed():
                     "activo": True,
                 },
             )
-            print(f"      {'+ Nodo creado' if node_created else '✓ Nodo ya existe'}: {item['nodo_nombre']}")
+
+            # Forzar asignación y metadatos del nodo para evitar deriva entre corridas.
+            node.area_riego_id = area.id
+            node.nombre = item["nodo_nombre"]
+            node.latitud = item["lat"]
+            node.longitud = item["lon"]
+            node.activo = True
+
+            print(
+                f"      {'+ Nodo creado' if node_created else '✓ Nodo ya existe'}: {item['nodo_nombre']}"
+            )
 
         db.commit()
         print("\n✅ Seed completado exitosamente.\n")
         print("  Credenciales de acceso:")
         print("    Admin:    admin@sensores.com     / admin123")
-        print("    Cliente:  cliente@sensores.com   / cliente123")
-        print("    Simulador (API Key Nogal Norte): 99189486-8181-4e8c-8c6d-b3da66e6712b\n")
+        print("    Cliente:  alan2203mx@gmail.com   / 123")
+        print(
+            "    Simulador (API Key Nogal Norte): 99189486-8181-4e8c-8c6d-b3da66e6712b\n"
+        )
 
     except Exception as e:
         db.rollback()

@@ -14,8 +14,8 @@ Tienen acceso únicamente a ver sus propios predios, áreas de riego y dashboard
 
 **1. Juan Perez (Recomendado para pruebas)**
 Este usuario ya tiene asignado el predio "Rancho Norte" y el área "Nogal Norte" con un nodo activo recibiendo datos.
-- **Login:** `cliente@sensores.com`
-- **Password:** `cliente123`
+- **Login:** `alan2203mx@gmail.com`
+- **Password:** `123`
 
 **2. Juan López**
 Usuario cliente inicial, actualmente sin predios asignados. El dashboard aparecerá vacío hasta que el Admin le asigne un predio.
@@ -35,4 +35,4 @@ Estas API Keys se utilizan para enviar datos desde el simulador haciéndose pasa
 | 3 | Nodo Alfalfa Este | Alfalfa Este | `c1f5cd79-e760-4a9f-92ea-31ea685a3add` |
 | 4 | Nodo Chile Principal | Chile Principal | `02b21674-0099-4470-a8dd-b4ebd7d8c2b0` |
 
-> **Nota para el Simulador:** Puedes usar cualquiera de estas keys, pero te sugerimos la del **Nodo Nogal Norte** (`99189486-8181-4e8c-8c6d-b3da66e6712b`), ya que este nodo pertenece al cliente `cliente@sensores.com` y podrás ver los datos fluyendo en vivo en su dashboard de prueba.
+> **Nota para el Simulador:** Puedes usar cualquiera de estas keys, pero te sugerimos la del **Nodo Nogal Norte** (`99189486-8181-4e8c-8c6d-b3da66e6712b`), ya que este nodo pertenece al cliente `alan2203mx@gmail.com` y podrás ver los datos fluyendo en vivo en su dashboard de prueba.
