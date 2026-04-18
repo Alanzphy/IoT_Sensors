@@ -244,12 +244,13 @@ def list_readings(
     page: int,
     per_page: int,
     irrigation_area_id: int | None = None,
+    node_ids: list[int] | None = None,
     start_date: date | None = None,
     end_date: date | None = None,
     crop_cycle_id: int | None = None,
 ) -> tuple[list[Reading], int]:
     conditions = _build_history_query(
-        irrigation_area_id, None, start_date, end_date, crop_cycle_id, db
+        irrigation_area_id, node_ids, start_date, end_date, crop_cycle_id, db
     )
 
     count_query = select(func.count()).select_from(Reading).where(*conditions)

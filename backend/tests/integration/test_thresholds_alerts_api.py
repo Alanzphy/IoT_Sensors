@@ -2,6 +2,13 @@
 
 from datetime import UTC, datetime, timedelta
 
+from app.core.security import hash_password
+from app.models.client import Client
+from app.models.irrigation_area import IrrigationArea
+from app.models.node import Node
+from app.models.property import Property
+from app.models.user import User
+
 SENSOR_PAYLOAD = {
     "timestamp": "2026-04-01T10:00:00Z",
     "soil": {
@@ -85,8 +92,101 @@ class TestThresholdsApi:
         second = client.post("/api/v1/thresholds", headers=admin_headers, json=payload)
         assert second.status_code == 409
 
+    def test_client_cannot_list_thresholds(self, client, client_headers):
+        resp = client.get("/api/v1/thresholds", headers=client_headers)
+        assert resp.status_code == 403
+
+    def test_client_cannot_get_update_delete_threshold(
+        self,
+        client,
+        admin_headers,
+        client_headers,
+        sample_irrigation_area,
+    ):
+        created = client.post(
+            "/api/v1/thresholds",
+            headers=admin_headers,
+            json={
+                "irrigation_area_id": sample_irrigation_area.id,
+                "parameter": "environmental.wind_speed",
+                "max_value": 20.0,
+                "severity": "warning",
+            },
+        )
+        assert created.status_code == 201
+        threshold_id = created.json()["id"]
+
+        get_resp = client.get(
+            f"/api/v1/thresholds/{threshold_id}", headers=client_headers
+        )
+        assert get_resp.status_code == 403
+
+        put_resp = client.put(
+            f"/api/v1/thresholds/{threshold_id}",
+            headers=client_headers,
+            json={"max_value": 25.0},
+        )
+        assert put_resp.status_code == 403
+
+        del_resp = client.delete(
+            f"/api/v1/thresholds/{threshold_id}", headers=client_headers
+        )
+        assert del_resp.status_code == 403
+
 
 class TestAlertsApi:
+    def _create_foreign_area_node(self, db, crop_type_id: int):
+        """Área/nodo que no pertenecen al cliente por defecto de la fixture."""
+        foreign_user = User(
+            correo="cliente2@test.com",
+            contrasena_hash=hash_password("cliente2pass"),
+            nombre_completo="Cliente Dos",
+            rol="cliente",
+            activo=True,
+        )
+        db.add(foreign_user)
+        db.flush()
+
+        foreign_client = Client(
+            usuario_id=foreign_user.id,
+            nombre_empresa="Empresa Dos",
+            telefono="555-0002",
+            direccion="Calle Dos 456",
+        )
+        db.add(foreign_client)
+        db.flush()
+
+        foreign_property = Property(
+            cliente_id=foreign_client.id,
+            nombre="Rancho Externo",
+            ubicacion="Sonora, MX",
+        )
+        db.add(foreign_property)
+        db.flush()
+
+        foreign_area = IrrigationArea(
+            predio_id=foreign_property.id,
+            tipo_cultivo_id=crop_type_id,
+            nombre="Area Externa",
+            tamano_area=7.0,
+        )
+        db.add(foreign_area)
+        db.flush()
+
+        foreign_node = Node(
+            area_riego_id=foreign_area.id,
+            api_key="ak_foreign_node_001",
+            nombre="Nodo Externo",
+            latitud=27.0000,
+            longitud=-108.0000,
+            activo=True,
+        )
+        db.add(foreign_node)
+        db.commit()
+        db.refresh(foreign_area)
+        db.refresh(foreign_node)
+        return foreign_area, foreign_node
+
     def _create_threshold(self, client, admin_headers, area_id):
         resp = client.post(
             "/api/v1/thresholds",
@@ -206,6 +306,65 @@ class TestAlertsApi:
         updated = patch_resp.json()
         assert updated["read"] is True
         assert updated["read_at"] is not None
+
+    def test_client_cannot_access_foreign_alert_detail_or_mark_read(
+        self,
+        client,
+        db,
+        admin_headers,
+        client_headers,
+        sample_crop_type,
+    ):
+        foreign_area, foreign_node = self._create_foreign_area_node(
+            db, sample_crop_type.id
+        )
+
+        threshold_resp = client.post(
+            "/api/v1/thresholds",
+            headers=admin_headers,
+            json={
+                "irrigation_area_id": foreign_area.id,
+                "parameter": "soil.humidity",
+                "min_value": 50.0,
+                "severity": "critical",
+            },
+        )
+        assert threshold_resp.status_code == 201
+
+        payload = {
+            **SENSOR_PAYLOAD,
+            "timestamp": "2026-04-01T15:00:00Z",
+            "soil": {
+                **SENSOR_PAYLOAD["soil"],
+                "humidity": 35.0,
+            },
+        }
+        ingest = client.post(
+            "/api/v1/readings",
+            headers={"X-API-Key": foreign_node.api_key},
+            json=payload,
+        )
+        assert ingest.status_code == 201
+
+        alerts_resp = client.get(
+            f"/api/v1/alerts?irrigation_area_id={foreign_area.id}",
+            headers=admin_headers,
+        )
+        assert alerts_resp.status_code == 200
+        assert alerts_resp.json()["total"] >= 1
+        alert_id = alerts_resp.json()["data"][0]["id"]
+
+        detail_forbidden = client.get(
+            f"/api/v1/alerts/{alert_id}", headers=client_headers
+        )
+        assert detail_forbidden.status_code == 403
+
+        mark_forbidden = client.patch(
+            f"/api/v1/alerts/{alert_id}/read",
+            headers=client_headers,
+            json={"read": True},
+        )
+        assert mark_forbidden.status_code == 403
 
 
 class TestInactivityAlertsApi:

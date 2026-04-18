@@ -63,6 +63,20 @@ def _validate_area_access(user: User, db: Session, irrigation_area_id: int) -> N
         )
 
 
+def _get_client_node_ids(user: User, db: Session) -> list[int]:
+    area_ids = _get_client_area_ids(user, db)
+    if not area_ids:
+        return []
+    return list(
+        db.execute(
+            select(Node.id).where(
+                Node.area_riego_id.in_(area_ids),
+                Node.eliminado_en.is_(None),
+            )
+        ).scalars()
+    )
+
+
 # ---------- POST (sensor ingestion via API Key) ----------
 
 
@@ -178,11 +192,29 @@ def list_readings(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    node_ids: list[int] | None = None
+
     if irrigation_area_id is not None:
         _validate_area_access(current_user, db, irrigation_area_id)
+    elif current_user.rol != "admin":
+        node_ids = _get_client_node_ids(current_user, db)
+        if not node_ids:
+            return PaginatedResponse(
+                page=page,
+                per_page=per_page,
+                total=0,
+                data=[],
+            )
 
     items, total = reading_service.list_readings(
-        db, page, per_page, irrigation_area_id, start_date, end_date, crop_cycle_id
+        db=db,
+        page=page,
+        per_page=per_page,
+        irrigation_area_id=irrigation_area_id,
+        node_ids=node_ids,
+        start_date=start_date,
+        end_date=end_date,
+        crop_cycle_id=crop_cycle_id,
     )
     return PaginatedResponse(
         page=page,
