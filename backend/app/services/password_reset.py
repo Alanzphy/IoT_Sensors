@@ -133,7 +133,9 @@ def _rate_limit_count(
     )
 
 
-def _mark_attempt(*, db: Session, entity: str, entity_id: str, detail: str | None = None) -> None:
+def _mark_attempt(
+    *, db: Session, entity: str, entity_id: str, detail: str | None = None
+) -> None:
     create_audit_log(
         db,
         user_id=None,
@@ -162,7 +164,9 @@ def _audit_recovery_event(
     )
 
 
-def request_password_reset(*, db: Session, email: str, request_ip: str | None = None) -> None:
+def request_password_reset(
+    *, db: Session, email: str, request_ip: str | None = None
+) -> None:
     normalized_email = email.strip().lower()
     resolved_ip = (request_ip or "unknown").strip() or "unknown"
 

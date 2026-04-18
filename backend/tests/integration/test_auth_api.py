@@ -192,7 +192,9 @@ class TestPasswordRecovery:
             calls["count"] += 1
             return "tok_" + f"{calls['count']:044d}"
 
-        monkeypatch.setattr(password_reset_service, "_generate_raw_reset_token", _token_factory)
+        monkeypatch.setattr(
+            password_reset_service, "_generate_raw_reset_token", _token_factory
+        )
         monkeypatch.setattr(
             password_reset_service, "_send_reset_email", lambda **kwargs: True
         )
@@ -251,7 +253,9 @@ class TestPasswordRecovery:
 
         token_hash = password_reset_service._hash_reset_token(raw_token)
         token = db.execute(
-            select(PasswordResetToken).where(PasswordResetToken.token_hash == token_hash)
+            select(PasswordResetToken).where(
+                PasswordResetToken.token_hash == token_hash
+            )
         ).scalar_one()
         token.expira_en = datetime.now(UTC).replace(tzinfo=None) - timedelta(minutes=1)
         db.commit()
