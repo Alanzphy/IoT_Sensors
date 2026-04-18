@@ -60,8 +60,14 @@ def list_thresholds(
     irrigation_area_id: int | None = None,
     parameter: str | None = None,
     active: bool | None = None,
+    allowed_area_ids: list[int] | None = None,
 ) -> tuple[list[Threshold], int]:
     conditions = [Threshold.eliminado_en.is_(None)]
+
+    if allowed_area_ids is not None:
+        if len(allowed_area_ids) == 0:
+            return [], 0
+        conditions.append(Threshold.area_riego_id.in_(allowed_area_ids))
 
     if irrigation_area_id is not None:
         conditions.append(Threshold.area_riego_id == irrigation_area_id)

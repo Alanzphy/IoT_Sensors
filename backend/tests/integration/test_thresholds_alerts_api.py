@@ -35,6 +35,45 @@ SENSOR_PAYLOAD = {
 
 
 class TestThresholdsApi:
+    def _create_foreign_area(self, db, crop_type_id: int):
+        foreign_user = User(
+            correo="cliente_umbral_externo@test.com",
+            contrasena_hash=hash_password("cliente2pass"),
+            nombre_completo="Cliente Umbral Externo",
+            rol="cliente",
+            activo=True,
+        )
+        db.add(foreign_user)
+        db.flush()
+
+        foreign_client = Client(
+            usuario_id=foreign_user.id,
+            nombre_empresa="Empresa Externa Umbral",
+            telefono="555-0003",
+            direccion="Calle Externa 789",
+        )
+        db.add(foreign_client)
+        db.flush()
+
+        foreign_property = Property(
+            cliente_id=foreign_client.id,
+            nombre="Rancho Externo Umbral",
+            ubicacion="Durango, MX",
+        )
+        db.add(foreign_property)
+        db.flush()
+
+        foreign_area = IrrigationArea(
+            predio_id=foreign_property.id,
+            tipo_cultivo_id=crop_type_id,
+            nombre="Area Externa Umbral",
+            tamano_area=5.0,
+        )
+        db.add(foreign_area)
+        db.commit()
+        db.refresh(foreign_area)
+        return foreign_area
+
     def test_admin_can_create_threshold(
         self,
         client,
@@ -58,7 +97,7 @@ class TestThresholdsApi:
         assert data["irrigation_area_id"] == sample_irrigation_area.id
         assert data["parameter"] == "soil.humidity"
 
-    def test_client_cannot_create_threshold(
+    def test_client_can_create_threshold_on_owned_area(
         self,
         client,
         client_headers,
@@ -71,6 +110,27 @@ class TestThresholdsApi:
                 "irrigation_area_id": sample_irrigation_area.id,
                 "parameter": "soil.humidity",
                 "min_value": 40.0,
+                "severity": "warning",
+            },
+        )
+        assert resp.status_code == 201
+
+    def test_client_cannot_create_threshold_on_foreign_area(
+        self,
+        client,
+        db,
+        admin_headers,
+        client_headers,
+        sample_crop_type,
+    ):
+        foreign_area = self._create_foreign_area(db, sample_crop_type.id)
+        resp = client.post(
+            "/api/v1/thresholds",
+            headers=client_headers,
+            json={
+                "irrigation_area_id": foreign_area.id,
+                "parameter": "soil.humidity",
+                "min_value": 35.0,
                 "severity": "warning",
             },
         )
@@ -94,11 +154,47 @@ class TestThresholdsApi:
         second = client.post("/api/v1/thresholds", headers=admin_headers, json=payload)
         assert second.status_code == 409
 
-    def test_client_cannot_list_thresholds(self, client, client_headers):
-        resp = client.get("/api/v1/thresholds", headers=client_headers)
-        assert resp.status_code == 403
+    def test_client_lists_only_owned_thresholds(
+        self,
+        client,
+        db,
+        admin_headers,
+        client_headers,
+        sample_irrigation_area,
+        sample_crop_type,
+    ):
+        own = client.post(
+            "/api/v1/thresholds",
+            headers=admin_headers,
+            json={
+                "irrigation_area_id": sample_irrigation_area.id,
+                "parameter": "soil.humidity",
+                "min_value": 40.0,
+                "severity": "warning",
+            },
+        )
+        assert own.status_code == 201
 
-    def test_client_cannot_get_update_delete_threshold(
+        foreign_area = self._create_foreign_area(db, sample_crop_type.id)
+        foreign = client.post(
+            "/api/v1/thresholds",
+            headers=admin_headers,
+            json={
+                "irrigation_area_id": foreign_area.id,
+                "parameter": "environmental.eto",
+                "max_value": 8.0,
+                "severity": "critical",
+            },
+        )
+        assert foreign.status_code == 201
+
+        resp = client.get("/api/v1/thresholds", headers=client_headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total"] == 1
+        assert data["data"][0]["irrigation_area_id"] == sample_irrigation_area.id
+
+    def test_client_can_get_update_delete_own_threshold(
         self,
         client,
         admin_headers,
@@ -110,6 +206,45 @@ class TestThresholdsApi:
             headers=admin_headers,
             json={
                 "irrigation_area_id": sample_irrigation_area.id,
+                "parameter": "environmental.wind_speed",
+                "max_value": 20.0,
+                "severity": "warning",
+            },
+        )
+        assert created.status_code == 201
+        threshold_id = created.json()["id"]
+
+        get_resp = client.get(
+            f"/api/v1/thresholds/{threshold_id}", headers=client_headers
+        )
+        assert get_resp.status_code == 200
+
+        put_resp = client.put(
+            f"/api/v1/thresholds/{threshold_id}",
+            headers=client_headers,
+            json={"max_value": 25.0},
+        )
+        assert put_resp.status_code == 200
+
+        del_resp = client.delete(
+            f"/api/v1/thresholds/{threshold_id}", headers=client_headers
+        )
+        assert del_resp.status_code == 200
+
+    def test_client_cannot_get_update_delete_foreign_threshold(
+        self,
+        client,
+        db,
+        admin_headers,
+        client_headers,
+        sample_crop_type,
+    ):
+        foreign_area = self._create_foreign_area(db, sample_crop_type.id)
+        created = client.post(
+            "/api/v1/thresholds",
+            headers=admin_headers,
+            json={
+                "irrigation_area_id": foreign_area.id,
                 "parameter": "environmental.wind_speed",
                 "max_value": 20.0,
                 "severity": "warning",

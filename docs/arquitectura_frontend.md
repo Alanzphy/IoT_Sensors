@@ -45,7 +45,7 @@ src/app/
 Actualmente el frontend está en fase de **transición de datos estáticos hacia consumo real del backend FastAPI**, con parte de Fase 2 Lite activa.
 
 - **Fase 1 (Completada)**: Autenticación. `LoginPage` conecta a `/api/v1/auth/login`. El JWT se decodifica con `jwt-decode`, se guarda en `localStorage` y se gestiona mediante `AuthContext`. El `api.ts` de Axios inyecta automáticamente el header `Authorization: Bearer <token>` y maneja las redirecciones por `401 Unauthorized`.
-- **Fase 2 Lite (Implementada)**: Centro de alertas y popover conectados a `/api/v1/alerts`, bitácora administrativa en `/api/v1/audit-logs`, gestión Admin de umbrales, preferencias de notificación del cliente y flujo de recuperación de contraseña (`/api/v1/auth/forgot-password`, `/api/v1/auth/reset-password`).
+- **Fase 2 Lite (Implementada)**: Centro de alertas y popover conectados a `/api/v1/alerts`, bitácora administrativa en `/api/v1/audit-logs`, gestión de umbrales para Admin y Cliente (ownership por área), preferencias de notificación del cliente y flujo de recuperación de contraseña (`/api/v1/auth/forgot-password`, `/api/v1/auth/reset-password`).
 - **Fase 3 (En proceso)**: Reemplazo gradual de `mockData` en dashboard/histórico por datos reales (`/api/v1/readings`, `/api/v1/readings/latest`, `/api/v1/readings/availability`).
 - **Fase 4 (Parcial)**: Semáforos de estado para datos prioritarios en dashboard cliente usando alertas de umbral activas.
 
@@ -62,11 +62,11 @@ Actualmente el frontend está en fase de **transición de datos estáticos hacia
 - `services/auditLogs.ts`: cliente HTTP para `/api/v1/audit-logs` y `/api/v1/audit-logs/{id}`.
 - Ruta protegida: `/admin/auditoria`.
 
-### 3.3 Módulo de Umbrales en UI (Activo - Admin)
+### 3.3 Módulo de Umbrales en UI (Activo - Admin/Cliente)
 
-- `pages/admin/ThresholdManagement.tsx`: CRUD de umbrales por área/parámetro/severidad.
+- `pages/admin/ThresholdManagement.tsx`: CRUD de umbrales por área/parámetro/severidad (reutilizado para ambos roles).
 - `services/thresholds.ts`: cliente HTTP para `/api/v1/thresholds`.
-- Ruta protegida: `/admin/umbrales`.
+- Rutas protegidas: `/admin/umbrales` y `/cliente/umbrales`.
 
 ### 3.4 Semáforos de Prioridad en Dashboard Cliente (Activo)
 

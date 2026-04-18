@@ -18,6 +18,7 @@ import { NotificationPreferencesPage } from "./pages/client/NotificationPreferen
 import { ProfilePage } from "./pages/client/ProfilePage";
 import { PropertyDetail } from "./pages/client/PropertyDetail";
 import { AlertsCenterPage } from "./pages/shared/AlertsCenterPage";
+import { ThresholdManagement } from "./pages/admin/ThresholdManagement";
 
 // Admin pages
 import { AdminDashboard } from "./pages/admin/AdminDashboard";
@@ -29,7 +30,6 @@ import { IrrigationAreaManagement } from "./pages/admin/IrrigationAreaManagement
 import { NodeDetail } from "./pages/admin/NodeDetail";
 import { NodeManagement } from "./pages/admin/NodeManagement";
 import { PropertyManagement } from "./pages/admin/PropertyManagement";
-import { ThresholdManagement } from "./pages/admin/ThresholdManagement";
 
 export const router = createBrowserRouter([
   {
@@ -78,6 +78,10 @@ export const router = createBrowserRouter([
               {
                 path: "notificaciones",
                 Component: NotificationPreferencesPage,
+              },
+              {
+                path: "umbrales",
+                Component: ThresholdManagement,
               },
               {
                 path: "perfil",

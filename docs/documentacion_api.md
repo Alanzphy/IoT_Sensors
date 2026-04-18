@@ -174,6 +174,7 @@ JWT (JSON Web Token) es un token encriptado que el backend genera al hacer login
 | Nodes — POST/PUT/DELETE | ✅ | ❌ |
 | Readings — GET (histórico, latest) | ✅ (todos) | ✅ (solo suyos) |
 | Readings — GET export | ✅ (todos) | ✅ (solo suyos) |
+| Thresholds — GET/POST/PUT/DELETE | ✅ (todos) | ✅ (solo suyos) |
 
 > **"Solo suyos"** significa: el backend verifica que el recurso solicitado pertenece a la cadena Cliente → Predio → Área del usuario autenticado. Si un cliente intenta ver datos de otro cliente, recibe **403 Forbidden**.
 
@@ -1219,11 +1220,13 @@ Configuración de rangos por parámetro para disparar alertas automáticas.
 
 | Método | Endpoint | Descripción | Auth |
 |--------|----------|-------------|------|
-| `GET` | `/api/v1/thresholds` | Listado paginado con filtros | JWT (Admin) |
-| `POST` | `/api/v1/thresholds` | Crear umbral | JWT (Admin) |
-| `GET` | `/api/v1/thresholds/{id}` | Detalle de umbral | JWT (Admin) |
-| `PUT` | `/api/v1/thresholds/{id}` | Actualizar umbral | JWT (Admin) |
-| `DELETE` | `/api/v1/thresholds/{id}` | Eliminación lógica | JWT (Admin) |
+| `GET` | `/api/v1/thresholds` | Listado paginado con filtros | JWT (Admin/Cliente) |
+| `POST` | `/api/v1/thresholds` | Crear umbral | JWT (Admin/Cliente) |
+| `GET` | `/api/v1/thresholds/{id}` | Detalle de umbral | JWT (Admin/Cliente) |
+| `PUT` | `/api/v1/thresholds/{id}` | Actualizar umbral | JWT (Admin/Cliente) |
+| `DELETE` | `/api/v1/thresholds/{id}` | Eliminación lógica | JWT (Admin/Cliente) |
+
+> Para rol cliente, la operación está limitada estrictamente a áreas de riego propias (ownership por cadena Cliente -> Predio -> Área). Acceder o modificar umbrales de áreas ajenas retorna `403 Forbidden`.
 
 #### Listar umbrales — `GET /api/v1/thresholds`
 
@@ -1676,7 +1679,7 @@ Header: Authorization: Bearer eyJ...(cliente)...
 | GET | `/api/v1/readings/availability` | JWT | Fechas disponibles para calendario/filtros |
 | GET | `/api/v1/readings/export` | JWT | Exportar CSV/XLSX/PDF |
 
-### Thresholds (5 endpoints) — Admin only
+### Thresholds (5 endpoints) — Admin/Cliente (según ownership)
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|

@@ -32,6 +32,7 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
     { path: "/cliente/historico", icon: Clock, label: "Histórico" },
     { path: "/cliente/exportar", icon: Download, label: "Exportar" },
     { path: "/cliente/alertas", icon: Bell, label: "Alertas" },
+    { path: "/cliente/umbrales", icon: SlidersHorizontal, label: "Umbrales" },
     {
       path: "/cliente/notificaciones",
       icon: SlidersHorizontal,

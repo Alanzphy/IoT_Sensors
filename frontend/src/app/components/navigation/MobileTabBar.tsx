@@ -24,6 +24,7 @@ export function MobileTabBar({ role }: MobileTabBarProps) {
     { path: "/cliente/areas", icon: MapPin, label: "Predios" },
     { path: "/cliente/historico", icon: Clock, label: "Histórico" },
     { path: "/cliente/exportar", icon: Download, label: "Exportar" },
+    { path: "/cliente/umbrales", icon: SlidersHorizontal, label: "Umbrales" },
     { path: "/cliente/notificaciones", icon: Bell, label: "Notifs" },
   ];
 
