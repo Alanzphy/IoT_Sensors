@@ -43,7 +43,9 @@ class TestCreateClient:
         resp = client.post("/api/v1/clients", json=NEW_CLIENT)
         assert resp.status_code == 401
 
-    def test_create_client_duplicate_email_returns_409(self, client, admin_headers, client_user):
+    def test_create_client_duplicate_email_returns_409(
+        self, client, admin_headers, client_user
+    ):
         resp = client.post(
             "/api/v1/clients",
             json={**NEW_CLIENT, "email": "cliente@test.com"},
@@ -69,11 +71,31 @@ class TestUpdateClient:
         _, client_record = client_user
         resp = client.put(
             f"/api/v1/clients/{client_record.id}",
-            json={"company_name": "Nueva Empresa"},
+            json={
+                "company_name": "Nueva Empresa",
+                "email": "cliente.actualizado@test.com",
+                "full_name": "Cliente Actualizado",
+                "phone": "+526391111111",
+            },
             headers=admin_headers,
         )
         assert resp.status_code == 200
-        assert resp.json()["company_name"] == "Nueva Empresa"
+        data = resp.json()
+        assert data["company_name"] == "Nueva Empresa"
+        assert data["phone"] == "+526391111111"
+        assert data["user"]["email"] == "cliente.actualizado@test.com"
+        assert data["user"]["full_name"] == "Cliente Actualizado"
+
+    def test_update_client_duplicate_email_returns_409(
+        self, client, admin_headers, client_user, admin_user
+    ):
+        _, client_record = client_user
+        resp = client.put(
+            f"/api/v1/clients/{client_record.id}",
+            json={"email": admin_user.correo},
+            headers=admin_headers,
+        )
+        assert resp.status_code == 409
 
 
 class TestDeleteClient:

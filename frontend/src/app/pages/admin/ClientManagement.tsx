@@ -1,4 +1,4 @@
-import { ChevronRight, Plus, Search, XCircle } from "lucide-react";
+import { ChevronRight, Pencil, Plus, Search, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { BentoCard } from "../../components/BentoCard";
@@ -20,6 +20,8 @@ interface Client {
 export function ClientManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editingClientId, setEditingClientId] = useState<number | null>(null);
 
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,6 +32,14 @@ export function ClientManagement() {
     email: "",
     full_name: "",
     password: "",
+    phone: "",
+    address: "",
+  });
+
+  const [editFormData, setEditFormData] = useState({
+    company_name: "",
+    email: "",
+    full_name: "",
     phone: "",
     address: "",
   });
@@ -67,6 +77,34 @@ export function ClientManagement() {
       fetchClients();
     } catch (err: any) {
       alert(err.response?.data?.detail || "Error creating client");
+    }
+  };
+
+  const openEditForm = (client: Client) => {
+    setEditingClientId(client.id);
+    setEditFormData({
+      company_name: client.company_name || "",
+      email: client.user?.email || "",
+      full_name: client.user?.full_name || "",
+      phone: client.phone || "",
+      address: client.address || "",
+    });
+    setShowEditForm(true);
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingClientId) {
+      return;
+    }
+
+    try {
+      await api.put(`/clients/${editingClientId}`, editFormData);
+      setShowEditForm(false);
+      setEditingClientId(null);
+      fetchClients();
+    } catch (err: any) {
+      alert(err.response?.data?.detail || "Error updating client");
     }
   };
 
@@ -136,6 +174,13 @@ export function ClientManagement() {
                       </span>
                     </td>
                     <td className="py-3 px-4 flex justify-end gap-2">
+                       <PillButton
+                         variant="secondary"
+                         className="px-3 py-1 text-xs"
+                         onClick={() => openEditForm(client)}
+                       >
+                         Editar <Pencil className="w-3 h-3 ml-1" />
+                       </PillButton>
                        <Link to={`/admin/clientes/${client.id}/predios`}>
                          <PillButton variant="outline" className="px-3 py-1 text-xs">Predios <ChevronRight className="w-3 h-3 ml-1" /></PillButton>
                        </Link>
@@ -168,7 +213,14 @@ export function ClientManagement() {
               <p className="text-sm text-[#6E6359]">{client.user?.email}</p>
               <p className="text-sm text-[#6E6359]">{client.phone || "Sin teléfono"}</p>
             </div>
-            <div className="flex justify-end">
+            <div className="flex gap-2">
+              <PillButton
+                variant="secondary"
+                className="flex-1 justify-center"
+                onClick={() => openEditForm(client)}
+              >
+                Editar <Pencil className="w-4 h-4 ml-1" />
+              </PillButton>
               <Link to={`/admin/clientes/${client.id}/predios`}>
                  <PillButton variant="outline" className="w-full justify-center">Ver Predios <ChevronRight className="w-4 h-4 ml-1" /></PillButton>
               </Link>
@@ -176,6 +228,54 @@ export function ClientManagement() {
           </BentoCard>
         ))}
       </div>
+
+      {showEditForm && (
+        <div className="fixed inset-0 bg-[#2C2621]/50 z-50 flex items-center justify-center p-4">
+          <BentoCard variant="light" className="w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+               <h2 className="text-xl text-[#2C2621]">Editar Cliente</h2>
+               <button
+                 onClick={() => {
+                   setShowEditForm(false);
+                   setEditingClientId(null);
+                 }}
+                 type="button"
+               >
+                 <XCircle className="w-6 h-6 text-[#6E6359]" />
+               </button>
+            </div>
+            <form className="space-y-4" onSubmit={handleUpdate}>
+              <div>
+                <label className="block text-sm text-[#6E6359] mb-1">Nombre de la Empresa</label>
+                <input required type="text" value={editFormData.company_name} onChange={e => setEditFormData({...editFormData, company_name: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm text-[#6E6359] mb-1">Nombre de Contacto</label>
+                <input required type="text" value={editFormData.full_name} onChange={e => setEditFormData({...editFormData, full_name: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm text-[#6E6359] mb-1">Email</label>
+                <input required type="email" value={editFormData.email} onChange={e => setEditFormData({...editFormData, email: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm text-[#6E6359] mb-1">Teléfono / WhatsApp</label>
+                <input type="tel" value={editFormData.phone} onChange={e => setEditFormData({...editFormData, phone: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm text-[#6E6359] mb-1">Dirección</label>
+                <input type="text" value={editFormData.address} onChange={e => setEditFormData({...editFormData, address: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 focus:outline-none" />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <PillButton variant="outline" className="flex-1 justify-center" onClick={() => {
+                  setShowEditForm(false);
+                  setEditingClientId(null);
+                }} type="button">Cancelar</PillButton>
+                <PillButton variant="primary" className="flex-1 justify-center" type="submit">Guardar Cambios</PillButton>
+              </div>
+            </form>
+          </BentoCard>
+        </div>
+      )}
 
       {showCreateForm && (
         <div className="fixed inset-0 bg-[#2C2621]/50 z-50 flex items-center justify-center p-4">

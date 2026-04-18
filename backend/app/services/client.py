@@ -83,6 +83,22 @@ def update_client(db: Session, client_id: int, data: ClientUpdate) -> Client:
     client = get_client(db, client_id)
     update_data = data.model_dump(exclude_unset=True)
 
+    if "email" in update_data and update_data["email"] is not None:
+        new_email = update_data["email"]
+        if new_email != client.user.correo:
+            existing = db.execute(
+                select(User).where(User.correo == new_email, User.id != client.user.id)
+            ).scalar_one_or_none()
+            if existing is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Email '{new_email}' already registered",
+                )
+            client.user.correo = new_email
+
+    if "full_name" in update_data and update_data["full_name"] is not None:
+        client.user.nombre_completo = update_data["full_name"]
+
     if "company_name" in update_data:
         client.nombre_empresa = update_data["company_name"]
     if "phone" in update_data:

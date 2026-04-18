@@ -2,12 +2,14 @@
 
 from datetime import UTC, datetime, timedelta
 
+from app.core.config import settings
 from app.core.security import hash_password
 from app.models.client import Client
 from app.models.irrigation_area import IrrigationArea
 from app.models.node import Node
 from app.models.property import Property
 from app.models.user import User
+from app.services import alert as alert_service
 
 SENSOR_PAYLOAD = {
     "timestamp": "2026-04-01T10:00:00Z",
@@ -187,7 +189,13 @@ class TestAlertsApi:
         db.refresh(foreign_node)
         return foreign_area, foreign_node
 
-    def _create_threshold(self, client, admin_headers, area_id):
+    def _create_threshold(
+        self,
+        client,
+        admin_headers,
+        area_id,
+        severity: str = "critical",
+    ):
         resp = client.post(
             "/api/v1/thresholds",
             headers=admin_headers,
@@ -195,7 +203,7 @@ class TestAlertsApi:
                 "irrigation_area_id": area_id,
                 "parameter": "soil.humidity",
                 "min_value": 50.0,
-                "severity": "critical",
+                "severity": severity,
             },
         )
         assert resp.status_code == 201
@@ -480,7 +488,12 @@ class TestAlertNotificationDispatchApi:
         self,
         client,
         admin_headers,
+        monkeypatch,
     ):
+        monkeypatch.setattr(settings, "NOTIFICATIONS_ENABLED", False)
+        monkeypatch.setattr(settings, "NOTIFICATIONS_EMAIL_ENABLED", False)
+        monkeypatch.setattr(settings, "NOTIFICATIONS_WHATSAPP_ENABLED", False)
+
         resp = client.post(
             "/api/v1/alerts/dispatch-notifications?limit=50&only_unread=true",
             headers=admin_headers,
@@ -504,3 +517,155 @@ class TestAlertNotificationDispatchApi:
             headers=client_headers,
         )
         assert resp.status_code == 403
+
+    def test_warning_dispatches_email_only(
+        self,
+        client,
+        admin_headers,
+        node_headers,
+        sample_irrigation_area,
+        monkeypatch,
+    ):
+        monkeypatch.setattr(settings, "NOTIFICATIONS_ENABLED", True)
+        monkeypatch.setattr(settings, "NOTIFICATIONS_EMAIL_ENABLED", True)
+        monkeypatch.setattr(settings, "NOTIFICATIONS_WHATSAPP_ENABLED", True)
+
+        calls = {"email": 0, "whatsapp": 0}
+
+        def _fake_email(**_kwargs):
+            calls["email"] += 1
+            return True
+
+        def _fake_whatsapp(**_kwargs):
+            calls["whatsapp"] += 1
+            return True
+
+        monkeypatch.setattr(alert_service, "_send_email_notification", _fake_email)
+        monkeypatch.setattr(
+            alert_service, "_send_whatsapp_notification", _fake_whatsapp
+        )
+
+        threshold_resp = client.post(
+            "/api/v1/thresholds",
+            headers=admin_headers,
+            json={
+                "irrigation_area_id": sample_irrigation_area.id,
+                "parameter": "soil.humidity",
+                "min_value": 50.0,
+                "severity": "warning",
+            },
+        )
+        assert threshold_resp.status_code == 201
+
+        ingest = client.post(
+            "/api/v1/readings",
+            headers=node_headers,
+            json={
+                **SENSOR_PAYLOAD,
+                "timestamp": "2026-04-02T10:00:00Z",
+                "soil": {
+                    **SENSOR_PAYLOAD["soil"],
+                    "humidity": 35.0,
+                },
+            },
+        )
+        assert ingest.status_code == 201
+
+        dispatch = client.post(
+            "/api/v1/alerts/dispatch-notifications?only_unread=true&limit=20",
+            headers=admin_headers,
+        )
+        assert dispatch.status_code == 200
+        data = dispatch.json()
+        assert data["emailed_alerts"] == 1
+        assert data["whatsapp_alerts"] == 0
+        assert data["email_failures"] == 0
+        assert data["whatsapp_failures"] == 0
+        assert calls["email"] == 1
+        assert calls["whatsapp"] == 0
+
+        list_resp = client.get(
+            f"/api/v1/alerts?irrigation_area_id={sample_irrigation_area.id}",
+            headers=admin_headers,
+        )
+        assert list_resp.status_code == 200
+        alert = list_resp.json()["data"][0]
+        assert alert["severity"] == "warning"
+        assert alert["notified_email"] is True
+        assert alert["notified_whatsapp"] is False
+
+    def test_critical_dispatches_whatsapp_only(
+        self,
+        client,
+        admin_headers,
+        node_headers,
+        sample_irrigation_area,
+        monkeypatch,
+    ):
+        monkeypatch.setattr(settings, "NOTIFICATIONS_ENABLED", True)
+        monkeypatch.setattr(settings, "NOTIFICATIONS_EMAIL_ENABLED", True)
+        monkeypatch.setattr(settings, "NOTIFICATIONS_WHATSAPP_ENABLED", True)
+
+        calls = {"email": 0, "whatsapp": 0}
+
+        def _fake_email(**_kwargs):
+            calls["email"] += 1
+            return True
+
+        def _fake_whatsapp(**_kwargs):
+            calls["whatsapp"] += 1
+            return True
+
+        monkeypatch.setattr(alert_service, "_send_email_notification", _fake_email)
+        monkeypatch.setattr(
+            alert_service, "_send_whatsapp_notification", _fake_whatsapp
+        )
+
+        threshold_resp = client.post(
+            "/api/v1/thresholds",
+            headers=admin_headers,
+            json={
+                "irrigation_area_id": sample_irrigation_area.id,
+                "parameter": "soil.humidity",
+                "min_value": 50.0,
+                "severity": "critical",
+            },
+        )
+        assert threshold_resp.status_code == 201
+
+        ingest = client.post(
+            "/api/v1/readings",
+            headers=node_headers,
+            json={
+                **SENSOR_PAYLOAD,
+                "timestamp": "2026-04-02T11:00:00Z",
+                "soil": {
+                    **SENSOR_PAYLOAD["soil"],
+                    "humidity": 34.0,
+                },
+            },
+        )
+        assert ingest.status_code == 201
+
+        dispatch = client.post(
+            "/api/v1/alerts/dispatch-notifications?only_unread=true&limit=20",
+            headers=admin_headers,
+        )
+        assert dispatch.status_code == 200
+        data = dispatch.json()
+        assert data["emailed_alerts"] == 0
+        assert data["whatsapp_alerts"] == 1
+        assert data["email_failures"] == 0
+        assert data["whatsapp_failures"] == 0
+        assert calls["email"] == 0
+        assert calls["whatsapp"] == 1
+
+        list_resp = client.get(
+            f"/api/v1/alerts?irrigation_area_id={sample_irrigation_area.id}",
+            headers=admin_headers,
+        )
+        assert list_resp.status_code == 200
+        alert = list_resp.json()["data"][0]
+        assert alert["severity"] == "critical"
+        assert alert["notified_email"] is False
+        assert alert["notified_whatsapp"] is True
