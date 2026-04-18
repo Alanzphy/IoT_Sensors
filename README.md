@@ -127,6 +127,7 @@ La key del ejemplo corresponde al **Nodo Nogal Norte**, vinculado al usuario `cl
 | `Access denied for user 'root'` | Falta el `.env` o `DB_PASSWORD` está vacío | Ejecutar el **Paso 0** |
 | `Can't connect to MySQL server` | El contenedor de MySQL no está listo | Esperar ~10s y reintentar, o `docker compose logs mysql` |
 | `Connection refused` (localhost) | Problema de socket en Windows/WSL | Cambiar `DB_HOST=localhost` a `DB_HOST=127.0.0.1` en `.env` |
+| `500` en `/api/v1/alerts` o `/api/v1/thresholds` | Esquema desactualizado (faltan tablas de Fase 2 Lite) | Ejecutar `cd backend && uv run alembic upgrade head` |
 
 ## Guía de Despliegue (Producción)
 
