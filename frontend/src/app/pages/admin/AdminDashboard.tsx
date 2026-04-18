@@ -163,12 +163,6 @@ export function AdminDashboard() {
                       Nuevo Cliente
                     </PillButton>
                   </Link>
-                  <Link to="/admin/predios" className="block">
-                    <PillButton variant="secondary" className="w-full justify-center">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Nuevo Predio
-                    </PillButton>
-                  </Link>
                   <Link to="/admin/nodos" className="block">
                     <PillButton variant="secondary" className="w-full justify-center">
                       <Plus className="w-4 h-4 mr-2" />
