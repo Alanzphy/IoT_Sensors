@@ -14,6 +14,7 @@ from app.models.property import Property
 from app.models.user import User
 from app.schemas.base import PaginatedResponse
 from app.schemas.reading import (
+    PriorityStatusResponse,
     ReadingAvailabilityResponse,
     ReadingCreate,
     ReadingCreateResponse,
@@ -104,6 +105,20 @@ def get_latest_reading(
     if reading is None:
         return None
     return ReadingResponse.model_validate(reading)
+
+
+@router.get("/priority-status", response_model=PriorityStatusResponse)
+def get_priority_status(
+    irrigation_area_id: int = Query(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _validate_area_access(current_user, db, irrigation_area_id)
+    payload = reading_service.get_priority_status(
+        db=db,
+        irrigation_area_id=irrigation_area_id,
+    )
+    return PriorityStatusResponse.model_validate(payload)
 
 
 @router.get("/availability", response_model=ReadingAvailabilityResponse)

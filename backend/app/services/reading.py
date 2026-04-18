@@ -14,6 +14,19 @@ from app.models.threshold import Threshold
 from app.schemas.reading import ReadingCreate
 
 
+PRIORITY_PARAMETERS = (
+    "soil.humidity",
+    "irrigation.flow_per_minute",
+    "environmental.eto",
+)
+
+
+def _priority_level_from_severity(severity: str) -> str:
+    if severity == "critical":
+        return "critical"
+    return "warning"
+
+
 def _extract_threshold_value(reading: Reading, parameter: str) -> float | None:
     mapping = {
         "soil.conductivity": reading.suelo_conductividad,
@@ -174,6 +187,90 @@ def get_latest_reading(db: Session, irrigation_area_id: int) -> Reading | None:
         .limit(1)
     ).scalar_one_or_none()
     return reading
+
+
+def get_priority_status(db: Session, irrigation_area_id: int) -> dict[str, object]:
+    """Return semaphore status for priority parameters using latest reading + thresholds."""
+    node = db.execute(
+        select(Node).where(
+            Node.area_riego_id == irrigation_area_id,
+            Node.eliminado_en.is_(None),
+        )
+    ).scalar_one_or_none()
+    if node is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No node found for irrigation area {irrigation_area_id}",
+        )
+
+    latest = db.execute(
+        select(Reading)
+        .where(Reading.nodo_id == node.id)
+        .order_by(Reading.marca_tiempo.desc())
+        .limit(1)
+    ).scalar_one_or_none()
+
+    thresholds = list(
+        db.execute(
+            select(Threshold).where(
+                Threshold.area_riego_id == irrigation_area_id,
+                Threshold.activo.is_(True),
+                Threshold.eliminado_en.is_(None),
+                Threshold.parametro.in_(list(PRIORITY_PARAMETERS)),
+            )
+        ).scalars()
+    )
+    threshold_by_parameter = {t.parametro: t for t in thresholds}
+
+    items: list[dict[str, object]] = []
+    for parameter in PRIORITY_PARAMETERS:
+        threshold = threshold_by_parameter.get(parameter)
+        value = (
+            _extract_threshold_value(latest, parameter) if latest is not None else None
+        )
+
+        threshold_id: int | None = None
+        threshold_severity: str | None = None
+        min_value: float | None = None
+        max_value: float | None = None
+        breached = False
+        level = "optimal"
+
+        if threshold is not None:
+            threshold_id = threshold.id
+            threshold_severity = threshold.severidad
+            min_value = (
+                float(threshold.rango_min) if threshold.rango_min is not None else None
+            )
+            max_value = (
+                float(threshold.rango_max) if threshold.rango_max is not None else None
+            )
+            if value is not None and _is_threshold_breached(
+                value=value,
+                min_value=min_value,
+                max_value=max_value,
+            ):
+                breached = True
+                level = _priority_level_from_severity(threshold.severidad)
+
+        items.append(
+            {
+                "parameter": parameter,
+                "level": level,
+                "current_value": value,
+                "breached": breached,
+                "threshold_id": threshold_id,
+                "min_value": min_value,
+                "max_value": max_value,
+                "threshold_severity": threshold_severity,
+            }
+        )
+
+    return {
+        "irrigation_area_id": irrigation_area_id,
+        "reading_timestamp": latest.marca_tiempo if latest is not None else None,
+        "items": items,
+    }
 
 
 def _build_history_query(

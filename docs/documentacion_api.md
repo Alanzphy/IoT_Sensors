@@ -860,6 +860,7 @@ Los datos de los sensores. Tiene 5 operaciones con comportamientos diferentes:
 | `POST` | `/api/v1/readings` | **Ingesta de sensor** (simulador envía datos) | API Key (`X-API-Key`) |
 | `GET` | `/api/v1/readings` | **Histórico** paginado con filtros | JWT (Admin/Cliente) |
 | `GET` | `/api/v1/readings/latest` | **Última lectura** de un área (frescura) | JWT (Admin/Cliente) |
+| `GET` | `/api/v1/readings/priority-status` | **Semáforo prioritario** (lectura actual + umbrales activos) | JWT (Admin/Cliente) |
 | `GET` | `/api/v1/readings/availability` | **Disponibilidad de fechas** con lecturas | JWT (Admin/Cliente) |
 | `GET` | `/api/v1/readings/export` | **Exportar** datos filtrados (CSV/XLSX/PDF) | JWT (Admin/Cliente) |
 
@@ -1013,6 +1014,65 @@ Los datos de los sensores. Tiene 5 operaciones con comportamientos diferentes:
 ```
 
 > El frontend calcula el "tiempo transcurrido" comparando `timestamp` con la hora actual. Ejemplo: si `timestamp` es de hace 12 minutos, muestra "Último dato: hace 12 min". Si es de hace más de 20 minutos, muestra una alerta visual.
+
+#### Semáforo prioritario en tiempo real — `GET /api/v1/readings/priority-status`
+
+**Auth:** Header `Authorization: Bearer <jwt>`
+
+**Query params:**
+
+| Param | Tipo | Requerido | Notas |
+|-------|------|-----------|-------|
+| `irrigation_area_id` | integer | Sí | Área objetivo |
+
+Este endpoint resume el estado de los 3 parámetros prioritarios (`soil.humidity`, `irrigation.flow_per_minute`, `environmental.eto`) usando:
+- La **última lectura** disponible del área.
+- Los **umbrales activos** configurados para cada parámetro.
+
+**Response 200:**
+```json
+{
+  "irrigation_area_id": 1,
+  "reading_timestamp": "2026-04-18T16:30:00Z",
+  "items": [
+    {
+      "parameter": "soil.humidity",
+      "level": "critical",
+      "current_value": 35.0,
+      "breached": true,
+      "threshold_id": 12,
+      "min_value": 40.0,
+      "max_value": null,
+      "threshold_severity": "critical"
+    },
+    {
+      "parameter": "irrigation.flow_per_minute",
+      "level": "warning",
+      "current_value": 11.0,
+      "breached": true,
+      "threshold_id": 13,
+      "min_value": null,
+      "max_value": 10.0,
+      "threshold_severity": "warning"
+    },
+    {
+      "parameter": "environmental.eto",
+      "level": "optimal",
+      "current_value": 3.8,
+      "breached": false,
+      "threshold_id": 14,
+      "min_value": null,
+      "max_value": 4.0,
+      "threshold_severity": "info"
+    }
+  ]
+}
+```
+
+**Regla de mapeo de niveles:**
+- `critical` -> nivel `critical`
+- `warning` o `info` -> nivel `warning`
+- sin umbral activo o sin ruptura -> nivel `optimal`
 
 #### Disponibilidad de fechas — `GET /api/v1/readings/availability`
 
@@ -1669,13 +1729,14 @@ Header: Authorization: Bearer eyJ...(cliente)...
 | PUT | `/api/v1/nodes/{id}` | Actualizar |
 | DELETE | `/api/v1/nodes/{id}` | Eliminar |
 
-### Readings (5 endpoints)
+### Readings (6 endpoints)
 
 | Método | Endpoint | Auth | Descripción |
 |--------|----------|------|-------------|
 | POST | `/api/v1/readings` | API Key | Ingesta de sensor |
 | GET | `/api/v1/readings` | JWT | Histórico (paginado, filtros: irrigation_area_id, dates, cycle) |
 | GET | `/api/v1/readings/latest` | JWT | Última lectura (frescura) |
+| GET | `/api/v1/readings/priority-status` | JWT | Semáforo prioritario (lectura + umbrales activos) |
 | GET | `/api/v1/readings/availability` | JWT | Fechas disponibles para calendario/filtros |
 | GET | `/api/v1/readings/export` | JWT | Exportar CSV/XLSX/PDF |
 
@@ -1721,4 +1782,4 @@ Header: Authorization: Bearer eyJ...(cliente)...
 |--------|----------|-------------|
 | GET | `/health` | Verificación de estado del servicio |
 
-**Total: 62 endpoints.**
+**Total: 63 endpoints.**

@@ -30,7 +30,9 @@ SENSOR_PAYLOAD = {
 
 class TestPostReading:
     def test_ingest_reading_valid_api_key(self, client, sample_node, node_headers):
-        resp = client.post("/api/v1/readings", json=SENSOR_PAYLOAD, headers=node_headers)
+        resp = client.post(
+            "/api/v1/readings", json=SENSOR_PAYLOAD, headers=node_headers
+        )
         assert resp.status_code == 201
         data = resp.json()
         assert "id" in data
@@ -57,8 +59,19 @@ class TestPostReading:
         payload = {
             **SENSOR_PAYLOAD,
             "timestamp": "2026-04-01T11:00:00Z",
-            "soil": {"conductivity": None, "temperature": None, "humidity": None, "water_potential": None},
-            "environmental": {"temperature": None, "relative_humidity": None, "wind_speed": None, "solar_radiation": None, "eto": None},
+            "soil": {
+                "conductivity": None,
+                "temperature": None,
+                "humidity": None,
+                "water_potential": None,
+            },
+            "environmental": {
+                "temperature": None,
+                "relative_humidity": None,
+                "wind_speed": None,
+                "solar_radiation": None,
+                "eto": None,
+            },
         }
         resp = client.post("/api/v1/readings", json=payload, headers=node_headers)
         assert resp.status_code == 201
@@ -87,7 +100,9 @@ class TestGetReadings:
         resp = client.get("/api/v1/readings")
         assert resp.status_code == 401
 
-    def test_list_readings_with_auth(self, client, sample_node, node_headers, admin_headers):
+    def test_list_readings_with_auth(
+        self, client, sample_node, node_headers, admin_headers
+    ):
         self._ingest(client, node_headers)
         resp = client.get("/api/v1/readings", headers=admin_headers)
         assert resp.status_code == 200
@@ -96,7 +111,9 @@ class TestGetReadings:
         assert "total" in data
         assert "page" in data
 
-    def test_list_readings_pagination(self, client, node_headers, admin_headers, sample_node):
+    def test_list_readings_pagination(
+        self, client, node_headers, admin_headers, sample_node
+    ):
         for i in range(3):
             self._ingest(client, node_headers, f"2026-04-0{i+1}T10:00:00Z")
         resp = client.get("/api/v1/readings?page=1&per_page=2", headers=admin_headers)
@@ -119,7 +136,9 @@ class TestGetReadings:
 
 class TestGetLatestReading:
     def test_latest_requires_auth(self, client, sample_irrigation_area):
-        resp = client.get(f"/api/v1/readings/latest?irrigation_area_id={sample_irrigation_area.id}")
+        resp = client.get(
+            f"/api/v1/readings/latest?irrigation_area_id={sample_irrigation_area.id}"
+        )
         assert resp.status_code == 401
 
     def test_latest_returns_none_when_no_readings(
@@ -156,9 +175,114 @@ class TestGetLatestReading:
         assert "2026-04-01T10:00" in data["timestamp"]
 
 
+class TestGetPriorityStatus:
+    def test_priority_status_requires_auth(self, client, sample_irrigation_area):
+        resp = client.get(
+            f"/api/v1/readings/priority-status?irrigation_area_id={sample_irrigation_area.id}"
+        )
+        assert resp.status_code == 401
+
+    def test_priority_status_defaults_to_optimal_without_readings(
+        self, client, admin_headers, sample_irrigation_area, sample_node
+    ):
+        resp = client.get(
+            f"/api/v1/readings/priority-status?irrigation_area_id={sample_irrigation_area.id}",
+            headers=admin_headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["irrigation_area_id"] == sample_irrigation_area.id
+        assert data["reading_timestamp"] is None
+
+        by_param = {item["parameter"]: item for item in data["items"]}
+        assert by_param["soil.humidity"]["level"] == "optimal"
+        assert by_param["irrigation.flow_per_minute"]["level"] == "optimal"
+        assert by_param["environmental.eto"]["level"] == "optimal"
+
+    def test_priority_status_uses_latest_reading_and_thresholds(
+        self,
+        client,
+        admin_headers,
+        node_headers,
+        sample_node,
+        sample_irrigation_area,
+    ):
+        thresholds_payloads = [
+            {
+                "irrigation_area_id": sample_irrigation_area.id,
+                "parameter": "soil.humidity",
+                "min_value": 40.0,
+                "severity": "critical",
+            },
+            {
+                "irrigation_area_id": sample_irrigation_area.id,
+                "parameter": "irrigation.flow_per_minute",
+                "max_value": 10.0,
+                "severity": "warning",
+            },
+            {
+                "irrigation_area_id": sample_irrigation_area.id,
+                "parameter": "environmental.eto",
+                "max_value": 4.0,
+                "severity": "info",
+            },
+        ]
+
+        for payload in thresholds_payloads:
+            created = client.post(
+                "/api/v1/thresholds",
+                headers=admin_headers,
+                json=payload,
+            )
+            assert created.status_code == 201
+
+        reading_payload = {
+            **SENSOR_PAYLOAD,
+            "timestamp": "2026-04-02T10:00:00Z",
+            "soil": {
+                **SENSOR_PAYLOAD["soil"],
+                "humidity": 35.0,
+            },
+            "irrigation": {
+                **SENSOR_PAYLOAD["irrigation"],
+                "flow_per_minute": 11.0,
+            },
+            "environmental": {
+                **SENSOR_PAYLOAD["environmental"],
+                "eto": 5.0,
+            },
+        }
+        ingest = client.post(
+            "/api/v1/readings", json=reading_payload, headers=node_headers
+        )
+        assert ingest.status_code == 201
+
+        resp = client.get(
+            f"/api/v1/readings/priority-status?irrigation_area_id={sample_irrigation_area.id}",
+            headers=admin_headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["reading_timestamp"] is not None
+
+        by_param = {item["parameter"]: item for item in data["items"]}
+
+        assert by_param["soil.humidity"]["level"] == "critical"
+        assert by_param["soil.humidity"]["breached"] is True
+
+        assert by_param["irrigation.flow_per_minute"]["level"] == "warning"
+        assert by_param["irrigation.flow_per_minute"]["breached"] is True
+
+        # "info" severities are represented as warning semaphore level in UI
+        assert by_param["environmental.eto"]["level"] == "warning"
+        assert by_param["environmental.eto"]["breached"] is True
+
+
 class TestExportReadings:
     def _ingest_one(self, client, node_headers):
-        return client.post("/api/v1/readings", json=SENSOR_PAYLOAD, headers=node_headers)
+        return client.post(
+            "/api/v1/readings", json=SENSOR_PAYLOAD, headers=node_headers
+        )
 
     def test_export_csv(
         self, client, admin_headers, node_headers, sample_node, sample_irrigation_area

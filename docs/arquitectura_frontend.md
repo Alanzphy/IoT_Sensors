@@ -75,7 +75,7 @@ Actualmente el frontend está en fase de **transición de datos estáticos hacia
 	- `soil.humidity`
 	- `irrigation.flow_per_minute`
 	- `environmental.eto`
-- El estado se deriva de alertas de tipo `threshold` no leídas del área seleccionada.
+- El estado se deriva en tiempo real de `GET /api/v1/readings/priority-status` (última lectura + umbrales activos del área seleccionada), sin depender del estado leída/no leída de alertas.
 
 ### 3.5 Preferencias de Notificación en Cliente (Activo)
 

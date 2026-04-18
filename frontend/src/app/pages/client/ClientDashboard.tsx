@@ -20,21 +20,9 @@ import { api } from "../../services/api";
 type PriorityKey = "soil.humidity" | "irrigation.flow_per_minute" | "environmental.eto";
 type SemaphoreLevel = "optimal" | "warning" | "critical";
 
-type AlertLike = {
-  parameter: string | null;
-  severity: "info" | "warning" | "critical";
-};
-
-const severityRank: Record<AlertLike["severity"], number> = {
-  info: 1,
-  warning: 2,
-  critical: 3,
-};
-
-const levelFromRank: Record<number, SemaphoreLevel> = {
-  1: "warning",
-  2: "warning",
-  3: "critical",
+type PriorityStatusItem = {
+  parameter: string;
+  level: SemaphoreLevel;
 };
 
 const defaultSemaphore: Record<PriorityKey, SemaphoreLevel> = {
@@ -112,7 +100,12 @@ export function ClientDashboard() {
 
     const fetchData = async () => {
       try {
-        const latestRes = await api.get(`/readings/latest?irrigation_area_id=${selectedArea.id}`);
+        const [latestRes, histRes, priorityRes] = await Promise.all([
+          api.get(`/readings/latest?irrigation_area_id=${selectedArea.id}`),
+          api.get(`/readings?irrigation_area_id=${selectedArea.id}&per_page=12`),
+          api.get(`/readings/priority-status?irrigation_area_id=${selectedArea.id}`),
+        ]);
+
         const latestData = latestRes.data;
 
         if (isMounted) {
@@ -144,7 +137,6 @@ export function ClientDashboard() {
           }
         }
 
-        const histRes = await api.get(`/readings?irrigation_area_id=${selectedArea.id}&per_page=12`);
         if (isMounted && histRes.data?.data) {
           const rawItems = histRes.data.data;
           const chartData = rawItems.reverse().map((item: any) => {
@@ -159,32 +151,25 @@ export function ClientDashboard() {
           setHistoricalData(chartData);
         }
 
-        const alertsRes = await api.get(
-          `/alerts?irrigation_area_id=${selectedArea.id}&alert_type=threshold&read=false&per_page=100`,
-        );
         if (isMounted) {
-          const items: AlertLike[] = alertsRes.data?.data ?? [];
-          const ranks: Record<PriorityKey, number> = {
-            "soil.humidity": 0,
-            "irrigation.flow_per_minute": 0,
-            "environmental.eto": 0,
+          const items: PriorityStatusItem[] = priorityRes.data?.items ?? [];
+          const nextSemaphore: Record<PriorityKey, SemaphoreLevel> = {
+            ...defaultSemaphore,
           };
 
           for (const item of items) {
-            if (!item.parameter) continue;
-            if (!(item.parameter in ranks)) continue;
+            if (!(item.parameter in nextSemaphore)) continue;
             const key = item.parameter as PriorityKey;
-            const nextRank = severityRank[item.severity] ?? 0;
-            if (nextRank > ranks[key]) {
-              ranks[key] = nextRank;
+            if (
+              item.level === "optimal" ||
+              item.level === "warning" ||
+              item.level === "critical"
+            ) {
+              nextSemaphore[key] = item.level;
             }
           }
 
-          setPrioritySemaphore({
-            "soil.humidity": levelFromRank[ranks["soil.humidity"]] ?? "optimal",
-            "irrigation.flow_per_minute": levelFromRank[ranks["irrigation.flow_per_minute"]] ?? "optimal",
-            "environmental.eto": levelFromRank[ranks["environmental.eto"]] ?? "optimal",
-          });
+          setPrioritySemaphore(nextSemaphore);
         }
       } catch (err) {
         console.error("Error fetching dashboard data:", err);

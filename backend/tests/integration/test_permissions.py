@@ -105,6 +105,15 @@ class TestClientCanOnlySeeOwnData:
         )
         assert resp.status_code == 200
 
+    def test_client_can_get_priority_status_of_own_area(
+        self, client, client_headers, sample_irrigation_area, sample_node
+    ):
+        resp = client.get(
+            f"/api/v1/readings/priority-status?irrigation_area_id={sample_irrigation_area.id}",
+            headers=client_headers,
+        )
+        assert resp.status_code == 200
+
     def test_client_cannot_see_readings_of_another_client(
         self,
         client,
@@ -187,6 +196,12 @@ class TestClientCanOnlySeeOwnData:
             headers=client_headers,
         )
         assert export_resp.status_code == 403
+
+        priority_resp = client.get(
+            f"/api/v1/readings/priority-status?irrigation_area_id={other_area_id}",
+            headers=client_headers,
+        )
+        assert priority_resp.status_code == 403
 
     def test_client_cannot_access_admin_only_endpoints(self, client, client_headers):
         """Un usuario cliente no puede acceder a endpoints solo de admin."""

@@ -126,6 +126,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResetPasswordResponse'
+        '400':
+          description: Token invalido, expirado o ya utilizado
+        '429':
+          description: Demasiados intentos de restablecimiento desde la misma IP
         '422':
           description: Validation Error
           content:
@@ -1519,6 +1523,34 @@ paths:
                 - $ref: '#/components/schemas/ReadingResponse'
                 - type: 'null'
                 title: Response Get Latest Reading Api V1 Readings Latest Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/readings/priority-status:
+    get:
+      tags:
+      - Readings
+      summary: Get Priority Status
+      operationId: get_priority_status_api_v1_readings_priority_status_get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: irrigation_area_id
+        in: query
+        required: true
+        schema:
+          type: integer
+          title: Irrigation Area Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriorityStatusResponse'
         '422':
           description: Validation Error
           content:
@@ -3368,6 +3400,80 @@ components:
       - total
       - data
       title: PaginatedResponse[UserResponse]
+    PriorityStatusItem:
+      properties:
+        parameter:
+          type: string
+          enum:
+          - soil.humidity
+          - irrigation.flow_per_minute
+          - environmental.eto
+          title: Parameter
+        level:
+          type: string
+          enum:
+          - optimal
+          - warning
+          - critical
+          title: Level
+        current_value:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Current Value
+        breached:
+          type: boolean
+          title: Breached
+          default: false
+        threshold_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Threshold Id
+        min_value:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Min Value
+        max_value:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Max Value
+        threshold_severity:
+          anyOf:
+          - type: string
+            enum:
+            - info
+            - warning
+            - critical
+          - type: 'null'
+          title: Threshold Severity
+      type: object
+      required:
+      - parameter
+      - level
+      title: PriorityStatusItem
+    PriorityStatusResponse:
+      properties:
+        irrigation_area_id:
+          type: integer
+          title: Irrigation Area Id
+        reading_timestamp:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Reading Timestamp
+        items:
+          items:
+            $ref: '#/components/schemas/PriorityStatusItem'
+          type: array
+          title: Items
+      type: object
+      required:
+      - irrigation_area_id
+      title: PriorityStatusResponse
     PropertyCreate:
       properties:
         client_id:

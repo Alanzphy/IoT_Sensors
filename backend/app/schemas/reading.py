@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -115,3 +116,29 @@ class ReadingAvailabilityResponse(BaseModel):
     min_date: date | None = None
     max_date: date | None = None
     available_dates: list[date] = Field(default_factory=list)
+
+
+PriorityParameter = Literal[
+    "soil.humidity",
+    "irrigation.flow_per_minute",
+    "environmental.eto",
+]
+PrioritySemaphoreLevel = Literal["optimal", "warning", "critical"]
+ThresholdSeverity = Literal["info", "warning", "critical"]
+
+
+class PriorityStatusItem(BaseModel):
+    parameter: PriorityParameter
+    level: PrioritySemaphoreLevel
+    current_value: float | None = None
+    breached: bool = False
+    threshold_id: int | None = None
+    min_value: float | None = None
+    max_value: float | None = None
+    threshold_severity: ThresholdSeverity | None = None
+
+
+class PriorityStatusResponse(BaseModel):
+    irrigation_area_id: int
+    reading_timestamp: datetime | None = None
+    items: list[PriorityStatusItem] = Field(default_factory=list)
