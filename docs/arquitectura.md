@@ -255,7 +255,7 @@ graph TD
 
 **Reglas clave:**
 - El **Admin** puede ver y gestionar todo (CRUD completo).
-- El **Cliente** solo ve sus propios predios, áreas y lecturas.
+- El **Cliente** solo accede a sus propios predios, áreas y lecturas; además puede gestionar umbrales y preferencias de notificación dentro de su ownership.
 - Cada Área de Riego tiene **exactamente 1 Nodo** (relación 1:1).
 - Cada Área puede tener **múltiples Ciclos de Cultivo** (historial de temporadas), pero solo **1 activo** a la vez.
 - El **catálogo de tipos de cultivo** es administrable por el Admin. Valores iniciales: Nogal, Alfalfa, Manzana, Maíz, Chile, Algodón.
@@ -268,9 +268,9 @@ graph TD
 |------|-----------|-----|
 | **Frontend** | React (SPA) | Interfaz web. Build estático servido por Nginx. Dashboard, histórico, exportación. |
 | **Backend** | Python 3.11+ / FastAPI / Uvicorn | API REST. Recibe lecturas de sensores + atiende CRUD del frontend. Async. |
-| **Base de Datos** | MySQL 8 | Almacenamiento relacional. 12 tablas. ORM: SQLAlchemy. Migraciones: Alembic. |
+| **Base de Datos** | MySQL 8 | Almacenamiento relacional. 14 tablas activas en el estado actual. ORM: SQLAlchemy. Migraciones: Alembic. |
 | **Reverse Proxy** | Nginx | Punto de entrada público. SSL termination. Rutea `/` → frontend, `/api/v1/*` → backend. |
-| **Contenedores** | Docker + Docker Compose | Orquestación de 3 contenedores (Frontend+Nginx, Backend, MySQL) en la VPS. |
+| **Contenedores** | Docker + Docker Compose | Orquestación de Frontend+Nginx, Backend, MySQL y schedulers opcionales para inactividad/notificaciones en la VPS. |
 | **Servidor** | VPS Linux ("Servidor Grogu") | Infraestructura. Puertos expuestos: 80, 443. Internos: 5050, 3306. |
 
 **Convenciones del API:**
@@ -318,7 +318,7 @@ Esta sección separa lo que ya está activo en el sistema de lo que continúa co
 Componentes activos a la fecha:
 
 - Tablas activas en base de datos: `umbrales`, `alertas`, `audit_log`, `preferencias_notificacion`.
-- Endpoints activos: `/api/v1/thresholds`, `/api/v1/alerts`, `/api/v1/alerts/scan-inactivity`, `/api/v1/alerts/dispatch-notifications`, `/api/v1/notification-preferences`, `/api/v1/clients/me/notification-settings`, `/api/v1/audit-logs`.
+- Endpoints activos: `/api/v1/thresholds`, `/api/v1/alerts`, `/api/v1/alerts/unread-count`, `/api/v1/alerts/scan-inactivity`, `/api/v1/alerts/dispatch-notifications`, `/api/v1/notification-preferences`, `/api/v1/clients/me/notification-settings`, `/api/v1/audit-logs`, `/api/v1/readings/priority-status`.
 - Endpoint activo para despacho: `/api/v1/alerts/dispatch-notifications` (Admin).
 - Política de despacho activa por severidad: `info`/`warning` por email y `critical` por WhatsApp.
 - Evaluación de umbrales durante la ingesta de `POST /api/v1/readings`.
@@ -394,13 +394,12 @@ Funcionalidades que permanecen en roadmap y no forman parte de la implementació
 - Integración de IA conversacional con Azure OpenAI.
 - Automatización asíncrona con n8n.
 - Visualización geoespacial avanzada en mapas.
-- Configuración de umbrales por cliente final (self-service).
 
 ### 7.5 Checklist de Estado
 
 #### Implementado (Fase 2 Lite)
 - [x] Migración y uso de tablas `umbrales`, `alertas`, `audit_log`.
-- [x] CRUD de umbrales (Admin).
+- [x] CRUD de umbrales (Admin/Cliente con ownership por área).
 - [x] Listado/detalle/marcado de alertas (Admin/Cliente por ownership).
 - [x] Escaneo de inactividad (`/api/v1/alerts/scan-inactivity`) y scheduler en compose.
 - [x] Despacho de notificaciones de alertas (`/api/v1/alerts/dispatch-notifications`) por backend directo.
@@ -409,7 +408,7 @@ Funcionalidades que permanecen en roadmap y no forman parte de la implementació
 - [x] Recuperación de contraseña por correo (`/api/v1/auth/forgot-password`, `/api/v1/auth/reset-password`) con token temporal de un solo uso.
 - [x] UI de alertas (popover + centro de alertas).
 - [x] Endpoint y vista de auditoría administrativa (`/api/v1/audit-logs`, `/admin/auditoria`).
-- [x] UI admin de umbrales (`/admin/umbrales`).
+- [x] UI de umbrales para Admin y Cliente (`/admin/umbrales`, `/cliente/umbrales`).
 - [x] Semáforos visuales de umbral en dashboard cliente (parámetros prioritarios).
 
 #### Pendiente (Fase 2 Completa)
