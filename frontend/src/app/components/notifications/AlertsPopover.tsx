@@ -5,7 +5,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
 
 import { usePageVisibility } from "../../hooks/usePageVisibility";
-import { AlertItem, listAlerts, markAlertRead } from "../../services/alerts";
+import {
+    AlertItem,
+    getUnreadAlertsCount,
+    listAlerts,
+    markAlertRead,
+} from "../../services/alerts";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 
 interface AlertsPopoverProps {
@@ -61,13 +66,13 @@ export function AlertsPopover({
     setErrorMessage(null);
 
     try {
-      const [alertsPage, unreadPage] = await Promise.all([
+      const [alertsPage, unreadCountValue] = await Promise.all([
         listAlerts({ page: 1, per_page: 12 }),
-        listAlerts({ page: 1, per_page: 1, read: false }),
+        getUnreadAlertsCount(),
       ]);
 
       setAlerts(alertsPage.data ?? []);
-      setUnreadCount(unreadPage.total ?? 0);
+      setUnreadCount(unreadCountValue);
     } catch (error) {
       console.error("Failed to load alerts", error);
       setErrorMessage("No fue posible cargar alertas");

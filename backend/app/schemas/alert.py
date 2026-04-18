@@ -49,3 +49,7 @@ class NotificationDispatchResponse(BaseModel):
     email_failures: int
     whatsapp_failures: int
     executed_at: datetime
+
+
+class AlertUnreadCountResponse(BaseModel):
+    unread_count: int

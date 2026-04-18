@@ -26,6 +26,10 @@ export interface AlertsPaginatedResponse {
   data: AlertItem[];
 }
 
+export interface AlertUnreadCountResponse {
+  unread_count: number;
+}
+
 export interface ListAlertsParams {
   page?: number;
   per_page?: number;
@@ -48,4 +52,13 @@ export async function listAlerts(
 export async function markAlertRead(alertId: number, read = true): Promise<AlertItem> {
   const response = await api.patch<AlertItem>(`/alerts/${alertId}/read`, { read });
   return response.data;
+}
+
+export async function getUnreadAlertsCount(
+  params?: Omit<ListAlertsParams, "page" | "per_page" | "read">,
+): Promise<number> {
+  const response = await api.get<AlertUnreadCountResponse>("/alerts/unread-count", {
+    params,
+  });
+  return response.data.unread_count ?? 0;
 }

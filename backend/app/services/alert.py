@@ -512,6 +512,46 @@ def list_alerts(
     return items, total
 
 
+def count_unread_alerts(
+    db: Session,
+    irrigation_area_id: int | None = None,
+    node_id: int | None = None,
+    severity: str | None = None,
+    alert_type: str | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
+    allowed_area_ids: list[int] | None = None,
+) -> int:
+    conditions = [Alert.leida.is_(False)]
+
+    if allowed_area_ids is not None:
+        if not allowed_area_ids:
+            return 0
+        conditions.append(Alert.area_riego_id.in_(allowed_area_ids))
+
+    if irrigation_area_id is not None:
+        conditions.append(Alert.area_riego_id == irrigation_area_id)
+    if node_id is not None:
+        conditions.append(Alert.nodo_id == node_id)
+    if severity is not None:
+        conditions.append(Alert.severidad == severity)
+    if alert_type is not None:
+        conditions.append(Alert.tipo == alert_type)
+    if start_date is not None:
+        conditions.append(
+            Alert.marca_tiempo >= datetime.combine(start_date, datetime.min.time())
+        )
+    if end_date is not None:
+        conditions.append(
+            Alert.marca_tiempo <= datetime.combine(end_date, datetime.max.time())
+        )
+
+    return (
+        db.execute(select(func.count()).select_from(Alert).where(*conditions)).scalar()
+        or 0
+    )
+
+
 def mark_alert_read(db: Session, alert_id: int, read: bool = True) -> Alert:
     alert = get_alert(db, alert_id)
     alert.leida = read

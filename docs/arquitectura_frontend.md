@@ -53,7 +53,7 @@ Actualmente el frontend está en fase de **transición de datos estáticos hacia
 
 - `components/notifications/AlertsPopover.tsx`: campana global con contador y últimas alertas.
 - `pages/shared/AlertsCenterPage.tsx`: listado completo con filtros, paginación y marcado de leídas.
-- `services/alerts.ts`: cliente HTTP para `/api/v1/alerts` y `/api/v1/alerts/{id}/read`.
+- `services/alerts.ts`: cliente HTTP para `/api/v1/alerts`, `/api/v1/alerts/unread-count` y `/api/v1/alerts/{id}/read`.
 - Integración en layouts de Admin y Cliente para visibilidad transversal.
 
 ### 3.2 Módulo de Auditoría en UI (Activo - Admin)
@@ -101,7 +101,7 @@ Actualmente el frontend está en fase de **transición de datos estáticos hacia
 
 - `hooks/usePageVisibility.ts`: pausa el polling cuando la pestaña no está visible.
 - `pages/client/ClientDashboard.tsx`: refresco cada 30s, solo en pestaña visible, con guardas para evitar solicitudes simultáneas.
-- `components/notifications/AlertsPopover.tsx`: polling deshabilitado en la ruta de centro de alertas y cuando la pestaña está oculta; también evita solicitudes concurrentes.
+- `components/notifications/AlertsPopover.tsx`: polling deshabilitado en la ruta de centro de alertas y cuando la pestaña está oculta; también evita solicitudes concurrentes y usa `/api/v1/alerts/unread-count` para el badge de no leídas.
 - `pages/shared/AlertsCenterPage.tsx`: mantiene auto-refresh cada 30s solo en pestaña visible y evita solapamiento de peticiones.
 
 ---

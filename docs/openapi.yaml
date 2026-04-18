@@ -1930,6 +1930,78 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/alerts/unread-count:
+    get:
+      tags:
+      - Alerts
+      summary: Get Unread Alert Count
+      operationId: get_unread_alert_count_api_v1_alerts_unread_count_get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: irrigation_area_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Irrigation Area Id
+      - name: node_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Node Id
+      - name: severity
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Severity
+      - name: alert_type
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Alert Type
+      - name: start_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Start Date
+      - name: end_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: End Date
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertUnreadCountResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/alerts/{alert_id}:
     get:
       tags:
@@ -2299,6 +2371,15 @@ components:
       - created_at
       - updated_at
       title: AlertResponse
+    AlertUnreadCountResponse:
+      properties:
+        unread_count:
+          type: integer
+          title: Unread Count
+      type: object
+      required:
+      - unread_count
+      title: AlertUnreadCountResponse
     AuditLogResponse:
       properties:
         id:

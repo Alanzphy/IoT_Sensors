@@ -1135,6 +1135,7 @@ Historial de alertas generadas por umbral o por inactividad de nodos.
 | Método | Endpoint | Descripción | Auth |
 |--------|----------|-------------|------|
 | `GET` | `/api/v1/alerts` | Listado paginado con filtros | JWT (Admin/Cliente) |
+| `GET` | `/api/v1/alerts/unread-count` | Conteo de alertas no leídas | JWT (Admin/Cliente) |
 | `GET` | `/api/v1/alerts/{id}` | Detalle de alerta | JWT (Admin/Cliente) |
 | `PATCH` | `/api/v1/alerts/{id}/read` | Marcar como leída/no leída | JWT (Admin/Cliente) |
 | `POST` | `/api/v1/alerts/scan-inactivity` | Ejecutar escaneo de inactividad | JWT (Admin) |
@@ -1194,6 +1195,28 @@ Historial de alertas generadas por umbral o por inactividad de nodos.
 #### Detalle de alerta — `GET /api/v1/alerts/{id}`
 
 Retorna la misma estructura de `AlertResponse` para una alerta específica.
+
+#### Conteo no leídas — `GET /api/v1/alerts/unread-count`
+
+Endpoint ligero para indicadores y badges (campana/contador), evitando descargar listados completos solo para obtener el total de no leídas.
+
+**Query params opcionales:**
+
+| Param | Tipo | Requerido | Notas |
+|-------|------|-----------|-------|
+| `irrigation_area_id` | integer | No | Filtrar por área |
+| `node_id` | integer | No | Filtrar por nodo |
+| `severity` | string | No | `info`, `warning`, `critical` |
+| `alert_type` | string | No | `threshold` o `inactivity` |
+| `start_date` | string (date) | No | Inicio de rango |
+| `end_date` | string (date) | No | Fin de rango |
+
+**Response 200:**
+```json
+{
+  "unread_count": 7
+}
+```
 
 #### Marcar alerta como leída — `PATCH /api/v1/alerts/{id}/read`
 
@@ -1750,11 +1773,12 @@ Header: Authorization: Bearer eyJ...(cliente)...
 | PUT | `/api/v1/thresholds/{id}` | Actualizar |
 | DELETE | `/api/v1/thresholds/{id}` | Eliminar lógico |
 
-### Alerts (5 endpoints) — Admin/Cliente (según ownership)
+### Alerts (6 endpoints) — Admin/Cliente (según ownership)
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
 | GET | `/api/v1/alerts` | Listar (paginado y filtros) |
+| GET | `/api/v1/alerts/unread-count` | Conteo de no leídas |
 | GET | `/api/v1/alerts/{id}` | Detalle |
 | PATCH | `/api/v1/alerts/{id}/read` | Marcar leída/no leída |
 | POST | `/api/v1/alerts/scan-inactivity` | Escanear nodos inactivos (Admin) |
@@ -1782,4 +1806,4 @@ Header: Authorization: Bearer eyJ...(cliente)...
 |--------|----------|-------------|
 | GET | `/health` | Verificación de estado del servicio |
 
-**Total: 63 endpoints.**
+**Total: 64 endpoints.**

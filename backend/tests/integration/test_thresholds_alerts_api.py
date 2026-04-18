@@ -509,6 +509,113 @@ class TestAlertsApi:
         )
         assert mark_forbidden.status_code == 403
 
+    def test_unread_count_admin_gets_global_count(
+        self,
+        client,
+        db,
+        admin_headers,
+        node_headers,
+        sample_irrigation_area,
+        sample_crop_type,
+    ):
+        self._create_threshold(client, admin_headers, sample_irrigation_area.id)
+
+        own_ingest = client.post(
+            "/api/v1/readings",
+            headers=node_headers,
+            json={
+                **SENSOR_PAYLOAD,
+                "timestamp": "2026-04-03T10:00:00Z",
+                "soil": {
+                    **SENSOR_PAYLOAD["soil"],
+                    "humidity": 35.0,
+                },
+            },
+        )
+        assert own_ingest.status_code == 201
+
+        foreign_area, foreign_node = self._create_foreign_area_node(
+            db, sample_crop_type.id
+        )
+        self._create_threshold(client, admin_headers, foreign_area.id)
+        foreign_ingest = client.post(
+            "/api/v1/readings",
+            headers={"X-API-Key": foreign_node.api_key},
+            json={
+                **SENSOR_PAYLOAD,
+                "timestamp": "2026-04-03T10:05:00Z",
+                "soil": {
+                    **SENSOR_PAYLOAD["soil"],
+                    "humidity": 30.0,
+                },
+            },
+        )
+        assert foreign_ingest.status_code == 201
+
+        count_resp = client.get(
+            "/api/v1/alerts/unread-count",
+            headers=admin_headers,
+        )
+        assert count_resp.status_code == 200
+        assert count_resp.json()["unread_count"] == 2
+
+    def test_unread_count_client_is_scoped_to_owned_areas(
+        self,
+        client,
+        db,
+        admin_headers,
+        client_headers,
+        node_headers,
+        sample_irrigation_area,
+        sample_crop_type,
+    ):
+        self._create_threshold(client, admin_headers, sample_irrigation_area.id)
+
+        own_ingest = client.post(
+            "/api/v1/readings",
+            headers=node_headers,
+            json={
+                **SENSOR_PAYLOAD,
+                "timestamp": "2026-04-04T10:00:00Z",
+                "soil": {
+                    **SENSOR_PAYLOAD["soil"],
+                    "humidity": 34.0,
+                },
+            },
+        )
+        assert own_ingest.status_code == 201
+
+        foreign_area, foreign_node = self._create_foreign_area_node(
+            db, sample_crop_type.id
+        )
+        self._create_threshold(client, admin_headers, foreign_area.id)
+        foreign_ingest = client.post(
+            "/api/v1/readings",
+            headers={"X-API-Key": foreign_node.api_key},
+            json={
+                **SENSOR_PAYLOAD,
+                "timestamp": "2026-04-04T10:05:00Z",
+                "soil": {
+                    **SENSOR_PAYLOAD["soil"],
+                    "humidity": 31.0,
+                },
+            },
+        )
+        assert foreign_ingest.status_code == 201
+
+        own_count_resp = client.get(
+            "/api/v1/alerts/unread-count",
+            headers=client_headers,
+        )
+        assert own_count_resp.status_code == 200
+        assert own_count_resp.json()["unread_count"] == 1
+
+        forbidden_count_resp = client.get(
+            f"/api/v1/alerts/unread-count?irrigation_area_id={foreign_area.id}",
+            headers=client_headers,
+        )
+        assert forbidden_count_resp.status_code == 403
+
 
 class TestInactivityAlertsApi:
     def _iso_utc(self, dt: datetime) -> str:
