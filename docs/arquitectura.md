@@ -387,9 +387,13 @@ sequenceDiagram
     B-->>SCH: Resumen de escaneo
 ```
 
-### 7.4 Fase 2 Completa (Futuro)
+### 7.4 Fase 2 Completa (En Ejecución)
 
-Funcionalidades que permanecen en roadmap y no forman parte de la implementación activa actual:
+Estado actual de Fase 2 Completa:
+
+- Sprint 1 geoespacial base iniciado (mapa cliente + endpoint `/api/v1/nodes/geo`).
+
+Funcionalidades que permanecen en roadmap y no forman parte de la implementación activa final:
 
 - Integración de IA conversacional con Azure OpenAI.
 - Automatización asíncrona con n8n.
@@ -413,4 +417,4 @@ Funcionalidades que permanecen en roadmap y no forman parte de la implementació
 
 #### Pendiente (Fase 2 Completa)
 - [ ] Integración IA/n8n.
-- [ ] Módulo de mapas.
+- [~] Módulo de mapas (base activa en Sprint 1, faltan capas/funciones avanzadas).

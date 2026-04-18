@@ -797,6 +797,7 @@ Sensores instalados en campo. **Admin gestiona.** Cliente ve los de sus áreas.
 | Método | Endpoint | Descripción | Quién |
 |--------|----------|-------------|-------|
 | `GET` | `/api/v1/nodes` | Listar nodos | Admin: todos. Cliente: solo suyos. |
+| `GET` | `/api/v1/nodes/geo` | Capa geoespacial de nodos con frescura | Admin: global con filtros. Cliente: solo su ownership. |
 | `POST` | `/api/v1/nodes` | Registrar nodo (genera API Key) | Admin |
 | `GET` | `/api/v1/nodes/{id}` | Detalle de un nodo | Admin: cualquiera. Cliente: solo suyos. |
 | `PUT` | `/api/v1/nodes/{id}` | Actualizar nodo | Admin |
@@ -848,6 +849,59 @@ Sensores instalados en campo. **Admin gestiona.** Cliente ve los de sus áreas.
 #### Listar nodos — `GET /api/v1/nodes`
 
 **Query params:** `?page=1&per_page=50&irrigation_area_id=1`
+
+#### Capa geoespacial de nodos — `GET /api/v1/nodes/geo`
+
+Entrega nodos listos para renderizado en mapa con contexto jerárquico y estado de frescura.
+
+**Query params:**
+
+| Param | Tipo | Requerido | Notas |
+|-------|------|-----------|-------|
+| `page` | integer | No | Default: 1 |
+| `per_page` | integer | No | Default: 200, máx: 200 |
+| `client_id` | integer | No | Solo admin. En cliente se fuerza a su propio `client_id` |
+| `property_id` | integer | No | Filtra por predio |
+| `irrigation_area_id` | integer | No | Filtra por área |
+| `include_without_coordinates` | boolean | No | Default: `false`. Si `true`, también retorna nodos sin GPS |
+
+**Response 200 (ejemplo):**
+```json
+{
+  "page": 1,
+  "per_page": 200,
+  "total": 1,
+  "data": [
+    {
+      "id": 1,
+      "irrigation_area_id": 1,
+      "irrigation_area_name": "Nogal Norte",
+      "property_id": 1,
+      "property_name": "Rancho Los Nogales",
+      "client_id": 1,
+      "client_company_name": "Agricola del Norte",
+      "crop_type_id": 1,
+      "crop_type_name": "Nogal",
+      "api_key": "ak_...",
+      "serial_number": "SN-2026-001",
+      "name": "Sensor Nogal Norte",
+      "latitude": 28.186753,
+      "longitude": -105.471492,
+      "is_active": true,
+      "last_reading_timestamp": "2026-04-18T15:30:00Z",
+      "minutes_since_last_reading": 8,
+      "freshness_status": "fresh"
+    }
+  ]
+}
+```
+
+`freshness_status` posibles:
+- `fresh`: último dato reciente.
+- `stale`: última lectura con atraso (>=20 min).
+- `no_data`: nodo sin lecturas históricas.
+
+En rol cliente, filtros de `property_id` o `irrigation_area_id` fuera de su ownership retornan `403 Forbidden`.
 
 ---
 
@@ -1742,11 +1796,12 @@ Header: Authorization: Bearer eyJ...(cliente)...
 | PUT | `/api/v1/crop-cycles/{id}` | Actualizar |
 | DELETE | `/api/v1/crop-cycles/{id}` | Eliminar |
 
-### Nodes (5 endpoints) — Admin CRUD, Cliente GET
+### Nodes (6 endpoints) — Admin CRUD, Cliente GET
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
 | GET | `/api/v1/nodes` | Listar (paginado, filtro: irrigation_area_id) |
+| GET | `/api/v1/nodes/geo` | Capa geoespacial (filtros: client/property/area, frescura) |
 | POST | `/api/v1/nodes` | Registrar (genera API Key) |
 | GET | `/api/v1/nodes/{id}` | Detalle |
 | PUT | `/api/v1/nodes/{id}` | Actualizar |
@@ -1806,4 +1861,4 @@ Header: Authorization: Bearer eyJ...(cliente)...
 |--------|----------|-------------|
 | GET | `/health` | Verificación de estado del servicio |
 
-**Total: 64 endpoints.**
+**Total: 65 endpoints.**

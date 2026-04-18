@@ -13,6 +13,7 @@ import { ResetPasswordPage } from "./pages/auth/ResetPasswordPage";
 import { ThresholdManagement } from "./pages/admin/ThresholdManagement";
 import { AreaSelector } from "./pages/client/AreaSelector";
 import { ClientDashboard } from "./pages/client/ClientDashboard";
+import { ClientMapPage } from "./pages/client/ClientMapPage";
 import { ExportData } from "./pages/client/ExportData";
 import { HistoricalData } from "./pages/client/HistoricalData";
 import { NotificationPreferencesPage } from "./pages/client/NotificationPreferencesPage";
@@ -62,6 +63,10 @@ export const router = createBrowserRouter([
               {
                 path: "areas",
                 Component: AreaSelector,
+              },
+              {
+                path: "mapa",
+                Component: ClientMapPage,
               },
               {
                 path: "historico",

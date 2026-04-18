@@ -29,6 +29,7 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
   const clientNavItems = [
     { path: "/cliente", icon: LayoutDashboard, label: "Dashboard" },
     { path: "/cliente/areas", icon: MapPin, label: "Predios" },
+    { path: "/cliente/mapa", icon: MapPin, label: "Mapa" },
     { path: "/cliente/historico", icon: Clock, label: "Histórico" },
     { path: "/cliente/exportar", icon: Download, label: "Exportar" },
     { path: "/cliente/alertas", icon: Bell, label: "Alertas" },

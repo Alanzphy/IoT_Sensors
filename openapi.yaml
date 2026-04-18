@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: Sistema IoT Riego Agrícola
+  title: "Sistema IoT Riego Agr\xEDcola"
   version: 0.1.0
 paths:
   /api/v1/auth/login:
@@ -1194,6 +1194,76 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/NodeResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/nodes/geo:
+    get:
+      tags:
+      - Nodes
+      summary: List Nodes Geo
+      operationId: list_nodes_geo_api_v1_nodes_geo_get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 200
+          title: Per Page
+      - name: client_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Client Id
+      - name: property_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Property Id
+      - name: irrigation_area_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Irrigation Area Id
+      - name: include_without_coordinates
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Include Without Coordinates
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse_NodeGeoResponse_'
         '422':
           description: Validation Error
           content:
@@ -2977,6 +3047,90 @@ components:
       required:
       - irrigation_area_id
       title: NodeCreate
+    NodeGeoResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        irrigation_area_id:
+          type: integer
+          title: Irrigation Area Id
+        irrigation_area_name:
+          type: string
+          title: Irrigation Area Name
+        property_id:
+          type: integer
+          title: Property Id
+        property_name:
+          type: string
+          title: Property Name
+        client_id:
+          type: integer
+          title: Client Id
+        client_company_name:
+          type: string
+          title: Client Company Name
+        crop_type_id:
+          type: integer
+          title: Crop Type Id
+        crop_type_name:
+          type: string
+          title: Crop Type Name
+        api_key:
+          type: string
+          title: Api Key
+        serial_number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Serial Number
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
+        latitude:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Latitude
+        longitude:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Longitude
+        is_active:
+          type: boolean
+          title: Is Active
+        last_reading_timestamp:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Last Reading Timestamp
+        minutes_since_last_reading:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Minutes Since Last Reading
+        freshness_status:
+          type: string
+          title: Freshness Status
+      type: object
+      required:
+      - id
+      - irrigation_area_id
+      - irrigation_area_name
+      - property_id
+      - property_name
+      - client_id
+      - client_company_name
+      - crop_type_id
+      - crop_type_name
+      - api_key
+      - is_active
+      - freshness_status
+      title: NodeGeoResponse
     NodeResponse:
       properties:
         id:
@@ -3343,6 +3497,29 @@ components:
       - total
       - data
       title: PaginatedResponse[IrrigationAreaResponse]
+    PaginatedResponse_NodeGeoResponse_:
+      properties:
+        page:
+          type: integer
+          title: Page
+        per_page:
+          type: integer
+          title: Per Page
+        total:
+          type: integer
+          title: Total
+        data:
+          items:
+            $ref: '#/components/schemas/NodeGeoResponse'
+          type: array
+          title: Data
+      type: object
+      required:
+      - page
+      - per_page
+      - total
+      - data
+      title: PaginatedResponse[NodeGeoResponse]
     PaginatedResponse_NodeResponse_:
       properties:
         page:

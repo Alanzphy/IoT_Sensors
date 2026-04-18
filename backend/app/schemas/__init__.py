@@ -28,7 +28,7 @@ from app.schemas.irrigation_area import (
     IrrigationAreaResponse,
     IrrigationAreaUpdate,
 )
-from app.schemas.node import NodeCreate, NodeResponse, NodeUpdate
+from app.schemas.node import NodeCreate, NodeGeoResponse, NodeResponse, NodeUpdate
 from app.schemas.property import PropertyCreate, PropertyResponse, PropertyUpdate
 from app.schemas.reading import (
     EnvironmentalData,
@@ -93,6 +93,7 @@ __all__ = [
     "NodeCreate",
     "NodeUpdate",
     "NodeResponse",
+    "NodeGeoResponse",
     "ReadingCreate",
     "ReadingCreateResponse",
     "ReadingResponse",

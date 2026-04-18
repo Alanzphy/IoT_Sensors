@@ -22,6 +22,7 @@ export function MobileTabBar({ role }: MobileTabBarProps) {
   const clientTabs = [
     { path: "/cliente", icon: LayoutDashboard, label: "Inicio" },
     { path: "/cliente/areas", icon: MapPin, label: "Predios" },
+    { path: "/cliente/mapa", icon: MapPin, label: "Mapa" },
     { path: "/cliente/historico", icon: Clock, label: "Histórico" },
     { path: "/cliente/exportar", icon: Download, label: "Exportar" },
     { path: "/cliente/umbrales", icon: SlidersHorizontal, label: "Umbrales" },

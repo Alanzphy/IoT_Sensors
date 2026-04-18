@@ -9,7 +9,7 @@ from app.models.irrigation_area import IrrigationArea
 from app.models.property import Property
 from app.models.user import User
 from app.schemas.base import PaginatedResponse
-from app.schemas.node import NodeCreate, NodeResponse, NodeUpdate
+from app.schemas.node import NodeCreate, NodeGeoResponse, NodeResponse, NodeUpdate
 from app.services import node as node_service
 
 router = APIRouter()
@@ -63,6 +63,8 @@ def list_nodes(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    allowed_area_ids: list[int] | None = None
+
     if current_user.rol != "admin" and irrigation_area_id is not None:
         area_ids = _get_client_area_ids(current_user, db)
         if irrigation_area_id not in area_ids:
@@ -70,13 +72,103 @@ def list_nodes(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied to this irrigation area",
             )
+    elif current_user.rol != "admin":
+        allowed_area_ids = _get_client_area_ids(current_user, db)
 
-    items, total = node_service.list_nodes(db, page, per_page, irrigation_area_id)
+    items, total = node_service.list_nodes(
+        db,
+        page,
+        per_page,
+        irrigation_area_id,
+        allowed_area_ids=allowed_area_ids,
+    )
     return PaginatedResponse(
         page=page,
         per_page=per_page,
         total=total,
         data=[NodeResponse.model_validate(n) for n in items],
+    )
+
+
+@router.get("/geo", response_model=PaginatedResponse[NodeGeoResponse])
+def list_nodes_geo(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(200, ge=1, le=200),
+    client_id: int | None = Query(None),
+    property_id: int | None = Query(None),
+    irrigation_area_id: int | None = Query(None),
+    include_without_coordinates: bool = Query(False),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    resolved_client_id = client_id
+
+    if current_user.rol != "admin":
+        client = db.execute(
+            select(Client).where(
+                Client.usuario_id == current_user.id,
+                Client.eliminado_en.is_(None),
+            )
+        ).scalar_one_or_none()
+        if client is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Client record not found",
+            )
+
+        if client_id is not None and client_id != client.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied to this client",
+            )
+        resolved_client_id = client.id
+
+        if property_id is not None:
+            own_property = db.execute(
+                select(Property.id).where(
+                    Property.id == property_id,
+                    Property.cliente_id == client.id,
+                    Property.eliminado_en.is_(None),
+                )
+            ).scalar_one_or_none()
+            if own_property is None:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied to this property",
+                )
+
+        if irrigation_area_id is not None:
+            own_area = db.execute(
+                select(IrrigationArea.id)
+                .join(Property, Property.id == IrrigationArea.predio_id)
+                .where(
+                    IrrigationArea.id == irrigation_area_id,
+                    IrrigationArea.eliminado_en.is_(None),
+                    Property.cliente_id == client.id,
+                    Property.eliminado_en.is_(None),
+                )
+            ).scalar_one_or_none()
+            if own_area is None:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied to this irrigation area",
+                )
+
+    items, total = node_service.list_nodes_geo(
+        db=db,
+        page=page,
+        per_page=per_page,
+        client_id=resolved_client_id,
+        property_id=property_id,
+        irrigation_area_id=irrigation_area_id,
+        include_without_coordinates=include_without_coordinates,
+    )
+
+    return PaginatedResponse(
+        page=page,
+        per_page=per_page,
+        total=total,
+        data=[NodeGeoResponse.model_validate(item) for item in items],
     )
 
 

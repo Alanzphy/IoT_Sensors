@@ -33,3 +33,24 @@ class NodeResponse(BaseModel):
     is_active: bool = Field(validation_alias="activo")
     created_at: datetime = Field(validation_alias="creado_en")
     updated_at: datetime = Field(validation_alias="actualizado_en")
+
+
+class NodeGeoResponse(BaseModel):
+    id: int
+    irrigation_area_id: int
+    irrigation_area_name: str
+    property_id: int
+    property_name: str
+    client_id: int
+    client_company_name: str
+    crop_type_id: int
+    crop_type_name: str
+    api_key: str
+    serial_number: str | None = None
+    name: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    is_active: bool
+    last_reading_timestamp: datetime | None = None
+    minutes_since_last_reading: int | None = None
+    freshness_status: str

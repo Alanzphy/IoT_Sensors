@@ -13,6 +13,7 @@ Este documento describe la arquitectura, stack tecnológico, estado actual y reg
 - **Cliente HTTP**: `axios` (v1.x) con interceptores para JWT.
 - **Iconografía**: `lucide-react`.
 - **Gráficos**: `recharts` (para visualización de series de tiempo).
+- **Mapas (Sprint 1 Fase 2)**: `maplibre-gl` + estilo base OpenFreeMap (`https://tiles.openfreemap.org/styles/liberty`).
 
 ---
 
@@ -46,6 +47,7 @@ Actualmente el frontend está en fase de **transición de datos estáticos hacia
 
 - **Fase 1 (Completada)**: Autenticación. `LoginPage` conecta a `/api/v1/auth/login`. El JWT se decodifica con `jwt-decode`, se guarda en `localStorage` y se gestiona mediante `AuthContext`. El `api.ts` de Axios inyecta automáticamente el header `Authorization: Bearer <token>` y maneja las redirecciones por `401 Unauthorized`.
 - **Fase 2 Lite (Finalizada)**: Centro de alertas y popover conectados a `/api/v1/alerts`, bitácora administrativa en `/api/v1/audit-logs`, gestión de umbrales para Admin y Cliente (ownership por área), preferencias de notificación del cliente y flujo de recuperación de contraseña (`/api/v1/auth/forgot-password`, `/api/v1/auth/reset-password`).
+- **Fase 2 Completa - Sprint 1 (En curso)**: módulo geoespacial base en cliente con `ClientMapPage` y consumo de `/api/v1/nodes/geo` para render de marcadores por ownership y frescura de datos.
 - **Fase 3 (En proceso)**: Reemplazo gradual de `mockData` en dashboard/histórico por datos reales (`/api/v1/readings`, `/api/v1/readings/latest`, `/api/v1/readings/availability`).
 - **Fase 4 (Parcial)**: Semáforos de estado para datos prioritarios en dashboard cliente usando estado en tiempo real de lectura + umbral activo.
 
@@ -103,6 +105,14 @@ Actualmente el frontend está en fase de **transición de datos estáticos hacia
 - `pages/client/ClientDashboard.tsx`: refresco cada 30s, solo en pestaña visible, con guardas para evitar solicitudes simultáneas.
 - `components/notifications/AlertsPopover.tsx`: polling deshabilitado en la ruta de centro de alertas y cuando la pestaña está oculta; también evita solicitudes concurrentes y usa `/api/v1/alerts/unread-count` para el badge de no leídas.
 - `pages/shared/AlertsCenterPage.tsx`: mantiene auto-refresh cada 30s solo en pestaña visible y evita solapamiento de peticiones.
+
+### 3.8 Módulo Geoespacial Base (Fase 2 Sprint 1)
+
+- `pages/client/ClientMapPage.tsx`: vista de mapa para cliente con filtros por predio/área, marcadores por nodo y panel de detalle.
+- `services/nodes.ts`: cliente HTTP para `GET /api/v1/nodes/geo`.
+- `routes.tsx`: ruta protegida de cliente `/cliente/mapa`.
+- `components/navigation/DesktopSidebar.tsx` y `components/navigation/MobileTabBar.tsx`: acceso de navegación al mapa.
+- Fallback UX: cuando un nodo no tiene coordenadas, se muestra en listado lateral de "Nodos sin GPS".
 
 ---
 
