@@ -10,10 +10,11 @@ import {
     RadioTower,
     RefreshCw,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router";
 
 import { BentoCard } from "../../components/BentoCard";
+import { usePageVisibility } from "../../hooks/usePageVisibility";
 import { AlertItem, listAlerts, markAlertRead } from "../../services/alerts";
 
 type ReadFilter = "all" | "read" | "unread";
@@ -40,6 +41,8 @@ function formatRelativeDate(iso: string): string {
 export function AlertsCenterPage() {
   const location = useLocation();
   const isAdmin = location.pathname.startsWith("/admin");
+  const isPageVisible = usePageVisibility();
+  const loadingRef = useRef(false);
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -61,7 +64,9 @@ export function AlertsCenterPage() {
     [items],
   );
 
-  const fetchAlerts = async () => {
+  const fetchAlerts = useCallback(async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     setLoading(true);
     setErrorMessage(null);
 
@@ -87,20 +92,24 @@ export function AlertsCenterPage() {
       console.error("Failed to fetch alerts", error);
       setErrorMessage("No fue posible cargar las alertas");
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchAlerts();
   }, [page, severity, alertType, readFilter, startDate, endDate]);
 
   useEffect(() => {
+    if (!isPageVisible) return;
+    fetchAlerts();
+  }, [fetchAlerts, isPageVisible]);
+
+  useEffect(() => {
+    if (!isPageVisible) return;
+
     const intervalId = window.setInterval(fetchAlerts, 30000);
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [page, severity, alertType, readFilter, startDate, endDate]);
+  }, [fetchAlerts, isPageVisible]);
 
   const markAsRead = async (alertId: number) => {
     setUpdatingIds((previous) => {

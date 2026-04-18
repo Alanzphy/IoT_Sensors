@@ -15,6 +15,7 @@ import { MetricCard } from "../../components/MetricCard";
 import { useAuth } from "../../context/AuthContext";
 import { useSelection } from "../../context/SelectionContext";
 import { useIsMobile } from "../../hooks/useIsMobile";
+import { usePageVisibility } from "../../hooks/usePageVisibility";
 import { api } from "../../services/api";
 
 type PriorityKey = "soil.humidity" | "irrigation.flow_per_minute" | "environmental.eto";
@@ -30,6 +31,8 @@ const defaultSemaphore: Record<PriorityKey, SemaphoreLevel> = {
   "irrigation.flow_per_minute": "optimal",
   "environmental.eto": "optimal",
 };
+
+const DASHBOARD_REFRESH_MS = 30000;
 
 function getSemaphoreLabel(level: SemaphoreLevel): string {
   if (level === "critical") return "Critico";
@@ -53,6 +56,7 @@ function SemaphorePill({ level }: { level: SemaphoreLevel }) {
 
 export function ClientDashboard() {
   const isMobile = useIsMobile();
+  const isPageVisible = usePageVisibility();
   const { user } = useAuth();
   const {
     properties,
@@ -94,16 +98,21 @@ export function ClientDashboard() {
   }, [selectedProperty, filteredAreas, selectedArea, setSelectedArea]);
 
   useEffect(() => {
-    if (!selectedArea) return;
+    if (!selectedArea || !isPageVisible) return;
 
     let isMounted = true;
+    let inFlight = false;
+    const areaId = selectedArea.id;
 
     const fetchData = async () => {
+      if (inFlight) return;
+      inFlight = true;
+
       try {
         const [latestRes, histRes, priorityRes] = await Promise.all([
-          api.get(`/readings/latest?irrigation_area_id=${selectedArea.id}`),
-          api.get(`/readings?irrigation_area_id=${selectedArea.id}&per_page=12`),
-          api.get(`/readings/priority-status?irrigation_area_id=${selectedArea.id}`),
+          api.get(`/readings/latest?irrigation_area_id=${areaId}`),
+          api.get(`/readings?irrigation_area_id=${areaId}&per_page=12`),
+          api.get(`/readings/priority-status?irrigation_area_id=${areaId}`),
         ]);
 
         const latestData = latestRes.data;
@@ -173,23 +182,24 @@ export function ClientDashboard() {
         }
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
+      } finally {
+        inFlight = false;
       }
     };
 
     fetchData();
 
-    // Auto-refresh interval set to 2 seconds for real-time visualization
-    const intervalId = setInterval(() => {
+    const intervalId = window.setInterval(() => {
       if (isMounted) {
         fetchData();
       }
-    }, 2000);
+    }, DASHBOARD_REFRESH_MS);
 
     return () => {
       isMounted = false;
-      clearInterval(intervalId);
+      window.clearInterval(intervalId);
     };
-  }, [selectedArea]);
+  }, [selectedArea, isPageVisible]);
 
 
   return (

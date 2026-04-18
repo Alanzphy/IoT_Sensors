@@ -1,9 +1,10 @@
 import { formatDistanceToNowStrict } from "date-fns";
 import { es } from "date-fns/locale";
 import { AlertTriangle, Bell, Check, Loader2, RadioTower } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
 
+import { usePageVisibility } from "../../hooks/usePageVisibility";
 import { AlertItem, listAlerts, markAlertRead } from "../../services/alerts";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 
@@ -34,6 +35,9 @@ export function AlertsPopover({
   refreshIntervalMs = 30000,
 }: AlertsPopoverProps) {
   const location = useLocation();
+  const isPageVisible = usePageVisibility();
+  const isAlertsPage = location.pathname.endsWith("/alertas");
+  const loadingRef = useRef(false);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -50,7 +54,9 @@ export function AlertsPopover({
     ? "/admin/alertas"
     : "/cliente/alertas";
 
-  const loadAlerts = async () => {
+  const loadAlerts = useCallback(async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     setLoading(true);
     setErrorMessage(null);
 
@@ -66,11 +72,14 @@ export function AlertsPopover({
       console.error("Failed to load alerts", error);
       setErrorMessage("No fue posible cargar alertas");
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
+    if (!isPageVisible || isAlertsPage) return;
+
     loadAlerts();
 
     const intervalId = window.setInterval(() => {
@@ -80,7 +89,7 @@ export function AlertsPopover({
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [refreshIntervalMs]);
+  }, [refreshIntervalMs, loadAlerts, isPageVisible, isAlertsPage]);
 
   const handleMarkRead = async (alertId: number) => {
     setUpdatingIds((previous) => {

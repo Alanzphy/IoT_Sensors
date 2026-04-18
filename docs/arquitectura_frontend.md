@@ -27,7 +27,7 @@ src/app/
 │   └── ProtectedRoute.tsx # HOC para blindar rutas según el Rol y JWT.
 ├── context/          # React Context API para estado global (AuthContext, SelectionContext)
 ├── data/             # (Deprecado/Migración) Datos estáticos 'mockData'. Se eliminarán.
-├── hooks/            # Custom hooks (e.g., useIsMobile.ts, useAuth.ts)
+├── hooks/            # Custom hooks (e.g., useIsMobile.ts, useAuth.ts, usePageVisibility.ts)
 ├── layouts/          # Envoltorios de interfaz (RootLayout, AdminLayout, ClientLayout)
 ├── pages/            # Vistas enrutadas
 │   ├── admin/        # CRUD para el admin (Clientes, Predios, Nodos, Cultivos, etc.)
@@ -47,7 +47,7 @@ Actualmente el frontend está en fase de **transición de datos estáticos hacia
 - **Fase 1 (Completada)**: Autenticación. `LoginPage` conecta a `/api/v1/auth/login`. El JWT se decodifica con `jwt-decode`, se guarda en `localStorage` y se gestiona mediante `AuthContext`. El `api.ts` de Axios inyecta automáticamente el header `Authorization: Bearer <token>` y maneja las redirecciones por `401 Unauthorized`.
 - **Fase 2 Lite (Implementada)**: Centro de alertas y popover conectados a `/api/v1/alerts`, bitácora administrativa en `/api/v1/audit-logs`, gestión de umbrales para Admin y Cliente (ownership por área), preferencias de notificación del cliente y flujo de recuperación de contraseña (`/api/v1/auth/forgot-password`, `/api/v1/auth/reset-password`).
 - **Fase 3 (En proceso)**: Reemplazo gradual de `mockData` en dashboard/histórico por datos reales (`/api/v1/readings`, `/api/v1/readings/latest`, `/api/v1/readings/availability`).
-- **Fase 4 (Parcial)**: Semáforos de estado para datos prioritarios en dashboard cliente usando alertas de umbral activas.
+- **Fase 4 (Parcial)**: Semáforos de estado para datos prioritarios en dashboard cliente usando estado en tiempo real de lectura + umbral activo.
 
 ### 3.1 Módulo de Alertas en UI (Activo)
 
@@ -96,6 +96,13 @@ Actualmente el frontend está en fase de **transición de datos estáticos hacia
 - Rutas públicas:
 	- `/recuperar-contrasena`
 	- `/restablecer-contrasena?token=...`
+
+### 3.7 Estrategia de Polling en UI (Optimizada)
+
+- `hooks/usePageVisibility.ts`: pausa el polling cuando la pestaña no está visible.
+- `pages/client/ClientDashboard.tsx`: refresco cada 30s, solo en pestaña visible, con guardas para evitar solicitudes simultáneas.
+- `components/notifications/AlertsPopover.tsx`: polling deshabilitado en la ruta de centro de alertas y cuando la pestaña está oculta; también evita solicitudes concurrentes.
+- `pages/shared/AlertsCenterPage.tsx`: mantiene auto-refresh cada 30s solo en pestaña visible y evita solapamiento de peticiones.
 
 ---
 
