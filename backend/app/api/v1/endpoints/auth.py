@@ -160,6 +160,12 @@ def forgot_password(
     "/reset-password",
     response_model=ResetPasswordResponse,
     status_code=status.HTTP_200_OK,
+    responses={
+        400: {"description": "Token invalido, expirado o ya utilizado"},
+        429: {
+            "description": "Demasiados intentos de restablecimiento desde la misma IP"
+        },
+    },
 )
 def reset_password(
     body: ResetPasswordRequest,

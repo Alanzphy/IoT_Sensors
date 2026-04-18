@@ -424,7 +424,14 @@ Endpoints de autenticación y recuperación de contraseña.
 }
 ```
 
-**Errores:** 400 (token inválido, expirado o ya utilizado).
+**Errores:**
+- 400 (token inválido, expirado o ya utilizado).
+- 429 (demasiados intentos de restablecimiento desde la misma IP en la ventana de seguridad).
+
+**Seguridad operativa:**
+- La solicitud de recuperación (`forgot-password`) aplica rate limit por correo e IP y mantiene respuesta 200 para evitar enumeración de usuarios.
+- El reset (`reset-password`) aplica rate limit por IP y devuelve 429 cuando se rebasa el umbral.
+- El backend registra eventos del flujo en `audit_log` (emisión de token, envío de correo, intentos inválidos y bloqueos por rate limit).
 
 ---
 
