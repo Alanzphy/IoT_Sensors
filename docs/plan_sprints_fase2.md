@@ -3,7 +3,7 @@
 Estado base: Fase 2 Lite finalizada.
 Fecha de actualizacion: 2026-04-18.
 
-## Sprint 1 - Geoespacial Base (EN CURSO)
+## Sprint 1 - Geoespacial Base (COMPLETADO)
 Objetivo:
 - Entregar un mapa operativo con nodos por ownership y estado de frescura.
 
@@ -15,12 +15,17 @@ Decision de stack del sprint:
 Estado actual de implementacion:
 - En backend se habilito `GET /api/v1/nodes/geo` con filtros y ownership por rol.
 - En frontend se habilito `ClientMapPage` en `/cliente/mapa` con marcadores y fallback de nodos sin GPS.
+- En frontend se habilito `AdminMapPage` en `/admin/mapa` con filtros globales cliente/predio/area.
+- Se agrego modo de visualizacion con clusters y capas por estado de frescura (fresco/tardio/sin lectura) para operacion administrativa.
 - Se agregaron pruebas de integracion backend para permisos/filtros del endpoint geoespacial.
 
 Entregables:
 - Endpoint backend geoespacial (ownership por rol).
 - Vista frontend de mapa con marcadores por nodo.
+- Vista frontend administrativa de mapa global por jerarquia.
+- Clustering y capas por estado en mapa admin.
 - Integracion de navegacion cliente hacia la vista mapa.
+- Integracion de navegacion admin hacia la vista mapa.
 - Fallback para nodos sin coordenadas.
 
 Criterios de aceptacion:

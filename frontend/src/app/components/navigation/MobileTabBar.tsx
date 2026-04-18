@@ -32,6 +32,7 @@ export function MobileTabBar({ role }: MobileTabBarProps) {
   const adminTabs = [
     { path: "/admin", icon: LayoutDashboard, label: "Inicio" },
     { path: "/admin/clientes", icon: Users, label: "Clientes" },
+    { path: "/admin/mapa", icon: MapPin, label: "Mapa" },
     { path: "/admin/nodos", icon: Radio, label: "Nodos" },
     { path: "/admin/cultivos", icon: Sprout, label: "Catálogo" },
     { path: "/admin/umbrales", icon: SlidersHorizontal, label: "Umbrales" },

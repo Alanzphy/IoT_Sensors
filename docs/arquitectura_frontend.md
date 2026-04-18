@@ -47,7 +47,7 @@ Actualmente el frontend está en fase de **transición de datos estáticos hacia
 
 - **Fase 1 (Completada)**: Autenticación. `LoginPage` conecta a `/api/v1/auth/login`. El JWT se decodifica con `jwt-decode`, se guarda en `localStorage` y se gestiona mediante `AuthContext`. El `api.ts` de Axios inyecta automáticamente el header `Authorization: Bearer <token>` y maneja las redirecciones por `401 Unauthorized`.
 - **Fase 2 Lite (Finalizada)**: Centro de alertas y popover conectados a `/api/v1/alerts`, bitácora administrativa en `/api/v1/audit-logs`, gestión de umbrales para Admin y Cliente (ownership por área), preferencias de notificación del cliente y flujo de recuperación de contraseña (`/api/v1/auth/forgot-password`, `/api/v1/auth/reset-password`).
-- **Fase 2 Completa - Sprint 1 (En curso)**: módulo geoespacial base en cliente con `ClientMapPage` y consumo de `/api/v1/nodes/geo` para render de marcadores por ownership y frescura de datos.
+- **Fase 2 Completa - Sprint 1 (Completado)**: módulo geoespacial en cliente y admin con consumo de `/api/v1/nodes/geo` para render de nodos por ownership y frescura, incluyendo filtros jerárquicos globales para admin.
 - **Fase 3 (En proceso)**: Reemplazo gradual de `mockData` en dashboard/histórico por datos reales (`/api/v1/readings`, `/api/v1/readings/latest`, `/api/v1/readings/availability`).
 - **Fase 4 (Parcial)**: Semáforos de estado para datos prioritarios en dashboard cliente usando estado en tiempo real de lectura + umbral activo.
 
@@ -109,8 +109,9 @@ Actualmente el frontend está en fase de **transición de datos estáticos hacia
 ### 3.8 Módulo Geoespacial Base (Fase 2 Sprint 1)
 
 - `pages/client/ClientMapPage.tsx`: vista de mapa para cliente con filtros por predio/área, marcadores por nodo y panel de detalle.
+- `pages/admin/AdminMapPage.tsx`: vista de mapa global para admin con filtros por cliente/predio/área, modo marcadores o clusters y capas por estado de frescura.
 - `services/nodes.ts`: cliente HTTP para `GET /api/v1/nodes/geo`.
-- `routes.tsx`: ruta protegida de cliente `/cliente/mapa`.
+- `routes.tsx`: rutas protegidas `/cliente/mapa` y `/admin/mapa`.
 - `components/navigation/DesktopSidebar.tsx` y `components/navigation/MobileTabBar.tsx`: acceso de navegación al mapa.
 - Fallback UX: cuando un nodo no tiene coordenadas, se muestra en listado lateral de "Nodos sin GPS".
 

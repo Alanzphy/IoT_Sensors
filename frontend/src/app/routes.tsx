@@ -23,6 +23,7 @@ import { AlertsCenterPage } from "./pages/shared/AlertsCenterPage";
 
 // Admin pages
 import { AdminDashboard } from "./pages/admin/AdminDashboard";
+import { AdminMapPage } from "./pages/admin/AdminMapPage";
 import { AuditLogsPage } from "./pages/admin/AuditLogsPage";
 import { ClientManagement } from "./pages/admin/ClientManagement";
 import { CropCycleManagement } from "./pages/admin/CropCycleManagement";
@@ -134,6 +135,10 @@ export const router = createBrowserRouter([
               {
                 path: "nodos",
                 Component: NodeManagement,
+              },
+              {
+                path: "mapa",
+                Component: AdminMapPage,
               },
               {
                 path: "nodos/:nodeId",
