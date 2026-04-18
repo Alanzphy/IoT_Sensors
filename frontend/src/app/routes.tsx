@@ -10,6 +10,7 @@ import { LoginPage } from "./pages/auth/LoginPage";
 import { ResetPasswordPage } from "./pages/auth/ResetPasswordPage";
 
 // Client pages
+import { ThresholdManagement } from "./pages/admin/ThresholdManagement";
 import { AreaSelector } from "./pages/client/AreaSelector";
 import { ClientDashboard } from "./pages/client/ClientDashboard";
 import { ExportData } from "./pages/client/ExportData";
@@ -18,7 +19,6 @@ import { NotificationPreferencesPage } from "./pages/client/NotificationPreferen
 import { ProfilePage } from "./pages/client/ProfilePage";
 import { PropertyDetail } from "./pages/client/PropertyDetail";
 import { AlertsCenterPage } from "./pages/shared/AlertsCenterPage";
-import { ThresholdManagement } from "./pages/admin/ThresholdManagement";
 
 // Admin pages
 import { AdminDashboard } from "./pages/admin/AdminDashboard";

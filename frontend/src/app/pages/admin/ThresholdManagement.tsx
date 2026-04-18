@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 
 import { BentoCard } from "../../components/BentoCard";
 import { PillButton } from "../../components/PillButton";
+import { useAuth } from "../../context/AuthContext";
+import { useOptionalSelection } from "../../context/SelectionContext";
 import { api } from "../../services/api";
 import {
   ThresholdCreatePayload,
@@ -62,6 +64,11 @@ function toNumberOrNull(value: string): number | null {
 }
 
 export function ThresholdManagement() {
+  const { user } = useAuth();
+  const selection = useOptionalSelection();
+  const isClientRole = user?.rol === "cliente";
+  const selectedClientAreaId = selection?.selectedArea?.id;
+
   const [thresholds, setThresholds] = useState<ThresholdItem[]>([]);
   const [areas, setAreas] = useState<IrrigationAreaItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,8 +126,33 @@ export function ThresholdManagement() {
     fetchData();
   }, [filterAreaId, filterParameter, filterActive]);
 
+  useEffect(() => {
+    if (!isClientRole || filterAreaId) {
+      return;
+    }
+
+    if (!selectedClientAreaId) {
+      return;
+    }
+
+    const areaId = String(selectedClientAreaId);
+    setFilterAreaId(areaId);
+    setForm((prev) =>
+      prev.irrigation_area_id
+        ? prev
+        : {
+            ...prev,
+            irrigation_area_id: areaId,
+          }
+    );
+  }, [isClientRole, selectedClientAreaId, filterAreaId]);
+
   const resetForm = () => {
-    setForm(defaultFormState);
+    const preferredAreaId = filterAreaId || (isClientRole && selectedClientAreaId ? String(selectedClientAreaId) : "");
+    setForm({
+      ...defaultFormState,
+      irrigation_area_id: preferredAreaId,
+    });
     setEditingThreshold(null);
   };
 

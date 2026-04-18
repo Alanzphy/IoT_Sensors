@@ -121,3 +121,7 @@ export function useSelection() {
   }
   return context;
 }
+
+export function useOptionalSelection() {
+  return useContext(SelectionContext);
+}
