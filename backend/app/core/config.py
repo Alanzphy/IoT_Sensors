@@ -31,6 +31,27 @@ class Settings(BaseSettings):
     DEFAULT_PAGE_SIZE: int = 50
     MAX_PAGE_SIZE: int = 200
 
+    # --- Alert Notifications (Direct Backend Delivery) ---
+    NOTIFICATIONS_ENABLED: bool = False
+
+    # Email (SMTP)
+    NOTIFICATIONS_EMAIL_ENABLED: bool = False
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = ""
+    SMTP_USE_TLS: bool = True
+    SMTP_USE_SSL: bool = False
+    NOTIFICATION_EMAIL_SUBJECT_PREFIX: str = "[Sensores IoT]"
+
+    # WhatsApp (Cloud API)
+    NOTIFICATIONS_WHATSAPP_ENABLED: bool = False
+    WHATSAPP_API_BASE_URL: str = "https://graph.facebook.com/v20.0"
+    WHATSAPP_PHONE_NUMBER_ID: str = ""
+    WHATSAPP_ACCESS_TOKEN: str = ""
+    WHATSAPP_HTTP_TIMEOUT_SECONDS: int = 15
+
     model_config = {
         "env_file": ".env",
         "case_sensitive": True,

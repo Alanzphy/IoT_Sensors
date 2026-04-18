@@ -35,3 +35,17 @@ class InactivityScanResponse(BaseModel):
     inactive_nodes: int
     created_alerts: int
     executed_at: datetime
+
+
+class NotificationDispatchResponse(BaseModel):
+    notifications_enabled: bool
+    email_enabled: bool
+    whatsapp_enabled: bool
+    pending_alerts: int
+    processed_alerts: int
+    skipped_alerts: int
+    emailed_alerts: int
+    whatsapp_alerts: int
+    email_failures: int
+    whatsapp_failures: int
+    executed_at: datetime

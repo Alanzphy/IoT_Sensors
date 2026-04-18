@@ -473,3 +473,34 @@ class TestInactivityAlertsApi:
             headers=client_headers,
         )
         assert resp.status_code == 403
+
+
+class TestAlertNotificationDispatchApi:
+    def test_admin_can_dispatch_notifications_disabled_noop(
+        self,
+        client,
+        admin_headers,
+    ):
+        resp = client.post(
+            "/api/v1/alerts/dispatch-notifications?limit=50&only_unread=true",
+            headers=admin_headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["notifications_enabled"] is False
+        assert data["email_enabled"] is False
+        assert data["whatsapp_enabled"] is False
+        assert data["processed_alerts"] == 0
+        assert data["emailed_alerts"] == 0
+        assert data["whatsapp_alerts"] == 0
+
+    def test_client_cannot_dispatch_notifications(
+        self,
+        client,
+        client_headers,
+    ):
+        resp = client.post(
+            "/api/v1/alerts/dispatch-notifications",
+            headers=client_headers,
+        )
+        assert resp.status_code == 403

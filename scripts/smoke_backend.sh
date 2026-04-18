@@ -92,6 +92,11 @@ audit_logs_code="$(printf '%s' "$audit_logs_resp" | extract_code)"
 [[ "$audit_logs_code" == "200" ]] || fail "Audit logs list failed (HTTP $audit_logs_code)"
 echo "[OK] audit logs list"
 
+dispatch_resp="$(request POST "$BASE_API_URL/alerts/dispatch-notifications?limit=10&only_unread=true" "$access_token" "{}")"
+dispatch_code="$(printf '%s' "$dispatch_resp" | extract_code)"
+[[ "$dispatch_code" == "200" ]] || fail "Alert notification dispatch failed (HTTP $dispatch_code)"
+echo "[OK] alert notifications dispatch"
+
 # 5) Readings latest (discover one irrigation area id)
 areas_resp="$(request GET "$BASE_API_URL/irrigation-areas?page=1&per_page=1" "$access_token")"
 areas_code="$(printf '%s' "$areas_resp" | extract_code)"

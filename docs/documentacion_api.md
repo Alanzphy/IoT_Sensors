@@ -1016,6 +1016,7 @@ Historial de alertas generadas por umbral o por inactividad de nodos.
 | `GET` | `/api/v1/alerts/{id}` | Detalle de alerta | JWT (Admin/Cliente) |
 | `PATCH` | `/api/v1/alerts/{id}/read` | Marcar como leída/no leída | JWT (Admin/Cliente) |
 | `POST` | `/api/v1/alerts/scan-inactivity` | Ejecutar escaneo de inactividad | JWT (Admin) |
+| `POST` | `/api/v1/alerts/dispatch-notifications` | Despachar notificaciones externas pendientes | JWT (Admin) |
 
 #### Listar alertas — `GET /api/v1/alerts`
 
@@ -1104,6 +1105,47 @@ Retorna la misma estructura de `AlertResponse` para una alerta específica.
   "executed_at": "2026-04-17T18:10:00Z"
 }
 ```
+
+#### Despacho de notificaciones — `POST /api/v1/alerts/dispatch-notifications`
+
+**Auth:** Admin.
+
+Ejecuta un lote de envío de notificaciones de alertas pendientes, usando integración directa del backend:
+
+- Email por SMTP (ej. Gmail SMTP).
+- WhatsApp Cloud API.
+
+**Query params:**
+
+| Param | Tipo | Requerido | Notas |
+|-------|------|-----------|-------|
+| `limit` | integer | No | Default: 200, máx: 1000 |
+| `only_unread` | boolean | No | Si es `true`, solo procesa alertas no leídas |
+| `severity` | string | No | Filtrar por severidad: `info`, `warning`, `critical` |
+| `alert_type` | string | No | Filtrar por tipo: `threshold`, `inactivity` |
+
+**Response 200:**
+```json
+{
+  "notifications_enabled": true,
+  "email_enabled": true,
+  "whatsapp_enabled": false,
+  "pending_alerts": 14,
+  "processed_alerts": 14,
+  "skipped_alerts": 1,
+  "emailed_alerts": 13,
+  "whatsapp_alerts": 0,
+  "email_failures": 0,
+  "whatsapp_failures": 0,
+  "executed_at": "2026-04-20T18:10:00Z"
+}
+```
+
+**Notas operativas:**
+
+- Si `NOTIFICATIONS_ENABLED=false`, el endpoint responde `200` con contadores en `0` (no-op seguro).
+- El endpoint marca `notified_email` y/o `notified_whatsapp` por alerta cuando el envío del canal es exitoso.
+- Se recomienda invocarlo de forma periódica mediante scheduler interno en Docker Compose (`notification_scheduler`).
 
 ---
 

@@ -10,7 +10,12 @@ from app.models.client import Client
 from app.models.irrigation_area import IrrigationArea
 from app.models.property import Property
 from app.models.user import User
-from app.schemas.alert import AlertReadUpdate, AlertResponse, InactivityScanResponse
+from app.schemas.alert import (
+    AlertReadUpdate,
+    AlertResponse,
+    InactivityScanResponse,
+    NotificationDispatchResponse,
+)
 from app.schemas.base import PaginatedResponse
 from app.services import alert as alert_service
 from app.services import audit_log as audit_log_service
@@ -174,3 +179,39 @@ def scan_inactivity_alerts(
         ),
     )
     return InactivityScanResponse.model_validate(result)
+
+
+@router.post(
+    "/dispatch-notifications",
+    response_model=NotificationDispatchResponse,
+)
+def dispatch_alert_notifications(
+    limit: int = Query(200, ge=1, le=1000),
+    only_unread: bool = Query(False),
+    severity: str | None = Query(None),
+    alert_type: str | None = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_admin(current_user)
+
+    result = alert_service.dispatch_pending_notifications(
+        db,
+        limit=limit,
+        only_unread=only_unread,
+        severity=severity,
+        alert_type=alert_type,
+    )
+    audit_log_service.create_audit_log(
+        db,
+        user_id=current_user.id,
+        action="execute",
+        entity="alert_notification_dispatch",
+        detail=(
+            f"limit={limit}, only_unread={only_unread}, severity={severity}, "
+            f"alert_type={alert_type}, processed={result['processed_alerts']}, "
+            f"emailed={result['emailed_alerts']}, "
+            f"whatsapp={result['whatsapp_alerts']}"
+        ),
+    )
+    return NotificationDispatchResponse.model_validate(result)

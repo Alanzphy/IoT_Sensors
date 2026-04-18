@@ -1,12 +1,327 @@
+import json
+import smtplib
 from datetime import UTC, date, datetime, timedelta
+from email.message import EmailMessage
+from urllib import error, request
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.models.alert import Alert
+from app.models.client import Client
+from app.models.irrigation_area import IrrigationArea
 from app.models.node import Node
+from app.models.property import Property
 from app.models.reading import Reading
+from app.models.user import User
+
+
+def _build_email_subject(alert: Alert) -> str:
+    return (
+        f"{settings.NOTIFICATION_EMAIL_SUBJECT_PREFIX} "
+        f"{alert.severidad.upper()} - Nodo {alert.nodo_id}"
+    )
+
+
+def _build_notification_message(
+    *,
+    alert: Alert,
+    area_name: str,
+    property_name: str,
+    node_name: str,
+) -> str:
+    lines = [
+        "Alerta de monitoreo de riego",
+        f"Severidad: {alert.severidad.upper()}",
+        f"Tipo: {alert.tipo}",
+        f"Predio: {property_name}",
+        f"Area: {area_name}",
+        f"Nodo: {node_name}",
+    ]
+
+    if alert.parametro:
+        lines.append(f"Parametro: {alert.parametro}")
+    if alert.valor_detectado is not None:
+        lines.append(f"Valor detectado: {float(alert.valor_detectado)}")
+
+    lines.extend(
+        [
+            f"Mensaje: {alert.mensaje}",
+            f"Timestamp UTC: {alert.marca_tiempo.isoformat()}",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _normalize_phone_number(raw_phone: str | None) -> str | None:
+    if raw_phone is None:
+        return None
+    cleaned = "".join(ch for ch in raw_phone if ch.isdigit())
+    return cleaned or None
+
+
+def _resolve_alert_contact_data(
+    db: Session,
+    *,
+    alert: Alert,
+) -> tuple[str | None, str | None, str, str, str] | None:
+    row = db.execute(
+        select(
+            User.correo,
+            Client.telefono,
+            Property.nombre,
+            IrrigationArea.nombre,
+            Node.nombre,
+        )
+        .select_from(IrrigationArea)
+        .join(
+            Property,
+            Property.id == IrrigationArea.predio_id,
+        )
+        .join(
+            Client,
+            Client.id == Property.cliente_id,
+        )
+        .join(
+            User,
+            User.id == Client.usuario_id,
+        )
+        .join(
+            Node,
+            Node.area_riego_id == IrrigationArea.id,
+        )
+        .where(
+            IrrigationArea.id == alert.area_riego_id,
+            Node.id == alert.nodo_id,
+            IrrigationArea.eliminado_en.is_(None),
+            Property.eliminado_en.is_(None),
+            Client.eliminado_en.is_(None),
+            User.eliminado_en.is_(None),
+            User.activo.is_(True),
+            Node.eliminado_en.is_(None),
+        )
+    ).first()
+
+    if row is None:
+        return None
+
+    email, phone, property_name, area_name, node_name = row
+    normalized_phone = _normalize_phone_number(phone)
+    resolved_node_name = node_name or f"Node {alert.nodo_id}"
+    return email, normalized_phone, property_name, area_name, resolved_node_name
+
+
+def _send_email_notification(
+    *,
+    recipient_email: str,
+    subject: str,
+    body: str,
+) -> bool:
+    from_email = settings.SMTP_FROM_EMAIL or settings.SMTP_USERNAME
+
+    if not settings.SMTP_HOST or not from_email:
+        return False
+
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = from_email
+    msg["To"] = recipient_email
+    msg.set_content(body)
+
+    try:
+        if settings.SMTP_USE_SSL:
+            with smtplib.SMTP_SSL(
+                settings.SMTP_HOST,
+                settings.SMTP_PORT,
+                timeout=20,
+            ) as smtp:
+                if settings.SMTP_USERNAME and settings.SMTP_PASSWORD:
+                    smtp.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
+                smtp.send_message(msg)
+            return True
+
+        with smtplib.SMTP(
+            settings.SMTP_HOST,
+            settings.SMTP_PORT,
+            timeout=20,
+        ) as smtp:
+            smtp.ehlo()
+            if settings.SMTP_USE_TLS:
+                smtp.starttls()
+                smtp.ehlo()
+            if settings.SMTP_USERNAME and settings.SMTP_PASSWORD:
+                smtp.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
+            smtp.send_message(msg)
+        return True
+    except Exception:
+        return False
+
+
+def _send_whatsapp_notification(
+    *,
+    recipient_phone: str,
+    message: str,
+) -> bool:
+    if not settings.WHATSAPP_PHONE_NUMBER_ID or not settings.WHATSAPP_ACCESS_TOKEN:
+        return False
+
+    api_base = settings.WHATSAPP_API_BASE_URL.rstrip("/")
+    url = f"{api_base}/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages"
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": recipient_phone,
+        "type": "text",
+        "text": {"preview_url": False, "body": message},
+    }
+    body = json.dumps(payload).encode("utf-8")
+
+    req = request.Request(url=url, data=body, method="POST")
+    req.add_header("Content-Type", "application/json")
+    req.add_header("Authorization", f"Bearer {settings.WHATSAPP_ACCESS_TOKEN}")
+
+    try:
+        with request.urlopen(req, timeout=settings.WHATSAPP_HTTP_TIMEOUT_SECONDS):
+            return True
+    except (error.HTTPError, error.URLError, TimeoutError):
+        return False
+
+
+def dispatch_pending_notifications(
+    db: Session,
+    *,
+    limit: int = 200,
+    only_unread: bool = False,
+    severity: str | None = None,
+    alert_type: str | None = None,
+) -> dict[str, int | bool | datetime]:
+    now_utc = datetime.now(UTC).replace(tzinfo=None)
+
+    notifications_enabled = settings.NOTIFICATIONS_ENABLED
+    email_enabled = notifications_enabled and settings.NOTIFICATIONS_EMAIL_ENABLED
+    whatsapp_enabled = notifications_enabled and settings.NOTIFICATIONS_WHATSAPP_ENABLED
+
+    if not email_enabled and not whatsapp_enabled:
+        return {
+            "notifications_enabled": notifications_enabled,
+            "email_enabled": email_enabled,
+            "whatsapp_enabled": whatsapp_enabled,
+            "pending_alerts": 0,
+            "processed_alerts": 0,
+            "skipped_alerts": 0,
+            "emailed_alerts": 0,
+            "whatsapp_alerts": 0,
+            "email_failures": 0,
+            "whatsapp_failures": 0,
+            "executed_at": now_utc,
+        }
+
+    conditions = []
+    if only_unread:
+        conditions.append(Alert.leida.is_(False))
+    if severity is not None:
+        conditions.append(Alert.severidad == severity)
+    if alert_type is not None:
+        conditions.append(Alert.tipo == alert_type)
+
+    pending_by_channel_conditions = []
+    if email_enabled:
+        pending_by_channel_conditions.append(Alert.notificada_email.is_(False))
+    if whatsapp_enabled:
+        pending_by_channel_conditions.append(Alert.notificada_whatsapp.is_(False))
+
+    conditions.append(or_(*pending_by_channel_conditions))
+
+    pending_alerts = (
+        db.execute(select(func.count()).select_from(Alert).where(*conditions)).scalar()
+        or 0
+    )
+
+    alerts = list(
+        db.execute(
+            select(Alert)
+            .where(*conditions)
+            .order_by(Alert.marca_tiempo.asc(), Alert.id.asc())
+            .limit(limit)
+        ).scalars()
+    )
+
+    processed_alerts = 0
+    skipped_alerts = 0
+    emailed_alerts = 0
+    whatsapp_alerts = 0
+    email_failures = 0
+    whatsapp_failures = 0
+    has_updates = False
+
+    for alert in alerts:
+        processed_alerts += 1
+        contact_data = _resolve_alert_contact_data(db, alert=alert)
+        if contact_data is None:
+            skipped_alerts += 1
+            continue
+
+        recipient_email, recipient_phone, property_name, area_name, node_name = (
+            contact_data
+        )
+        message = _build_notification_message(
+            alert=alert,
+            area_name=area_name,
+            property_name=property_name,
+            node_name=node_name,
+        )
+
+        attempted_any = False
+
+        if email_enabled and not alert.notificada_email:
+            if recipient_email:
+                attempted_any = True
+                email_sent = _send_email_notification(
+                    recipient_email=recipient_email,
+                    subject=_build_email_subject(alert),
+                    body=message,
+                )
+                if email_sent:
+                    alert.notificada_email = True
+                    emailed_alerts += 1
+                    has_updates = True
+                else:
+                    email_failures += 1
+
+        if whatsapp_enabled and not alert.notificada_whatsapp:
+            if recipient_phone:
+                attempted_any = True
+                whatsapp_sent = _send_whatsapp_notification(
+                    recipient_phone=recipient_phone,
+                    message=message,
+                )
+                if whatsapp_sent:
+                    alert.notificada_whatsapp = True
+                    whatsapp_alerts += 1
+                    has_updates = True
+                else:
+                    whatsapp_failures += 1
+
+        if not attempted_any:
+            skipped_alerts += 1
+
+    if has_updates:
+        db.commit()
+
+    return {
+        "notifications_enabled": notifications_enabled,
+        "email_enabled": email_enabled,
+        "whatsapp_enabled": whatsapp_enabled,
+        "pending_alerts": pending_alerts,
+        "processed_alerts": processed_alerts,
+        "skipped_alerts": skipped_alerts,
+        "emailed_alerts": emailed_alerts,
+        "whatsapp_alerts": whatsapp_alerts,
+        "email_failures": email_failures,
+        "whatsapp_failures": whatsapp_failures,
+        "executed_at": now_utc,
+    }
 
 
 def create_alert(

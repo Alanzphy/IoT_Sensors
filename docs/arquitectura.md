@@ -319,8 +319,10 @@ Componentes activos a la fecha:
 
 - Tablas activas en base de datos: `umbrales`, `alertas`, `audit_log`.
 - Endpoints activos: `/api/v1/thresholds`, `/api/v1/alerts`, `/api/v1/alerts/scan-inactivity`, `/api/v1/audit-logs`.
+- Endpoint activo para despacho: `/api/v1/alerts/dispatch-notifications` (Admin).
 - Evaluación de umbrales durante la ingesta de `POST /api/v1/readings`.
 - Escaneo periódico de inactividad con `inactivity_scheduler` en Docker Compose.
+- Despacho periódico opcional de notificaciones con `notification_scheduler` en Docker Compose.
 - Visualización en frontend: campana de notificaciones, centro de alertas, vista administrativa de auditoría y gestión de umbrales.
 - Semáforos de prioridad en dashboard cliente para humedad de suelo, flujo y ETO.
 
@@ -390,7 +392,6 @@ Funcionalidades que permanecen en roadmap y no forman parte de la implementació
 
 - Integración de IA conversacional con Azure OpenAI.
 - Automatización asíncrona con n8n.
-- Notificaciones externas (email/WhatsApp) sobre alertas.
 - Recuperación de contraseña por correo.
 - Visualización geoespacial avanzada en mapas.
 - Configuración de umbrales por cliente final (self-service).
@@ -402,14 +403,14 @@ Funcionalidades que permanecen en roadmap y no forman parte de la implementació
 - [x] CRUD de umbrales (Admin).
 - [x] Listado/detalle/marcado de alertas (Admin/Cliente por ownership).
 - [x] Escaneo de inactividad (`/api/v1/alerts/scan-inactivity`) y scheduler en compose.
+- [x] Despacho de notificaciones de alertas (`/api/v1/alerts/dispatch-notifications`) por backend directo.
+- [x] Integración externa configurable: SMTP (email) y WhatsApp Cloud API.
 - [x] UI de alertas (popover + centro de alertas).
 - [x] Endpoint y vista de auditoría administrativa (`/api/v1/audit-logs`, `/admin/auditoria`).
 - [x] UI admin de umbrales (`/admin/umbrales`).
 - [x] Semáforos visuales de umbral en dashboard cliente (parámetros prioritarios).
 
 #### Pendiente (Fase 2 Completa)
-- [ ] Notificaciones externas por email.
-- [ ] Notificaciones externas por WhatsApp.
 - [ ] Recuperación de contraseña (`forgot-password`, `reset-password`).
 - [ ] Integración IA/n8n.
 - [ ] Módulo de mapas.

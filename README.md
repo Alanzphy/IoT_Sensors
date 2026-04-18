@@ -152,6 +152,26 @@ Variables requeridas en producción:
 
 El scheduler se conecta internamente a `http://backend:5050/api/v1` y se inicia cuando el backend ya está saludable.
 
+### Scheduler De Notificaciones (Producción)
+
+El compose también incluye `notification_scheduler`, que ejecuta periódicamente `POST /api/v1/alerts/dispatch-notifications` para enviar alertas pendientes por canales externos configurados.
+
+Variables requeridas/recomendadas:
+
+- `NOTIFICATIONS_ENABLED` (`true`/`false`)
+- `NOTIFICATIONS_EMAIL_ENABLED` (`true`/`false`)
+- `NOTIFICATIONS_WHATSAPP_ENABLED` (`true`/`false`)
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`
+- `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`
+- `NOTIFICATION_DISPATCH_INTERVAL_SECONDS` (recomendado: `300`)
+- `NOTIFICATION_DISPATCH_LIMIT` (default: `200`)
+- `NOTIFICATION_DISPATCH_ONLY_UNREAD` (`true`/`false`)
+
+La implementación actual es **backend directo** (sin n8n):
+
+- Email: SMTP (compatible con Gmail SMTP usando app password).
+- WhatsApp: Cloud API oficial de Meta.
+
 ## Política de Documentación (Trabajo por Hitos)
 
 Para evitar pérdida de contexto y desfase entre implementación y docs, este repositorio usa una estrategia híbrida:

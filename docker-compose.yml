@@ -65,6 +65,21 @@ services:
       - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
       - REFRESH_TOKEN_EXPIRE_DAYS=${REFRESH_TOKEN_EXPIRE_DAYS:-7}
       - DEBUG=${DEBUG:-false}
+      - NOTIFICATIONS_ENABLED=${NOTIFICATIONS_ENABLED:-false}
+      - NOTIFICATIONS_EMAIL_ENABLED=${NOTIFICATIONS_EMAIL_ENABLED:-false}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USERNAME=${SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-}
+      - SMTP_USE_TLS=${SMTP_USE_TLS:-true}
+      - SMTP_USE_SSL=${SMTP_USE_SSL:-false}
+      - NOTIFICATION_EMAIL_SUBJECT_PREFIX=${NOTIFICATION_EMAIL_SUBJECT_PREFIX:-[Sensores IoT]}
+      - NOTIFICATIONS_WHATSAPP_ENABLED=${NOTIFICATIONS_WHATSAPP_ENABLED:-false}
+      - WHATSAPP_API_BASE_URL=${WHATSAPP_API_BASE_URL:-https://graph.facebook.com/v20.0}
+      - WHATSAPP_PHONE_NUMBER_ID=${WHATSAPP_PHONE_NUMBER_ID:-}
+      - WHATSAPP_ACCESS_TOKEN=${WHATSAPP_ACCESS_TOKEN:-}
+      - WHATSAPP_HTTP_TIMEOUT_SECONDS=${WHATSAPP_HTTP_TIMEOUT_SECONDS:-15}
     ports:
       - "5050:5050"
     healthcheck:
@@ -100,6 +115,26 @@ services:
       - INACTIVITY_SCAN_MINUTES=${INACTIVITY_SCAN_MINUTES:-20}
       - INACTIVITY_SCAN_HTTP_TIMEOUT_SECONDS=${INACTIVITY_SCAN_HTTP_TIMEOUT_SECONDS:-20}
     command: ["python", "-m", "app.jobs.inactivity_scheduler"]
+
+  # --- Notification Scheduler (calls /api/v1/alerts/dispatch-notifications) ---
+  notification_scheduler:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sensores_notification_scheduler
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      - BACKEND_API_URL=http://backend:5050/api/v1
+      - SCHEDULER_ADMIN_EMAIL=${SCHEDULER_ADMIN_EMAIL}
+      - SCHEDULER_ADMIN_PASSWORD=${SCHEDULER_ADMIN_PASSWORD}
+      - NOTIFICATION_DISPATCH_INTERVAL_SECONDS=${NOTIFICATION_DISPATCH_INTERVAL_SECONDS:-300}
+      - NOTIFICATION_DISPATCH_LIMIT=${NOTIFICATION_DISPATCH_LIMIT:-200}
+      - NOTIFICATION_DISPATCH_ONLY_UNREAD=${NOTIFICATION_DISPATCH_ONLY_UNREAD:-false}
+      - NOTIFICATION_DISPATCH_HTTP_TIMEOUT_SECONDS=${NOTIFICATION_DISPATCH_HTTP_TIMEOUT_SECONDS:-20}
+    command: ["python", "-m", "app.jobs.notification_scheduler"]
 
   # --- Frontend (React + Nginx interno para SPA) ---
   frontend:
