@@ -69,7 +69,7 @@ cd backend
 cp .env.example .env
 ```
 
-El archivo `.env` ya viene con los valores correctos para desarrollo local (la contraseña `rootpass` coincide con la que usa Docker).  
+El archivo `.env` ya viene con los valores correctos para desarrollo local (la contraseña `rootpass` coincide con la que usa Docker).
 Si cambiaste `DB_PASSWORD` en el `docker-compose.yml`, actualízala también en `.env`.
 
 ---
@@ -137,6 +137,50 @@ El proyecto está diseñado para desplegarse ágilmente en un VPS utilizando **D
 3. **Variables de Entorno:** Copia el contenido del archivo `.env.docker.example`, pégalo en la pestaña "Environment" de Dokploy, y ajusta las claves (reemplaza `tudominio.com` y cambia las contraseñas).
 4. **Desplegar:** Haz clic en "Deploy". Dokploy leerá el `docker-compose.yml`, construirá las imágenes optimizadas (multi-stage para React), levantará la base de datos MySQL, ejecutará las migraciones de Alembic y finalmente encenderá la API de FastAPI.
 5. **SSL Automático:** Traefik detectará las etiquetas de enrutamiento y generará automáticamente los certificados SSL (Let's Encrypt), enrutando `/api/*` al backend y todo el resto al dashboard React.
+
+### Scheduler De Inactividad (Producción)
+
+El compose incluye el servicio `inactivity_scheduler`, que ejecuta de forma periódica el endpoint `POST /api/v1/alerts/scan-inactivity` para generar alertas por nodos inactivos.
+
+Variables requeridas en producción:
+
+- `SCHEDULER_ADMIN_EMAIL`
+- `SCHEDULER_ADMIN_PASSWORD`
+- `INACTIVITY_SCAN_INTERVAL_SECONDS` (recomendado: `300` = 5 min)
+- `INACTIVITY_SCAN_MINUTES` (por defecto: `20`)
+
+El scheduler se conecta internamente a `http://backend:5050/api/v1` y se inicia cuando el backend ya está saludable.
+
+## Política de Documentación (Trabajo por Hitos)
+
+Para evitar pérdida de contexto y desfase entre implementación y docs, este repositorio usa una estrategia híbrida:
+
+1. **Actualización mínima inmediata:** cuando cambia contrato técnico (API, BD, flujo visible), se actualiza la documentación en el mismo bloque de trabajo.
+2. **Cierre por hito/módulo:** al terminar un bloque funcional, se revisa consistencia cruzada entre arquitectura, API, BD y SRS.
+3. **Pulido final de release:** al final del ciclo, se realiza limpieza editorial (formato, duplicados, pendientes).
+
+Checklist mínimo por cambio técnico:
+
+- ¿Cambió endpoint, parámetro o respuesta JSON? → actualizar `docs/documentacion_api.md`.
+- ¿Cambió tabla, relación, índice o regla de negocio? → actualizar `docs/documentacion_base_de_datos.md`.
+- ¿Cambió flujo operativo o componentes activos/futuros? → actualizar `docs/arquitectura.md` y/o `docs/arquitectura_frontend.md`.
+- ¿Cambió alcance funcional del producto? → actualizar `docs/srs/`.
+
+### Plantilla DoD Documental (Por Feature/Hito)
+
+Usar esta plantilla al cerrar cada módulo para asegurar trazabilidad documental completa:
+
+- Feature/Hito: `<nombre>`
+- Fecha: `<YYYY-MM-DD>`
+- Estado: `MVP` / `MVP Extendido (Fase 2 Lite)` / `Fase 2 Completa (futuro)`
+
+Checklist DoD:
+
+- [ ] API actualizada (`docs/documentacion_api.md`): endpoints, payloads, validaciones, errores, ejemplos.
+- [ ] BD actualizada (`docs/documentacion_base_de_datos.md`): tablas, relaciones, índices, reglas de negocio.
+- [ ] Arquitectura actualizada (`docs/arquitectura.md` y/o `docs/arquitectura_frontend.md`): flujo activo, componentes, límites de alcance.
+- [ ] SRS actualizado (`docs/srs/`): requisitos activos vs roadmap, roles y restricciones.
+- [ ] Consistencia transversal validada: misma terminología, mismos nombres de endpoint/campos, mismos estados de fase.
 
 ## Documentación
 

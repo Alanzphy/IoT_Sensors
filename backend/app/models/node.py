@@ -35,6 +35,7 @@ class Node(Base, TimestampMixin, SoftDeleteMixin):
         "IrrigationArea", back_populates="node"
     )
     readings: Mapped[list["Reading"]] = relationship("Reading", back_populates="node")
+    alerts: Mapped[list["Alert"]] = relationship("Alert", back_populates="node")
 
     __table_args__ = (
         Index("idx_nodos_api_key", "api_key"),

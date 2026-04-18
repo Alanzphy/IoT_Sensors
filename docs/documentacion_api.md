@@ -788,13 +788,14 @@ Sensores instalados en campo. **Admin gestiona.** Cliente ve los de sus áreas.
 
 ### 5.9. Readings (Lecturas)
 
-Los datos de los sensores. Tiene 4 operaciones con comportamientos muy diferentes:
+Los datos de los sensores. Tiene 5 operaciones con comportamientos diferentes:
 
 | Método | Endpoint | Descripción | Auth |
 |--------|----------|-------------|------|
 | `POST` | `/api/v1/readings` | **Ingesta de sensor** (simulador envía datos) | API Key (`X-API-Key`) |
 | `GET` | `/api/v1/readings` | **Histórico** paginado con filtros | JWT (Admin/Cliente) |
 | `GET` | `/api/v1/readings/latest` | **Última lectura** de un área (frescura) | JWT (Admin/Cliente) |
+| `GET` | `/api/v1/readings/availability` | **Disponibilidad de fechas** con lecturas | JWT (Admin/Cliente) |
 | `GET` | `/api/v1/readings/export` | **Exportar** datos filtrados (CSV/XLSX/PDF) | JWT (Admin/Cliente) |
 
 #### Ingesta de sensor — `POST /api/v1/readings`
@@ -948,6 +949,32 @@ Los datos de los sensores. Tiene 4 operaciones con comportamientos muy diferente
 
 > El frontend calcula el "tiempo transcurrido" comparando `timestamp` con la hora actual. Ejemplo: si `timestamp` es de hace 12 minutos, muestra "Último dato: hace 12 min". Si es de hace más de 20 minutos, muestra una alerta visual.
 
+#### Disponibilidad de fechas — `GET /api/v1/readings/availability`
+
+**Auth:** Header `Authorization: Bearer <jwt>`
+
+Este endpoint devuelve metadatos para habilitar selectores de fecha en frontend (fecha mínima, máxima y días con lecturas en un mes).
+
+**Query params:**
+
+| Param | Tipo | Requerido | Notas |
+|-------|------|-----------|-------|
+| `irrigation_area_id` | integer | Sí | Área objetivo |
+| `month_start` | string (date) | No | Cualquier fecha dentro del mes objetivo (`YYYY-MM-DD`) |
+
+**Response 200:**
+```json
+{
+  "min_date": "2026-03-01",
+  "max_date": "2026-04-17",
+  "available_dates": [
+    "2026-04-01",
+    "2026-04-02",
+    "2026-04-03"
+  ]
+}
+```
+
 #### Exportar datos — `GET /api/v1/readings/export`
 
 **Auth:** Header `Authorization: Bearer <jwt>`
@@ -973,6 +1000,182 @@ Los datos de los sensores. Tiene 4 operaciones con comportamientos muy diferente
 Header de respuesta: `Content-Disposition: attachment; filename="readings_area1_2026-01-01_2026-01-31.csv"`
 
 > La exportación aplica los **mismos filtros** que el histórico. La diferencia es que en vez de retornar JSON paginado, retorna un archivo con **todos** los registros que coincidan con los filtros (sin paginación).
+
+---
+
+### 5.10. Alerts (Alertas)
+
+Historial de alertas generadas por umbral o por inactividad de nodos.
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| `GET` | `/api/v1/alerts` | Listado paginado con filtros | JWT (Admin/Cliente) |
+| `GET` | `/api/v1/alerts/{id}` | Detalle de alerta | JWT (Admin/Cliente) |
+| `PATCH` | `/api/v1/alerts/{id}/read` | Marcar como leída/no leída | JWT (Admin/Cliente) |
+| `POST` | `/api/v1/alerts/scan-inactivity` | Ejecutar escaneo de inactividad | JWT (Admin) |
+
+#### Listar alertas — `GET /api/v1/alerts`
+
+**Auth:** Header `Authorization: Bearer <jwt>`
+
+**Permisos:**
+- Admin: puede consultar alertas globales.
+- Cliente: solo alertas de sus áreas.
+
+**Query params:**
+
+| Param | Tipo | Requerido | Notas |
+|-------|------|-----------|-------|
+| `page` | integer | No | Default: 1 |
+| `per_page` | integer | No | Default: 50, máx: 200 |
+| `irrigation_area_id` | integer | No | Filtrar por área |
+| `node_id` | integer | No | Filtrar por nodo |
+| `severity` | string | No | `info`, `warning`, `critical` |
+| `read` | boolean | No | `true` o `false` |
+| `alert_type` | string | No | `threshold` o `inactivity` |
+| `start_date` | string (date) | No | Inicio de rango |
+| `end_date` | string (date) | No | Fin de rango |
+
+**Response 200:**
+```json
+{
+  "page": 1,
+  "per_page": 50,
+  "total": 2,
+  "data": [
+    {
+      "id": 101,
+      "node_id": 1,
+      "irrigation_area_id": 1,
+      "threshold_id": 12,
+      "type": "threshold",
+      "parameter": "soil.humidity",
+      "detected_value": 35.0,
+      "severity": "critical",
+      "message": "soil.humidity fuera de umbral (35.0)",
+      "timestamp": "2026-04-17T11:00:00Z",
+      "read": false,
+      "read_at": null,
+      "notified_email": false,
+      "notified_whatsapp": false,
+      "created_at": "2026-04-17T11:00:02Z",
+      "updated_at": "2026-04-17T11:00:02Z"
+    }
+  ]
+}
+```
+
+#### Detalle de alerta — `GET /api/v1/alerts/{id}`
+
+Retorna la misma estructura de `AlertResponse` para una alerta específica.
+
+#### Marcar alerta como leída — `PATCH /api/v1/alerts/{id}/read`
+
+**Request:**
+```json
+{
+  "read": true
+}
+```
+
+**Response 200:** alerta actualizada con `read` y `read_at`.
+
+#### Escaneo de inactividad — `POST /api/v1/alerts/scan-inactivity`
+
+**Auth:** Admin.
+
+**Query params:**
+
+| Param | Tipo | Requerido | Notas |
+|-------|------|-----------|-------|
+| `minutes_without_data` | integer | No | Default: 20 |
+| `node_id` | integer | No | Escaneo puntual por nodo |
+| `irrigation_area_id` | integer | No | Escaneo puntual por área |
+
+**Response 200:**
+```json
+{
+  "scanned_nodes": 14,
+  "inactive_nodes": 2,
+  "created_alerts": 1,
+  "executed_at": "2026-04-17T18:10:00Z"
+}
+```
+
+---
+
+### 5.11. Thresholds (Umbrales)
+
+Configuración de rangos por parámetro para disparar alertas automáticas.
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| `GET` | `/api/v1/thresholds` | Listado paginado con filtros | JWT (Admin) |
+| `POST` | `/api/v1/thresholds` | Crear umbral | JWT (Admin) |
+| `GET` | `/api/v1/thresholds/{id}` | Detalle de umbral | JWT (Admin) |
+| `PUT` | `/api/v1/thresholds/{id}` | Actualizar umbral | JWT (Admin) |
+| `DELETE` | `/api/v1/thresholds/{id}` | Eliminación lógica | JWT (Admin) |
+
+#### Listar umbrales — `GET /api/v1/thresholds`
+
+**Query params:**
+
+| Param | Tipo | Requerido | Notas |
+|-------|------|-----------|-------|
+| `page` | integer | No | Default: 1 |
+| `per_page` | integer | No | Default: 50, máx: 200 |
+| `irrigation_area_id` | integer | No | Filtrar por área |
+| `parameter` | string | No | Parámetro exacto |
+| `active` | boolean | No | `true` o `false` |
+
+**Response 200:**
+```json
+{
+  "page": 1,
+  "per_page": 50,
+  "total": 1,
+  "data": [
+    {
+      "id": 12,
+      "irrigation_area_id": 1,
+      "parameter": "soil.humidity",
+      "min_value": 50.0,
+      "max_value": 80.0,
+      "severity": "critical",
+      "active": true,
+      "created_at": "2026-04-17T10:00:00Z",
+      "updated_at": "2026-04-17T10:00:00Z"
+    }
+  ]
+}
+```
+
+#### Crear umbral — `POST /api/v1/thresholds`
+
+**Request:**
+```json
+{
+  "irrigation_area_id": 1,
+  "parameter": "soil.humidity",
+  "min_value": 50.0,
+  "max_value": 80.0,
+  "severity": "critical",
+  "active": true
+}
+```
+
+**Validaciones principales:**
+- Debe existir `irrigation_area_id`.
+- Debe enviarse `min_value` o `max_value`.
+- No permite duplicar `parameter` en la misma área (409 Conflict).
+
+#### Actualizar umbral — `PUT /api/v1/thresholds/{id}`
+
+Permite actualizar cualquiera de los campos del umbral.
+
+#### Eliminar umbral — `DELETE /api/v1/thresholds/{id}`
+
+Realiza eliminación lógica (`active=false` + marca interna de eliminación) y retorna el registro actualizado.
 
 ---
 
@@ -1171,13 +1374,33 @@ Header: Authorization: Bearer eyJ...(cliente)...
 | PUT | `/api/v1/nodes/{id}` | Actualizar |
 | DELETE | `/api/v1/nodes/{id}` | Eliminar |
 
-### Readings (4 endpoints)
+### Readings (5 endpoints)
 
 | Método | Endpoint | Auth | Descripción |
 |--------|----------|------|-------------|
 | POST | `/api/v1/readings` | API Key | Ingesta de sensor |
 | GET | `/api/v1/readings` | JWT | Histórico (paginado, filtros: irrigation_area_id, dates, cycle) |
 | GET | `/api/v1/readings/latest` | JWT | Última lectura (frescura) |
+| GET | `/api/v1/readings/availability` | JWT | Fechas disponibles para calendario/filtros |
 | GET | `/api/v1/readings/export` | JWT | Exportar CSV/XLSX/PDF |
 
-**Total: 42 endpoints.**
+### Thresholds (5 endpoints) — Admin only
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/api/v1/thresholds` | Listar (paginado y filtros) |
+| POST | `/api/v1/thresholds` | Crear |
+| GET | `/api/v1/thresholds/{id}` | Detalle |
+| PUT | `/api/v1/thresholds/{id}` | Actualizar |
+| DELETE | `/api/v1/thresholds/{id}` | Eliminar lógico |
+
+### Alerts (4 endpoints) — Admin/Cliente (según ownership)
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/api/v1/alerts` | Listar (paginado y filtros) |
+| GET | `/api/v1/alerts/{id}` | Detalle |
+| PATCH | `/api/v1/alerts/{id}/read` | Marcar leída/no leída |
+| POST | `/api/v1/alerts/scan-inactivity` | Escanear nodos inactivos (Admin) |
+
+**Total: 52 endpoints.**

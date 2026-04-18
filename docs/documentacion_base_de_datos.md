@@ -13,24 +13,25 @@
 3. [Tablas de Gestión de Usuarios](#3-tablas-de-gestión-de-usuarios) (3 tablas)
 4. [Tablas de Estructura del Campo](#4-tablas-de-estructura-del-campo) (4 tablas)
 5. [Tabla de Hardware IoT](#5-tabla-de-hardware-iot) (1 tabla)
-6. [Tablas de Lecturas](#6-tablas-de-lecturas) (4 tablas)
+6. [Tabla de Lecturas](#6-tabla-de-lecturas-unificada) (1 tabla)
 7. [Flujo de Datos: De Sensor a Pantalla](#7-flujo-de-datos-de-sensor-a-pantalla)
 8. [Índices: Qué Aceleran y Por Qué Existen](#8-índices-qué-aceleran-y-por-qué-existen)
 9. [Reglas de Negocio Implementadas en el Backend](#9-reglas-de-negocio-implementadas-en-el-backend)
-10. [Lo Que Viene en Fase 2](#10-lo-que-viene-en-fase-2)
+10. [Estado Fase 2 Lite y Lo Que Sigue](#10-estado-fase-2-lite-y-lo-que-sigue)
 
 ---
 
 ## 1. Vista General
 
-### La base de datos tiene 9 tablas organizadas en 4 grupos:
+### La base de datos tiene 12 tablas organizadas en 5 grupos:
 
 | Grupo | Tablas | Propósito |
 |-------|--------|-----------|
 | **Gestión de Usuarios** | `usuarios`, `tokens_refresco`, `clientes` | Quién entra al sistema, cómo se autentica, y sus datos de negocio |
 | **Estructura del Campo** | `predios`, `tipos_cultivo`, `areas_riego`, `ciclos_cultivo` | Cómo está organizado el terreno del agricultor: fincas, parcelas, cultivos y temporadas |
 | **Hardware IoT** | `nodos` | Los sensores físicos (o simulados) instalados en campo |
-| **Lecturas de Sensores** | `lecturas`, `lecturas_suelo`, `lecturas_riego`, `lecturas_ambiental` | Los datos que llegan cada 10 minutos desde los nodos — es el corazón del sistema |
+| **Lecturas de Sensores** | `lecturas` | Los datos que llegan cada 10 minutos desde los nodos — es el corazón del sistema |
+| **Alertas y Auditoría (Fase 2 Lite)** | `umbrales`, `alertas`, `audit_log` | Motor de alertas por umbral/inactividad y trazabilidad operativa |
 
 ### Diagrama de Relaciones (ERD)
 
@@ -38,12 +39,17 @@
 erDiagram
     usuarios ||--o| clientes : "1:1 si rol=cliente"
     usuarios ||--o{ tokens_refresco : "1:N"
+    usuarios ||--o{ audit_log : "1:N"
     clientes ||--o{ predios : "1:N"
     predios ||--o{ areas_riego : "1:N"
     tipos_cultivo ||--o{ areas_riego : "1:N"
     areas_riego ||--o{ ciclos_cultivo : "1:N"
     areas_riego ||--|| nodos : "1:1"
+    areas_riego ||--o{ umbrales : "1:N"
+    areas_riego ||--o{ alertas : "1:N"
     nodos ||--o{ lecturas : "1:N"
+    nodos ||--o{ alertas : "1:N"
+    umbrales ||--o{ alertas : "1:N"
 ```
 
 ### La jerarquía del sistema: de arriba hacia abajo
@@ -395,10 +401,12 @@ Esta tabla es **el corazón del sistema** — aquí viven los millones de datos 
        ▼
 ┌─────────────────────────────────────────────────────────┐
 │  INSERT atómico en `lecturas` (todo en un comando)      │
+│  + evaluación de umbrales activos del área              │
+│  + creación de alerta si hay incumplimiento             │
 └─────────────────────────────────────────────────────────┘
 ```
 
-**¿Por qué transacción atómica?** Si por alguna razón la inserción de `lecturas_riego` falla pero `lecturas` y `lecturas_suelo` ya se guardaron, tendríamos una lectura incompleta: datos de suelo sin datos de riego. La transacción garantiza que **o se guardan las 4 filas, o no se guarda ninguna**. Nunca hay datos parciales.
+**¿Por qué transacción atómica?** Si ocurre un error durante la inserción o durante la generación de alertas por umbral, no deben quedar datos intermedios. La transacción garantiza consistencia: la lectura y sus efectos inmediatos se confirman juntas o se hace rollback.
 
 ### B) Consulta — Cuando el usuario abre el dashboard
 
@@ -450,6 +458,13 @@ Esto se calcula comparando el `marca_tiempo` de la lectura más reciente contra 
 | `predios` | `(cliente_id)` | Acelera "dame todos los predios del cliente X". Se usa cada vez que un cliente entra a la plataforma. |
 | `areas_riego` | `(predio_id)` | Acelera "dame todas las áreas del predio X". Se usa en la navegación jerárquica del dashboard. |
 | `areas_riego` | `(tipo_cultivo_id)` | Acelera búsquedas por tipo de cultivo: "¿qué áreas tienen Nogal?". |
+| `umbrales` | `(area_riego_id)` | Acelera la carga de umbrales activos por área al momento de ingerir lecturas. |
+| `umbrales` | `(area_riego_id, parametro)` | Evita duplicados y acelera validaciones por parámetro dentro de un área. |
+| `alertas` | `(area_riego_id, marca_tiempo)` | Acelera historial por área y orden temporal en centro de alertas. |
+| `alertas` | `(nodo_id, marca_tiempo)` | Acelera diagnósticos por nodo e inactividad. |
+| `alertas` | `(area_riego_id, leida, marca_tiempo)` | Acelera bandeja de no leídas con orden por tiempo. |
+| `audit_log` | `(usuario_id)` | Acelera consultas de actividad por usuario. |
+| `audit_log` | `(entidad, creado_en)` | Acelera trazabilidad por entidad y ventana de tiempo. |
 
 ---
 
@@ -465,28 +480,34 @@ Estas reglas **no están en el SQL** (la base de datos no las valida por sí mis
 | **Nodo solo a área sin nodo** | Al asignar un nodo a un área, se verifica que esa área no tenga ya otro nodo activo asignado. | Al crear (`POST`) o actualizar (`PUT`) un nodo. |
 | **Filtrar eliminados por defecto** | Toda query de listado incluye `WHERE eliminado_en IS NULL` automáticamente. Los registros soft-deleted no aparecen en ningún endpoint GET normal. | En todas las consultas GET de listado. |
 | **Nodo activo para aceptar lecturas** | Al recibir un POST de lectura, además de validar la API Key, se verifica que el nodo tenga `activo = true` y `eliminado_en IS NULL`. | Al recibir cada POST de lectura del simulador. |
+| **Evaluación de umbrales en ingesta** | Después de insertar una lectura, se evalúan umbrales activos de su área y se crea alerta si el valor sale de rango. | En cada POST `/api/v1/readings`. |
+| **Deduplicación de alerta por ventana corta** | Evita generar múltiples alertas idénticas del mismo parámetro/severidad en pocos minutos. | Durante creación de alertas por umbral. |
+| **Escaneo de inactividad** | Un proceso programado revisa nodos sin lecturas recientes y crea alerta `inactivity` si aplica. | Ejecución periódica del scheduler. |
 
 ---
 
-## 10. Lo Que Viene en Fase 2
+## 10. Estado Fase 2 Lite y Lo Que Sigue
 
-La base de datos del MVP está diseñada para soportar estas funcionalidades futuras **sin necesidad de reestructurar lo existente**. Aquí un resumen de las tablas que se agregarán:
+### 10.1 Ya implementado (MVP Extendido / Fase 2 Lite)
+
+| Tabla | Estado | Propósito |
+|------|--------|-----------|
+| `umbrales` | Activa | Rangos por parámetro y área para evaluación automática |
+| `alertas` | Activa | Historial de alertas por umbral e inactividad |
+| `audit_log` | Activa | Trazabilidad de acciones relevantes |
+
+### 10.2 Futuro (Fase 2 Completa)
 
 | Tabla futura | Propósito | Se relaciona con... |
 |-------------|-----------|---------------------|
-| `umbrales` | Rangos configurables por el cliente para cada parámetro del sensor (ej. humedad óptima entre 20-30%). Permiten mostrar colores en el dashboard: verde = óptimo, amarillo = advertencia, rojo = crítico. | `areas_riego` |
-| `alertas` | Historial de alertas generadas automáticamente cuando un valor sale de los umbrales configurados, o cuando un nodo deja de comunicarse por ≥20 minutos. | `nodos`, `areas_riego` |
 | `preferencias_notificacion` | Configuración por usuario de qué alertas recibir y por qué canal (email, WhatsApp). | `usuarios`, `areas_riego` |
 | `tokens_recuperacion` | Tokens temporales de un solo uso para el flujo "Olvidé mi contraseña". | `usuarios` |
-| `audit_log` | Registro detallado de quién hizo qué cambio, en qué entidad, cuándo, y qué datos se modificaron. Vista exclusiva para el Admin. | `usuarios` |
 
-Además, se evaluará agregar un campo `ndvi` (Índice de Vegetación) a la tabla `lecturas_suelo` cuando se defina la fuente de datos de imágenes satelitales.
-
-> Ninguna de estas tablas se implementa en el MVP actual. Solo se mencionan para que el equipo entienda por qué el diseño actual tiene ciertas decisiones (como soft delete, timestamps en todo, y BIGINT en lecturas).
+Además, se evaluará agregar un campo `ndvi` a `lecturas` cuando se defina una fuente estable de datos de vegetación.
 
 ---
 
-## Referencia Rápida — Las 9 Tablas del MVP
+## Referencia Rápida — 12 Tablas Activas
 
 | # | Tabla | Grupo | Propósito en una línea | ID tipo |
 |---|-------|-------|----------------------|---------|
@@ -499,3 +520,6 @@ Además, se evaluará agregar un campo `ndvi` (Índice de Vegetación) a la tabl
 | 7 | `ciclos_cultivo` | Campo | Temporadas agrícolas (inicio/fin) por área | INT |
 | 8 | `nodos` | Hardware | Sensores IoT con API Key y coordenadas GPS | INT |
 | 9 | `lecturas` | Lecturas | Registro centralizado con las 12 métricas dinámicas | BIGINT |
+| 10 | `umbrales` | Alertas | Rangos por parámetro para disparo automático | INT |
+| 11 | `alertas` | Alertas | Eventos de umbral/inactividad y estado de lectura | BIGINT |
+| 12 | `audit_log` | Auditoría | Registro de acciones de sistema y usuarios | BIGINT |

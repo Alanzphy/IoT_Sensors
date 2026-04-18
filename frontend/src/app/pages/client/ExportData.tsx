@@ -1,17 +1,18 @@
-import { format, subDays } from "date-fns";
+import { format, startOfDay, subDays } from "date-fns";
 import { Calendar, Download, FileSpreadsheet, FileText, Filter } from "lucide-react";
 import { useState } from "react";
 import { BentoCard } from "../../components/BentoCard";
 import { PillButton } from "../../components/PillButton";
+import { ReadingDateRangeSelector } from "../../components/ReadingDateRangeSelector";
 import { useSelection } from "../../context/SelectionContext";
 import { api } from "../../services/api";
 
 export function ExportData() {
   const { areas, selectedArea, setSelectedArea } = useSelection();
 
-  const [startDate, setStartDate] = useState(format(subDays(new Date(), 7), "yyyy-MM-dd"));
-  const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [exportFormat, setExportFormat] = useState<"csv" | "excel" | "pdf">("csv");
+  const [startDate, setStartDate] = useState<Date>(startOfDay(subDays(new Date(), 7)));
+  const [endDate, setEndDate] = useState<Date>(startOfDay(new Date()));
+  const [exportFormat, setExportFormat] = useState<"csv" | "xlsx" | "pdf">("csv");
   const [loading, setLoading] = useState(false);
 
   const handleExport = async () => {
@@ -20,22 +21,12 @@ export function ExportData() {
       return;
     }
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays > 90) {
-      alert("El rango de fechas no puede ser mayor a 90 días.");
-      return;
-    }
-
     try {
       setLoading(true);
       const params = new URLSearchParams({
         irrigation_area_id: selectedArea.id.toString(),
-        start_date: new Date(startDate).toISOString().split("T")[0],
-        end_date: new Date(endDate).toISOString().split("T")[0],
+        start_date: format(startDate, "yyyy-MM-dd"),
+        end_date: format(endDate, "yyyy-MM-dd"),
         format: exportFormat
       });
 
@@ -46,7 +37,7 @@ export function ExportData() {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
-      const extension = exportFormat === "excel" ? "xlsx" : exportFormat;
+      const extension = exportFormat;
       link.setAttribute("download", `export_${selectedArea.name}_${format(new Date(), "yyyy-MM-dd")}.${extension}`);
       document.body.appendChild(link);
       link.click();
@@ -81,30 +72,26 @@ export function ExportData() {
                 <Calendar className="w-5 h-5 text-[#7C8F5C]" />
                 <span className="font-medium">Rango de Fechas</span>
               </label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-[#6B5E4C] mb-2">
-                    Fecha Inicio
-                  </label>
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white border-2 border-[#E5DDD1] rounded-2xl text-[#2C2621] focus:outline-none focus:border-[#7C8F5C]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-[#6B5E4C] mb-2">
-                    Fecha Fin
-                  </label>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white border-2 border-[#E5DDD1] rounded-2xl text-[#2C2621] focus:outline-none focus:border-[#7C8F5C]"
-                  />
-                </div>
-              </div>
+              <ReadingDateRangeSelector
+                variant="bordered"
+                irrigationAreaId={selectedArea?.id}
+                startDate={startDate}
+                endDate={endDate}
+                onStartDateChange={(nextDate) => {
+                  const normalized = startOfDay(nextDate);
+                  setStartDate(normalized);
+                  if (normalized > endDate) {
+                    setEndDate(normalized);
+                  }
+                }}
+                onEndDateChange={(nextDate) => {
+                  const normalized = startOfDay(nextDate);
+                  setEndDate(normalized);
+                  if (normalized < startDate) {
+                    setStartDate(normalized);
+                  }
+                }}
+              />
             </div>
 
             {/* Area Selection */}
@@ -157,9 +144,9 @@ export function ExportData() {
                 </button>
 
                 <button
-                  onClick={() => setExportFormat("excel")}
+                  onClick={() => setExportFormat("xlsx")}
                   className={`p-4 rounded-2xl border-2 transition-all ${
-                    exportFormat === "excel"
+                    exportFormat === "xlsx"
                       ? "border-[#7C8F5C] bg-[#7C8F5C]/10"
                       : "border-[#E5DDD1] bg-white hover:border-[#7C8F5C]/50"
                   }`}
@@ -216,7 +203,6 @@ export function ExportData() {
             <li>• El archivo incluirá todos los datos del rango seleccionado</li>
             <li>• Los datos se exportan en formato estándar UTC</li>
             <li>• Las lecturas se muestran en sus unidades originales</li>
-            <li>• El límite máximo es de 90 días por exportación</li>
           </ul>
         </BentoCard>
       </div>

@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
+    alerts,
     auth,
     clients,
     crop_cycles,
@@ -9,6 +10,7 @@ from app.api.v1.endpoints import (
     nodes,
     properties,
     readings,
+    thresholds,
     users,
 )
 
@@ -31,3 +33,9 @@ api_v1_router.include_router(
 )
 api_v1_router.include_router(nodes.router, prefix="/nodes", tags=["Nodes"])
 api_v1_router.include_router(readings.router, prefix="/readings", tags=["Readings"])
+api_v1_router.include_router(
+    thresholds.router,
+    prefix="/thresholds",
+    tags=["Thresholds"],
+)
+api_v1_router.include_router(alerts.router, prefix="/alerts", tags=["Alerts"])

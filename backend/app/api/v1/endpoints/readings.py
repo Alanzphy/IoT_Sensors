@@ -13,7 +13,12 @@ from app.models.node import Node
 from app.models.property import Property
 from app.models.user import User
 from app.schemas.base import PaginatedResponse
-from app.schemas.reading import ReadingCreate, ReadingCreateResponse, ReadingResponse
+from app.schemas.reading import (
+    ReadingAvailabilityResponse,
+    ReadingCreate,
+    ReadingCreateResponse,
+    ReadingResponse,
+)
 from app.services import reading as reading_service
 
 router = APIRouter()
@@ -85,6 +90,28 @@ def get_latest_reading(
     if reading is None:
         return None
     return ReadingResponse.model_validate(reading)
+
+
+@router.get("/availability", response_model=ReadingAvailabilityResponse)
+def get_readings_availability(
+    irrigation_area_id: int = Query(...),
+    month_start: date | None = Query(
+        None, description="Any date inside the target month (YYYY-MM-DD)"
+    ),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _validate_area_access(current_user, db, irrigation_area_id)
+    min_date, max_date, available_dates = reading_service.get_readings_availability(
+        db=db,
+        irrigation_area_id=irrigation_area_id,
+        month_start=month_start,
+    )
+    return ReadingAvailabilityResponse(
+        min_date=min_date,
+        max_date=max_date,
+        available_dates=available_dates,
+    )
 
 
 # ---------- GET /readings/export ----------

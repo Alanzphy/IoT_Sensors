@@ -24,6 +24,9 @@ class User(Base, TimestampMixin, SoftDeleteMixin):
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
         "RefreshToken", back_populates="user"
     )
+    audit_logs: Mapped[list["AuditLog"]] = relationship(
+        "AuditLog", back_populates="user"
+    )
 
     __table_args__ = (
         Index("idx_usuarios_correo", "correo"),

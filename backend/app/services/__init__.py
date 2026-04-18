@@ -1,4 +1,6 @@
 from app.services import (
+    alert,
+    audit_log,
     client,
     crop_cycle,
     crop_type,
@@ -6,11 +8,14 @@ from app.services import (
     node,
     property,
     reading,
+    threshold,
     user,
 )
 
 __all__ = [
     "user",
+    "alert",
+    "audit_log",
     "client",
     "property",
     "crop_type",
@@ -18,4 +23,5 @@ __all__ = [
     "crop_cycle",
     "node",
     "reading",
+    "threshold",
 ]

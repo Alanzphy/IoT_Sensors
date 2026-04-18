@@ -1,15 +1,128 @@
 import csv
 import io
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.crop_cycle import CropCycle
+from app.models.alert import Alert
 from app.models.node import Node
 from app.models.reading import Reading
+from app.models.threshold import Threshold
 from app.schemas.reading import ReadingCreate
+
+
+def _extract_threshold_value(reading: Reading, parameter: str) -> float | None:
+    mapping = {
+        "soil.conductivity": reading.suelo_conductividad,
+        "soil.temperature": reading.suelo_temperatura,
+        "soil.humidity": reading.suelo_humedad,
+        "soil.water_potential": reading.suelo_potencial_hidrico,
+        "irrigation.active": reading.riego_activo,
+        "irrigation.accumulated_liters": reading.riego_litros_acumulados,
+        "irrigation.flow_per_minute": reading.riego_flujo_por_minuto,
+        "environmental.temperature": reading.ambiental_temperatura,
+        "environmental.relative_humidity": reading.ambiental_humedad_relativa,
+        "environmental.wind_speed": reading.ambiental_velocidad_viento,
+        "environmental.solar_radiation": reading.ambiental_radiacion_solar,
+        "environmental.eto": reading.ambiental_eto,
+    }
+    value = mapping.get(parameter)
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return 1.0 if value else 0.0
+    return float(value)
+
+
+def _is_threshold_breached(
+    value: float,
+    min_value: float | None,
+    max_value: float | None,
+) -> bool:
+    if min_value is not None and value < min_value:
+        return True
+    if max_value is not None and value > max_value:
+        return True
+    return False
+
+
+def _has_recent_duplicate_threshold_alert(
+    db: Session,
+    *,
+    node_id: int,
+    irrigation_area_id: int,
+    parameter: str,
+    severity: str,
+    timestamp: datetime,
+    window_minutes: int = 10,
+) -> bool:
+    window_start = timestamp - timedelta(minutes=window_minutes)
+    existing = db.execute(
+        select(Alert.id).where(
+            Alert.nodo_id == node_id,
+            Alert.area_riego_id == irrigation_area_id,
+            Alert.tipo == "threshold",
+            Alert.parametro == parameter,
+            Alert.severidad == severity,
+            Alert.marca_tiempo >= window_start,
+        )
+    ).scalar_one_or_none()
+    return existing is not None
+
+
+def _create_threshold_alerts(db: Session, node: Node, reading: Reading) -> None:
+    thresholds = list(
+        db.execute(
+            select(Threshold).where(
+                Threshold.area_riego_id == node.area_riego_id,
+                Threshold.activo.is_(True),
+                Threshold.eliminado_en.is_(None),
+            )
+        ).scalars()
+    )
+
+    for threshold in thresholds:
+        value = _extract_threshold_value(reading, threshold.parametro)
+        if value is None:
+            continue
+
+        min_value = (
+            float(threshold.rango_min) if threshold.rango_min is not None else None
+        )
+        max_value = (
+            float(threshold.rango_max) if threshold.rango_max is not None else None
+        )
+        if not _is_threshold_breached(value, min_value, max_value):
+            continue
+
+        if _has_recent_duplicate_threshold_alert(
+            db,
+            node_id=node.id,
+            irrigation_area_id=node.area_riego_id,
+            parameter=threshold.parametro,
+            severity=threshold.severidad,
+            timestamp=reading.marca_tiempo,
+        ):
+            continue
+
+        alert = Alert(
+            nodo_id=node.id,
+            area_riego_id=node.area_riego_id,
+            umbral_id=threshold.id,
+            tipo="threshold",
+            parametro=threshold.parametro,
+            valor_detectado=value,
+            severidad=threshold.severidad,
+            mensaje=f"{threshold.parametro} fuera de umbral ({value})",
+            marca_tiempo=reading.marca_tiempo,
+            leida=False,
+            notificada_email=False,
+            notificada_whatsapp=False,
+        )
+        db.add(alert)
 
 
 def create_reading(db: Session, node: Node, data: ReadingCreate) -> Reading:
@@ -31,6 +144,10 @@ def create_reading(db: Session, node: Node, data: ReadingCreate) -> Reading:
         ambiental_eto=data.environmental.eto,
     )
     db.add(reading)
+    db.flush()
+
+    _create_threshold_alerts(db, node, reading)
+
     db.commit()
     db.refresh(reading)
     return reading
@@ -147,6 +264,76 @@ def list_readings(
     )
     items = list(db.execute(query).scalars())
     return items, total
+
+
+def get_readings_availability(
+    db: Session,
+    irrigation_area_id: int,
+    month_start: date | None = None,
+) -> tuple[date | None, date | None, list[date]]:
+    """Return min/max reading dates and available days for a month."""
+    node_id = db.execute(
+        select(Node.id).where(
+            Node.area_riego_id == irrigation_area_id,
+            Node.eliminado_en.is_(None),
+        )
+    ).scalar_one_or_none()
+    if node_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No node found for irrigation area {irrigation_area_id}",
+        )
+
+    min_ts, max_ts = db.execute(
+        select(func.min(Reading.marca_tiempo), func.max(Reading.marca_tiempo)).where(
+            Reading.nodo_id == node_id
+        )
+    ).one()
+
+    if min_ts is None or max_ts is None:
+        return None, None, []
+
+    if isinstance(min_ts, str):
+        min_ts = datetime.fromisoformat(min_ts)
+    elif isinstance(min_ts, date) and not isinstance(min_ts, datetime):
+        min_ts = datetime.combine(min_ts, datetime.min.time())
+
+    if isinstance(max_ts, str):
+        max_ts = datetime.fromisoformat(max_ts)
+    elif isinstance(max_ts, date) and not isinstance(max_ts, datetime):
+        max_ts = datetime.combine(max_ts, datetime.min.time())
+
+    current_month_start = (month_start or max_ts.date()).replace(day=1)
+    next_month_start = (
+        current_month_start.replace(day=28) + timedelta(days=4)
+    ).replace(day=1)
+    current_month_end = next_month_start - timedelta(days=1)
+
+    month_dates_raw = list(
+        db.execute(
+            select(func.date(Reading.marca_tiempo))
+            .where(
+                Reading.nodo_id == node_id,
+                Reading.marca_tiempo
+                >= datetime.combine(current_month_start, datetime.min.time()),
+                Reading.marca_tiempo
+                <= datetime.combine(current_month_end, datetime.max.time()),
+            )
+            .group_by(func.date(Reading.marca_tiempo))
+            .order_by(func.date(Reading.marca_tiempo))
+        ).scalars()
+    )
+
+    available_dates: list[date] = []
+    for d in month_dates_raw:
+        if isinstance(d, date):
+            available_dates.append(d)
+        elif isinstance(d, datetime):
+            available_dates.append(d.date())
+        elif isinstance(d, str):
+            available_dates.append(date.fromisoformat(d))
+
+    return min_ts.date(), max_ts.date(), available_dates
 
 
 def export_readings_csv(
@@ -352,14 +539,38 @@ def export_readings_pdf(
                 r.suelo_conductividad if r.suelo_conductividad is not None else "",
                 r.suelo_temperatura if r.suelo_temperatura is not None else "",
                 r.suelo_humedad if r.suelo_humedad is not None else "",
-                r.suelo_potencial_hidrico if r.suelo_potencial_hidrico is not None else "",
+                (
+                    r.suelo_potencial_hidrico
+                    if r.suelo_potencial_hidrico is not None
+                    else ""
+                ),
                 "On" if r.riego_activo else "Off",
-                r.riego_litros_acumulados if r.riego_litros_acumulados is not None else "",
-                r.riego_flujo_por_minuto if r.riego_flujo_por_minuto is not None else "",
+                (
+                    r.riego_litros_acumulados
+                    if r.riego_litros_acumulados is not None
+                    else ""
+                ),
+                (
+                    r.riego_flujo_por_minuto
+                    if r.riego_flujo_por_minuto is not None
+                    else ""
+                ),
                 r.ambiental_temperatura if r.ambiental_temperatura is not None else "",
-                r.ambiental_humedad_relativa if r.ambiental_humedad_relativa is not None else "",
-                r.ambiental_velocidad_viento if r.ambiental_velocidad_viento is not None else "",
-                r.ambiental_radiacion_solar if r.ambiental_radiacion_solar is not None else "",
+                (
+                    r.ambiental_humedad_relativa
+                    if r.ambiental_humedad_relativa is not None
+                    else ""
+                ),
+                (
+                    r.ambiental_velocidad_viento
+                    if r.ambiental_velocidad_viento is not None
+                    else ""
+                ),
+                (
+                    r.ambiental_radiacion_solar
+                    if r.ambiental_radiacion_solar is not None
+                    else ""
+                ),
                 r.ambiental_eto if r.ambiental_eto is not None else "",
             ]
         )

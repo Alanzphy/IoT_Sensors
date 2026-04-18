@@ -1,4 +1,5 @@
 import {
+    Bell,
     ChevronLeft,
     ChevronRight,
     Clock,
@@ -11,8 +12,8 @@ import {
     Users
 } from "lucide-react";
 import { useState } from "react";
-import { useAuth } from "../../context/AuthContext";
 import { Link, useLocation } from "react-router";
+import { useAuth } from "../../context/AuthContext";
 
 interface DesktopSidebarProps {
   role: "client" | "admin";
@@ -28,6 +29,7 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
     { path: "/cliente/areas", icon: MapPin, label: "Predios" },
     { path: "/cliente/historico", icon: Clock, label: "Histórico" },
     { path: "/cliente/exportar", icon: Download, label: "Exportar" },
+    { path: "/cliente/alertas", icon: Bell, label: "Alertas" },
   ];
 
   const adminNavItems = [
@@ -35,13 +37,15 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
     { path: "/admin/clientes", icon: Users, label: "Clientes" },
     { path: "/admin/nodos", icon: Radio, label: "Nodos" },
     { path: "/admin/cultivos", icon: Sprout, label: "Catálogo" },
+    { path: "/admin/alertas", icon: Bell, label: "Alertas" },
   ];
 
   const navItems = role === "client" ? clientNavItems : adminNavItems;
+  const homePath = role === "client" ? "/cliente" : "/admin";
 
   return (
     <div
-      className={`${expanded ? "w-60" : "w-20"} bg-[#F9F8F4] border-r border-[#2C2621]/10 transition-all duration-300 flex flex-col`}
+      className={`${expanded ? "w-60" : "w-20"} h-screen sticky top-0 self-start shrink-0 overflow-hidden bg-[#F9F8F4] border-r border-[#2C2621]/10 transition-all duration-300 flex flex-col`}
     >
       {/* Logo */}
       <div className="p-6 flex items-center justify-between">
@@ -63,11 +67,15 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 space-y-2">
+      <nav className="flex-1 overflow-y-auto px-3 space-y-2 pb-4">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = location.pathname === item.path ||
-                          (item.path !== "/" && location.pathname.startsWith(item.path));
+          const currentPath = location.pathname.replace(/\/+$/, "") || "/";
+          const itemPath = item.path.replace(/\/+$/, "") || "/";
+          const isHomeItem = itemPath === homePath;
+          const isActive =
+            currentPath === itemPath ||
+            (!isHomeItem && currentPath.startsWith(`${itemPath}/`));
 
           return (
             <Link

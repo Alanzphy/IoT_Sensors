@@ -1,14 +1,15 @@
-import { Link, useLocation } from "react-router";
-import { 
-  LayoutDashboard, 
-  MapPin, 
-  Clock, 
-  Download, 
-  User,
-  Users, 
-  Radio, 
-  Sprout
+import {
+    Bell,
+    Clock,
+    Download,
+    LayoutDashboard,
+    MapPin,
+    Radio,
+    Sprout,
+    User,
+    Users
 } from "lucide-react";
+import { Link, useLocation } from "react-router";
 
 interface MobileTabBarProps {
   role: "client" | "admin";
@@ -30,7 +31,7 @@ export function MobileTabBar({ role }: MobileTabBarProps) {
     { path: "/admin/clientes", icon: Users, label: "Clientes" },
     { path: "/admin/nodos", icon: Radio, label: "Nodos" },
     { path: "/admin/cultivos", icon: Sprout, label: "Catálogo" },
-    { path: "/admin/perfil", icon: User, label: "Perfil" },
+    { path: "/admin/alertas", icon: Bell, label: "Alertas" },
   ];
 
   const tabs = role === "client" ? clientTabs : adminTabs;
@@ -48,10 +49,10 @@ export function MobileTabBar({ role }: MobileTabBarProps) {
               to={tab.path}
               className="flex flex-col items-center gap-1 px-3 py-2 rounded-2xl transition-colors min-w-[64px]"
             >
-              <Icon 
-                className={`w-6 h-6 ${isActive ? "text-[#6D7E5E]" : "text-[#6E6359]"}`} 
+              <Icon
+                className={`w-6 h-6 ${isActive ? "text-[#6D7E5E]" : "text-[#6E6359]"}`}
               />
-              <span 
+              <span
                 className={`text-xs font-medium ${isActive ? "text-[#6D7E5E]" : "text-[#6E6359]"}`}
               >
                 {tab.label}

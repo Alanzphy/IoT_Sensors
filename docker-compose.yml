@@ -82,6 +82,25 @@ services:
       - "traefik.http.routers.sensores-backend.tls.certresolver=letsencrypt"
       - "traefik.http.services.sensores-backend.loadbalancer.server.port=5050"
 
+  # --- Inactivity Scheduler (calls /api/v1/alerts/scan-inactivity) ---
+  inactivity_scheduler:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sensores_inactivity_scheduler
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      - BACKEND_API_URL=http://backend:5050/api/v1
+      - SCHEDULER_ADMIN_EMAIL=${SCHEDULER_ADMIN_EMAIL}
+      - SCHEDULER_ADMIN_PASSWORD=${SCHEDULER_ADMIN_PASSWORD}
+      - INACTIVITY_SCAN_INTERVAL_SECONDS=${INACTIVITY_SCAN_INTERVAL_SECONDS:-300}
+      - INACTIVITY_SCAN_MINUTES=${INACTIVITY_SCAN_MINUTES:-20}
+      - INACTIVITY_SCAN_HTTP_TIMEOUT_SECONDS=${INACTIVITY_SCAN_HTTP_TIMEOUT_SECONDS:-20}
+    command: ["python", "-m", "app.jobs.inactivity_scheduler"]
+
   # --- Frontend (React + Nginx interno para SPA) ---
   frontend:
     build:

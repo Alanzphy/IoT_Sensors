@@ -31,6 +31,12 @@ from app.schemas.reading import (
     SoilData,
     SoilResponse,
 )
+from app.schemas.threshold import (
+    ThresholdCreate,
+    ThresholdResponse,
+    ThresholdUpdate,
+)
+from app.schemas.alert import AlertReadUpdate, AlertResponse
 from app.schemas.user import UserCreate, UserResponse, UserUpdate
 
 __all__ = [
@@ -71,4 +77,9 @@ __all__ = [
     "IrrigationResponse",
     "EnvironmentalData",
     "EnvironmentalResponse",
+    "ThresholdCreate",
+    "ThresholdUpdate",
+    "ThresholdResponse",
+    "AlertReadUpdate",
+    "AlertResponse",
 ]

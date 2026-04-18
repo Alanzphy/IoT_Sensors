@@ -1,7 +1,7 @@
 # Arquitectura del Sistema — IoT Riego Agrícola
 
 > Documento de referencia visual de la arquitectura técnica del sistema.
-> Contiene los diagramas de infraestructura, flujos de datos y autenticación para el **MVP (Fase 1)**, y un apéndice pre-redactado con la **expansión de Fase 2** listo para activar.
+> Contiene los diagramas de infraestructura, flujos de datos y autenticación para el **MVP (Fase 1)**, el estado activo de **MVP Extendido (Fase 2 Lite)** y el alcance futuro de **Fase 2 Completa**.
 
 ---
 
@@ -12,7 +12,8 @@
 - [3. Flujos de Autenticación](#3-flujos-de-autenticación)
 - [4. Jerarquía de Entidades](#4-jerarquía-de-entidades)
 - [5. Stack Tecnológico](#5-stack-tecnológico)
-- [6. FASE 2 — Expansión de Arquitectura (pre-redactada)](#6-fase-2--expansión-de-arquitectura-pre-redactada)
+- [6. Decisiones de Arquitectura: Docker y Deployment](#6-decisiones-de-arquitectura-docker-y-deployment)
+- [7. Extensión de Arquitectura: Fase 2 Lite y Fase 2 Completa](#7-extensión-de-arquitectura-fase-2-lite-y-fase-2-completa)
 
 ---
 
@@ -291,7 +292,7 @@ En lugar de tener un servidor monolítico, la arquitectura divide las responsabi
 3. **Frontend (React + Nginx Interno):** Dedicado en exclusiva a servir la interfaz de usuario.
 
 ### 6.2 Multi-stage Build del Frontend (React -> Nginx)
-Una de las decisiones clave de optimización fue el uso de un patrón "Multi-stage" en el `Dockerfile` del Frontend. 
+Una de las decisiones clave de optimización fue el uso de un patrón "Multi-stage" en el `Dockerfile` del Frontend.
 
 En desarrollo habitual utilizamos Node.js (`npm run dev`), pero en producción esto es ineficiente y expone una superficie de ataque. La arquitectura establece que:
 - **Stage 1 (Construcción):** Un contenedor temporal levanta Node.js, descarga las librerías NPM, transpila React/TypeScript y genera los activos puros estáticos (Paso de empaquetado).
@@ -299,7 +300,7 @@ En desarrollo habitual utilizamos Node.js (`npm run dev`), pero en producción e
 - **Por qué:** Nginx es nativamente más rápido, requiere de ~10MB de RAM (contra los ~300MB de un framework JS en ejecución), reduce enormemente el tamaño de la imagen Docker final y blinda el código fuente original.
 
 ### 6.3 Routing y Proxy a través de Traefik (Dokploy)
-Se confió la entrada pública del tráfico a **Traefik**, integrado naturalmente por el gestor de VPS, Dokploy. 
+Se confió la entrada pública del tráfico a **Traefik**, integrado naturalmente por el gestor de VPS, Dokploy.
 
 - **Por qué Traefik sobre Nginx perimetral manual:** Traefik ofrece "Service Discovery". En lugar de cablear las rutas manualmente en un archivo complejo, los contenedores declaran sus rutas como "etiquetas" (labels) en el archivo `docker-compose.yml`. Al arrancar, Traefik lee estas etiquetas y auto-configura el ruteo.
 - **Let's Encrypt nativo:** Traefik intercepta el dominio asignado y genera un certificado SSL HTTPS en el acto antes de que el tráfico toque nuestros contenedores, haciendo innecesaria una configuración criptográfica en FastAPI o en el Frontend.
@@ -308,15 +309,19 @@ Se confió la entrada pública del tráfico a **Traefik**, integrado naturalment
 ---
 ---
 
-## 7. FASE 2 — Expansión de Arquitectura (pre-redactada)
+## 7. Extensión de Arquitectura: Fase 2 Lite y Fase 2 Completa
 
-> ⏳ **ESTA SECCIÓN NO ESTÁ IMPLEMENTADA.** Está pre-redactada para que, al iniciar la Fase 2, solo haya que activar los componentes — no redactar desde cero. Cada sub-sección incluye el diagrama, las tablas y los endpoints listos para integrar.
+Esta sección separa lo que ya está activo en el sistema de lo que continúa como roadmap.
 
----
+### 7.1 Estado Actual: MVP Extendido (Fase 2 Lite) — Implementado
 
-### 6.1 Diagrama de Arquitectura Expandida (Fase 2)
+Componentes activos a la fecha:
 
-El diagrama del MVP con todos los componentes nuevos añadidos. **Cuando se active la Fase 2, este diagrama reemplaza al de la Sección 1.**
+- Tablas activas en base de datos: `umbrales`, `alertas`, `audit_log`.
+- Endpoints activos: `/api/v1/thresholds`, `/api/v1/alerts`, `/api/v1/alerts/scan-inactivity`.
+- Evaluación de umbrales durante la ingesta de `POST /api/v1/readings`.
+- Escaneo periódico de inactividad con `inactivity_scheduler` en Docker Compose.
+- Visualización en frontend: campana de notificaciones y centro de alertas para Admin/Cliente.
 
 ```mermaid
 graph TD
@@ -325,311 +330,83 @@ graph TD
         Simulator["📡 Simulador<br/>(PC Local)"]
     end
 
-    subgraph EXTERNAL["☁️ Servicios Externos"]
-        AzureAI["🤖 Azure OpenAI<br/>[Fase 2]"]
-        SMTP["📧 Servicio Email / SMTP<br/>[Fase 2]"]
-        WhatsApp["📱 WhatsApp Business API<br/>[Fase 2]"]
-        Maps["🗺️ API de Mapas<br/>(Google Maps)<br/>[Fase 2]"]
-    end
-
     subgraph VPS["🐸 VPS Linux — Servidor Grogu<br/>Docker Compose"]
-        subgraph NGINX_BLOCK["Nginx — Reverse Proxy<br/>:80 / :443"]
-            Nginx["⚡ Nginx"]
-        end
-
-        subgraph FRONTEND_BLOCK["Contenedor Frontend"]
-            Frontend["⚛️ React SPA"]
-        end
-
-        subgraph BACKEND_BLOCK["Contenedor Backend"]
-            Backend["🐍 FastAPI + Uvicorn<br/>:5050"]
-        end
-
-        subgraph DB_BLOCK["Contenedor Base de Datos"]
-            MySQL["🗄️ MySQL 8<br/>:3306"]
-        end
-
-        subgraph N8N_BLOCK["Contenedor n8n<br/>[Fase 2]"]
-            N8N["🔄 n8n<br/>:5678"]
-        end
+        Nginx["⚡ Nginx / Traefik"]
+        Frontend["⚛️ React SPA<br/>Alertas UI"]
+        Backend["🐍 FastAPI :5050<br/>Threshold Engine"]
+        Scheduler["⏰ inactivity_scheduler<br/>scan-inactivity"]
+        MySQL["🗄️ MySQL 8<br/>umbrales + alertas + audit_log"]
     end
 
-    %% --- Conexiones MVP (sin cambios) ---
-    Browser -->|"HTTPS :443<br/>JWT Bearer"| Nginx
-    Simulator -->|"HTTPS POST<br/>/api/v1/readings<br/>X-API-Key"| Nginx
-    Nginx -->|"/ → static"| Frontend
-    Nginx -->|"/api/v1/* → :5050"| Backend
-    Frontend -.->|"REST API"| Nginx
-    Backend -->|"SQLAlchemy :3306"| MySQL
-
-    %% --- Conexiones FASE 2 ---
-    Backend -->|"Chat IA en tiempo real<br/>Function Calling<br/>[Fase 2]"| AzureAI
-    N8N -->|"Extracción masiva<br/>GET /api/v1/readings<br/>[Fase 2]"| Backend
-    N8N -->|"Análisis nocturno<br/>reportes + anomalías<br/>[Fase 2]"| AzureAI
-    Backend -->|"Alertas + Recovery<br/>[Fase 2]"| SMTP
-    Backend -->|"Alertas críticas<br/>[Fase 2]"| WhatsApp
-    Frontend -->|"Mapa interactivo<br/>GPS predios/nodos<br/>[Fase 2]"| Maps
-
-    %% --- Estilos MVP ---
-    style INTERNET fill:#e3f2fd,stroke:#1565c0,color:#000
-    style VPS fill:#f1f8e9,stroke:#33691e,color:#000
-    style NGINX_BLOCK fill:#fff3e0,stroke:#e65100,color:#000
-    style FRONTEND_BLOCK fill:#e8eaf6,stroke:#283593,color:#000
-    style BACKEND_BLOCK fill:#fce4ec,stroke:#b71c1c,color:#000
-    style DB_BLOCK fill:#f3e5f5,stroke:#4a148c,color:#000
-
-    %% --- Estilos Fase 2 (diferenciados) ---
-    style EXTERNAL fill:#fff8e1,stroke:#ff8f00,color:#000
-    style N8N_BLOCK fill:#fff8e1,stroke:#ff8f00,color:#000
+    Browser -->|HTTPS| Nginx
+    Simulator -->|POST /api/v1/readings<br/>X-API-Key| Nginx
+    Nginx --> Frontend
+    Nginx -->|/api/v1/*| Backend
+    Backend --> MySQL
+    Scheduler -->|POST /api/v1/alerts/scan-inactivity| Backend
 ```
 
----
-
-### 6.2 Nuevas Tablas de Base de Datos
-
-Tablas que se agregan en Fase 2. Se conectan a las tablas existentes del MVP.
-
-```mermaid
-erDiagram
-    areas_riego ||--o{ umbrales : "1:N"
-    nodos ||--o{ alertas : "1:N"
-    umbrales ||--o{ alertas : "1:N"
-    usuarios ||--o{ audit_log : "1:N"
-
-    umbrales {
-        BIGINT id PK
-        BIGINT area_riego_id FK
-        VARCHAR parametro "ej: soil.humidity"
-        DECIMAL rango_min "ej: 20.0"
-        DECIMAL rango_max "ej: 30.0"
-        VARCHAR severidad "info | warning | critical"
-        DATETIME creado_en
-        DATETIME actualizado_en
-    }
-
-    alertas {
-        BIGINT id PK
-        BIGINT nodo_id FK
-        BIGINT umbral_id FK
-        VARCHAR parametro "ej: soil.humidity"
-        DECIMAL valor_detectado "ej: 8.5"
-        VARCHAR severidad "info | warning | critical"
-        BOOLEAN leida "default false"
-        BOOLEAN notificada_email "default false"
-        BOOLEAN notificada_whatsapp "default false"
-        DATETIME marca_tiempo
-        DATETIME creado_en
-    }
-
-    audit_log {
-        BIGINT id PK
-        BIGINT usuario_id FK
-        VARCHAR accion "CREATE | UPDATE | DELETE"
-        VARCHAR entidad "ej: predios"
-        BIGINT entidad_id
-        JSON datos_anteriores "nullable"
-        JSON datos_nuevos "nullable"
-        DATETIME creado_en
-    }
-```
-
-**Migraciones Alembic necesarias:**
-- `alembic revision --autogenerate -m "add_umbrales_table"`
-- `alembic revision --autogenerate -m "add_alertas_table"`
-- `alembic revision --autogenerate -m "add_audit_log_table"`
-- (Opcional) `alembic revision -m "add_ndvi_field"` — si se define la fuente de datos.
-
----
-
-### 6.3 Nuevos Endpoints de API
-
-| Módulo | Método | Endpoint | Descripción |
-|--------|--------|----------|-------------|
-| **Umbrales** | GET | `/api/v1/thresholds?irrigation_area_id=` | Listar umbrales de un área |
-| | POST | `/api/v1/thresholds` | Crear umbral |
-| | PUT | `/api/v1/thresholds/{id}` | Editar umbral |
-| | DELETE | `/api/v1/thresholds/{id}` | Eliminar umbral |
-| **Alertas** | GET | `/api/v1/alerts?node_id=&severity=&read=` | Listar alertas con filtros |
-| | GET | `/api/v1/alerts/{id}` | Detalle de alerta |
-| | PATCH | `/api/v1/alerts/{id}/read` | Marcar alerta como leída |
-| **Auditoría** | GET | `/api/v1/audit-logs?user_id=&entity=&start_date=&end_date=` | Listar logs (solo Admin) |
-| **Chat IA** | POST | `/api/v1/chat` | Enviar pregunta → respuesta IA |
-| **Recuperación** | POST | `/api/v1/auth/forgot-password` | Solicitar email de recuperación |
-| | POST | `/api/v1/auth/reset-password` | Resetear contraseña con token |
-
----
-
-### 6.4 Flujo de Alertas por Umbrales
-
-Cuando llega una lectura, el backend compara los valores contra los umbrales configurados y genera alertas si están fuera de rango.
+### 7.2 Flujo Activo: Lectura -> Evaluación -> Alerta
 
 ```mermaid
 sequenceDiagram
     participant S as 📡 Simulador
     participant B as 🐍 Backend
     participant DB as 🗄️ MySQL
-    participant E as 📧 Email (SMTP)
-    participant W as 📱 WhatsApp API
 
-    S->>B: POST /api/v1/readings<br/>(flujo normal del MVP)
-    B->>DB: INSERT lectura + categorías
+    S->>B: POST /api/v1/readings (X-API-Key)
+    B->>DB: INSERT lectura
+    B->>DB: SELECT umbrales del area
 
-    B->>DB: SELECT umbrales<br/>WHERE area_riego_id = ?
-
-    loop Por cada umbral configurado
-        B->>B: Comparar valor vs rango<br/>ej: humidity=8.5 vs min=20
-        alt Valor fuera de rango
-            B->>DB: INSERT alerta<br/>(nodo_id, parámetro, valor, severidad)
-
-            alt Usuario tiene email activado
-                B->>E: Enviar notificación email
-                B->>DB: UPDATE alerta SET notificada_email=true
-            end
-
-            alt Severidad=critical AND WhatsApp activado
-                B->>W: Enviar notificación WhatsApp
-                B->>DB: UPDATE alerta SET notificada_whatsapp=true
-            end
-        end
+    alt Valor fuera de rango
+        B->>DB: INSERT alerta tipo=threshold
     end
 
     B-->>S: 201 Created
 ```
 
----
-
-### 6.5 Flujos de Inteligencia Artificial
-
-#### A) Chat Interactivo en Tiempo Real
-
-El usuario hace una pregunta en lenguaje natural y la IA responde usando datos del sistema.
+### 7.3 Flujo Activo: Inactividad de Nodo
 
 ```mermaid
 sequenceDiagram
-    participant U as 🖥️ Browser
+    participant SCH as ⏰ Scheduler
     participant B as 🐍 Backend
-    participant AI as 🤖 Azure OpenAI
     participant DB as 🗄️ MySQL
 
-    U->>B: POST /api/v1/chat<br/>{message: "¿Cuál es la humedad<br/>promedio del Nogal Norte<br/>esta semana?"}
+    SCH->>B: POST /api/v1/alerts/scan-inactivity
+    B->>DB: Buscar nodos sin datos >= 20 min
 
-    B->>AI: Chat Completion<br/>+ Function Definitions<br/>(get_readings, get_area_info...)
-
-    AI->>AI: Decide llamar función<br/>get_readings(area=Nogal Norte,<br/>last_7_days)
-
-    AI-->>B: Function Call request
-
-    B->>DB: SELECT AVG(humidity)<br/>FROM lecturas_suelo<br/>WHERE ... last 7 days
-    DB-->>B: 32.4
-
-    B->>AI: Function result: {avg_humidity: 32.4}
-
-    AI-->>B: "La humedad promedio del<br/>Nogal Norte esta semana es<br/>32.4%. Está dentro del rango<br/>óptimo (20-40%)."
-
-    B-->>U: 200 OK<br/>{response: "La humedad promedio..."}
-```
-
-#### B) Análisis Nocturno Automatizado (n8n)
-
-Tareas programadas que extraen datos masivos, los analizan con IA, y generan reportes o alertas tempranas.
-
-```mermaid
-sequenceDiagram
-    participant CRON as ⏰ n8n (Cron Trigger)
-    participant B as 🐍 Backend API
-    participant AI as 🤖 Azure OpenAI
-    participant DB as 🗄️ MySQL
-
-    Note over CRON: Ejecución nocturna<br/>ej: 02:00 AM diario
-
-    CRON->>B: GET /api/v1/readings<br/>?start_date=ayer&end_date=hoy<br/>&per_page=10000
-
-    B->>DB: SELECT lecturas masivas
-    DB-->>B: N registros
-    B-->>CRON: JSON con lecturas del día
-
-    CRON->>AI: Analizar datos:<br/>"Busca patrones, anomalías,<br/>tendencias en estas lecturas..."
-
-    AI-->>CRON: Análisis:<br/>"Nodo #3 muestra descenso<br/>sostenido de humedad (45→12%)<br/>en 6 horas. Posible riego<br/>insuficiente."
-
-    alt Se detectó anomalía
-        CRON->>B: POST /api/v1/alerts<br/>{tipo: "ai_analysis", ...}
-        B->>DB: INSERT alerta
+    alt Nodo inactivo sin alerta vigente
+        B->>DB: INSERT alerta tipo=inactivity
     end
 
-    CRON->>CRON: Generar reporte PDF/email
-    CRON->>B: Notificar al cliente<br/>(email con resumen del día)
+    B-->>SCH: Resumen de escaneo
 ```
 
----
+### 7.4 Fase 2 Completa (Futuro)
 
-### 6.6 Flujo de Inactividad de Nodo (Alerta Activa)
+Funcionalidades que permanecen en roadmap y no forman parte de la implementación activa actual:
 
-En el MVP, la "frescura de datos" es un indicador pasivo en el frontend. En Fase 2, el backend genera una alerta activa.
+- Integración de IA conversacional con Azure OpenAI.
+- Automatización asíncrona con n8n.
+- Notificaciones externas (email/WhatsApp) sobre alertas.
+- Recuperación de contraseña por correo.
+- Visualización geoespacial avanzada en mapas.
+- Configuración de umbrales por cliente final (self-service).
 
-```mermaid
-sequenceDiagram
-    participant CRON as ⏰ Backend (Cron/Scheduler)
-    participant DB as 🗄️ MySQL
-    participant E as 📧 Email
+### 7.5 Checklist de Estado
 
-    Note over CRON: Cada 5 minutos<br/>(background task)
+#### Implementado (Fase 2 Lite)
+- [x] Migración y uso de tablas `umbrales`, `alertas`, `audit_log`.
+- [x] CRUD de umbrales (Admin).
+- [x] Listado/detalle/marcado de alertas (Admin/Cliente por ownership).
+- [x] Escaneo de inactividad (`/api/v1/alerts/scan-inactivity`) y scheduler en compose.
+- [x] UI de alertas (popover + centro de alertas).
 
-    CRON->>DB: SELECT nodos<br/>WHERE última_lectura < NOW() - 20min
-
-    loop Por cada nodo inactivo
-        CRON->>DB: SELECT alerta existente<br/>WHERE nodo_id=? AND tipo='inactividad'<br/>AND no resuelta
-
-        alt No existe alerta previa
-            CRON->>DB: INSERT alerta<br/>(tipo: inactividad, nodo_id,<br/>severidad: warning)
-            CRON->>E: Notificar al cliente<br/>"Nodo X sin datos desde hace 20+ min"
-        end
-    end
-```
-
----
-
-### 6.7 Checklist de Activación — Fase 2
-
-Pasos concretos para integrar cada módulo. Marcar conforme se vayan completando.
-
-#### Infraestructura
-- [ ] Agregar contenedor **n8n** al `docker-compose.yml` (puerto 5678, volumen para workflows)
-- [ ] Configurar **Azure OpenAI** (API key, endpoint, modelo en variables de entorno)
-- [ ] Configurar **servicio SMTP** (host, puerto, credenciales en variables de entorno)
-- [ ] Configurar **WhatsApp Business API** (token, número, en variables de entorno)
-- [ ] Agregar **Google Maps API key** al frontend (variable de entorno del build)
-
-#### Base de Datos
-- [ ] Ejecutar migración Alembic: tabla `umbrales`
-- [ ] Ejecutar migración Alembic: tabla `alertas`
-- [ ] Ejecutar migración Alembic: tabla `audit_log`
-- [ ] (Opcional) Migración para campo NDVI si se define la fuente de datos
-
-#### Backend — Endpoints
-- [ ] Implementar CRUD `/api/v1/thresholds` (umbrales por área)
-- [ ] Implementar `/api/v1/alerts` (listado, detalle, marcar como leída)
-- [ ] Implementar `/api/v1/audit-logs` (solo Admin)
-- [ ] Implementar `/api/v1/chat` (proxy a Azure OpenAI con Function Calling)
-- [ ] Implementar `/api/v1/auth/forgot-password` y `/api/v1/auth/reset-password`
-- [ ] Agregar lógica de comparación lectura vs umbrales al flujo de ingesta (POST readings)
-- [ ] Agregar background task para detección de nodos inactivos (≥20 min sin datos)
-- [ ] Integrar envío de email (alertas + recuperación de contraseña)
-- [ ] Integrar envío de WhatsApp (alertas críticas)
-- [ ] Agregar middleware de auditoría (log de acciones CRUD al `audit_log`)
-
-#### Frontend
-- [ ] Componente de chat IA (interfaz conversacional)
-- [ ] Vista de alertas (listado, filtros, marcar como leída)
-- [ ] Configuración de umbrales por área (formulario)
-- [ ] Visualización geoespacial con Google Maps (mapa de predios/nodos)
-- [ ] Flujo de "Olvidé mi contraseña" (formulario + pantalla de reset)
-- [ ] Indicadores de color por umbrales en dashboard (verde/amarillo/rojo)
-- [ ] Vista de auditoría para Admin
-
-#### Documentación
-- [ ] Actualizar diagrama de arquitectura: reemplazar Sección 1 con diagrama de Sección 6.1
-- [ ] Actualizar SRS: reincorporar REQs de Fase 2 como activos
-- [ ] Actualizar casos de uso: nuevos flujos de alertas, umbrales, chat IA
-- [ ] Actualizar diagramas de actividad: agregar flujos de alertas, IA, recuperación de contraseña
-- [ ] Eliminar esta sección (6) o marcarla como "✅ ACTIVADA"
+#### Pendiente (Fase 2 Completa)
+- [ ] Notificaciones externas por email.
+- [ ] Notificaciones externas por WhatsApp.
+- [ ] Endpoint y vista de auditoría administrativa.
+- [ ] Recuperación de contraseña (`forgot-password`, `reset-password`).
+- [ ] Integración IA/n8n.
+- [ ] Módulo de mapas.

@@ -23,6 +23,7 @@ La arquitectura está basada en dominios funcionales (Feature-driven / Role-base
 src/app/
 ├── components/       # Componentes reusables de UI (Botones, Tarjetas, Input, etc.)
 │   ├── navigation/   # Menús (DesktopSidebar.tsx, MobileTabBar.tsx)
+│   ├── notifications/ # Alertas en UI (AlertsPopover)
 │   └── ProtectedRoute.tsx # HOC para blindar rutas según el Rol y JWT.
 ├── context/          # React Context API para estado global (AuthContext)
 ├── data/             # (Deprecado/Migración) Datos estáticos 'mockData'. Se eliminarán.
@@ -32,6 +33,7 @@ src/app/
 │   ├── admin/        # CRUD para el admin (Clientes, Predios, Nodos, Cultivos, etc.)
 │   ├── auth/         # Autenticación (LoginPage)
 │   └── client/       # Dashboards y datos de agricultores (ClientDashboard, Histórico, etc.)
+│   └── shared/       # Pantallas compartidas entre roles (AlertsCenterPage)
 ├── services/         # Integración y llamadas HTTP (api.ts para base axios)
 ├── App.tsx           # Entry point general integrando el AuthProvider y RouterProvider
 └── routes.tsx        # Definición del árbol de rutas y protección
@@ -40,12 +42,19 @@ src/app/
 ---
 
 ## 3. Estado de la Integración (Mock -> API Base de Datos)
-Actualmente el frontend está en fase de **transición de datos estáticos hacia consumo real del backend FastAPI**.
+Actualmente el frontend está en fase de **transición de datos estáticos hacia consumo real del backend FastAPI**, con parte de Fase 2 Lite activa.
 
 - **Fase 1 (Completada)**: Autenticación. `LoginPage` conecta a `/api/v1/auth/login`. El JWT se decodifica con `jwt-decode`, se guarda en `localStorage` y se gestiona mediante `AuthContext`. El `api.ts` de Axios inyecta automáticamente el header `Authorization: Bearer <token>` y maneja las redirecciones por `401 Unauthorized`.
-- **Fase 2 (Pendiente - En proceso)**: Reemplazar variables simuladas del Dashboard (`mockData.ts`) obteniendo los datos reales de `/api/v1/readings/latest`.
-- **Fase 3 (Pendiente)**: Históricos y gráficos consumiendo el API tabulado y exportación nativa de archivos.
-- **Fase 4 (Pendiente)**: Dashboards de Administrador (CRUD de Catálogos).
+- **Fase 2 Lite (Implementada parcialmente)**: Centro de alertas y popover de notificaciones conectados a `/api/v1/alerts`, con marcado de lectura y filtros por rol.
+- **Fase 3 (En proceso)**: Reemplazo gradual de `mockData` en dashboard/histórico por datos reales (`/api/v1/readings`, `/api/v1/readings/latest`, `/api/v1/readings/availability`).
+- **Fase 4 (Pendiente)**: CRUD de umbrales en interfaz Admin y semáforos de color por umbrales en dashboard.
+
+### 3.1 Módulo de Alertas en UI (Activo)
+
+- `components/notifications/AlertsPopover.tsx`: campana global con contador y últimas alertas.
+- `pages/shared/AlertsCenterPage.tsx`: listado completo con filtros, paginación y marcado de leídas.
+- `services/alerts.ts`: cliente HTTP para `/api/v1/alerts` y `/api/v1/alerts/{id}/read`.
+- Integración en layouts de Admin y Cliente para visibilidad transversal.
 
 ---
 

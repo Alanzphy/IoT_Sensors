@@ -7,6 +7,9 @@ from app.models.irrigation_area import IrrigationArea
 from app.models.crop_cycle import CropCycle
 from app.models.node import Node
 from app.models.reading import Reading
+from app.models.threshold import Threshold
+from app.models.alert import Alert
+from app.models.audit_log import AuditLog
 
 __all__ = [
     "User",
@@ -18,4 +21,7 @@ __all__ = [
     "CropCycle",
     "Node",
     "Reading",
+    "Threshold",
+    "Alert",
+    "AuditLog",
 ]

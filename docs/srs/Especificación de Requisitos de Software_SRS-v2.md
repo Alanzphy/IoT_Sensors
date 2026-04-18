@@ -96,7 +96,7 @@ El propósito de este documento es especificar de manera completa, consistente y
 
 El sistema proporcionará una plataforma de software destinada al monitoreo agrícola basado en datos IoT, permitiendo almacenar, procesar y visualizar información proveniente del módulo de control (simulador de hardware).
 
-El desarrollo se estructura en dos fases. Este SRS detalla la Fase 1 (MVP) e identifica las funcionalidades planificadas para la Fase 2\.
+El desarrollo se estructura en tres capas de evolución. Este SRS detalla el MVP, incorpora el estado activo de MVP Extendido (Fase 2 Lite), y mantiene como roadmap la Fase 2 Completa.
 
 **Fase 1** \- MVP (alcance actual). El sistema permitirá:
 
@@ -109,16 +109,22 @@ El desarrollo se estructura en dos fases. Este SRS detalla la Fase 1 (MVP) e ide
 * Consultar histórico con filtros por rango libre de fechas, presets rápidos (semana/mes/año) y ciclo de cultivo.
 * Exportar datos filtrados en formatos CSV, Excel (.xlsx) y PDF.
 
-**Fase 2** \- Funcionalidades planificadas (NO incluidas en el MVP):
+**MVP Extendido (Fase 2 Lite)** \- Implementado parcialmente sobre el MVP:
 
-Emitir alertas cuando un parámetro se encuentre fuera de los umbrales configurados por el usuario.
+● Alertas por umbral e inactividad en backend.
+● Scheduler para escaneo de nodos inactivos (>=20 min sin lectura).
+● Centro de alertas y notificaciones en interfaz web.
+● Configuración de umbrales por Administrador.
+
+**Fase 2 Completa** \- Funcionalidades planificadas (no activas aún):
+
 ● Notificaciones externas por correo electrónico y/o WhatsApp.
-● Integración con IA (Azure OpenAI) y agentes autónomos (n8n) para asistencia conversacional y reportes automáticos.
-● Visualización geoespacial de predios y nodos en mapa interactivo (API de Google Maps u otra).
-● Indicadores de color por umbrales (verde/amarillo/rojo) en el dashboard.
+● Integración con IA (Azure OpenAI) y automatización con n8n.
+● Visualización geoespacial de predios y nodos en mapa interactivo.
+● Indicadores de color por umbrales (verde/amarillo/rojo) en dashboard principal.
 ● NDVI (Índice de Vegetación) como parámetro adicional del sensor.
 ● Recuperación de contraseña por correo electrónico.
-● Logs de auditoría visibles para el Administrador.
+● Vista administrativa completa de auditoría.
 
 Este sistema es exclusivamente de monitoreo: no enviará comandos de control hacia equipos de campo. La comunicación con el módulo de control es estrictamente unidireccional (el servidor solo recibe datos).
 
@@ -142,7 +148,7 @@ El SRS aplica únicamente al software del servidor IoT, sus interfaces y su inte
 
 ● **Datos prioritarios:** Los 3 campos de mayor importancia para el cliente: Humedad del suelo (%), Flujo de agua (L/min) y E.T.O. (mm/día).
 
-● **Umbral:** Rango configurado por el usuario para determinar el estado de un parámetro *(Fase 2 — no implementado en el MVP)*.
+● **Umbral:** Rango configurado para determinar el estado de un parámetro *(activo en MVP Extendido/Fase 2 Lite para configuración por Admin)*.
 
 ● **Soft delete:** Eliminación lógica de un registro marcando el campo eliminado\_en con fecha/hora, sin borrarlo físicamente de la base de datos. Preserva historial para trazabilidad.
 
@@ -227,7 +233,7 @@ El sistema contempla **3 actores** con roles y capacidades diferenciadas:
 
 ● **Administrador (Usuario Humano):** Tiene privilegios globales sobre toda la plataforma. Gestiona clientes, predios, áreas de riego, catálogo de cultivos, ciclos de cultivo y nodos IoT. Puede supervisar el dashboard e histórico de **cualquier** cliente/predio/área. Es el único rol que realiza configuración del sistema.
 
-● **Cliente (Usuario Humano):** Es el agricultor o dueño de los predios. Tiene acceso restringido exclusivamente a **sus propios predios** y áreas de riego. Sus capacidades en el MVP son solo de **visualización**: consultar el dashboard multicategoría, ver indicadores de frescura, navegar jerárquicamente sus predios/áreas, consultar histórico con filtros y exportar datos. **No configura** parámetros del sistema *(en Fase 2, el cliente podrá configurar umbrales de alertas por área)*.
+● **Cliente (Usuario Humano):** Es el agricultor o dueño de los predios. Tiene acceso restringido exclusivamente a **sus propios predios** y áreas de riego. En MVP y MVP Extendido puede visualizar dashboard, histórico, exportación y alertas de sus áreas. **No configura** umbrales en esta etapa *(la autoconfiguración por cliente queda para Fase 2 Completa)*.
 
 **Perfil del usuario cliente:** Los usuarios entran dentro del perfil de agricultores. Se consideran los siguientes factores:
 
@@ -278,7 +284,9 @@ El sistema ofrecerá una interfaz web (SPA en React) accesible desde navegador:
 
 **Gráficas:** Visualización de series de tiempo con filtros por rango libre de fechas, presets rápidos (semana/mes/año — resueltos en el frontend como start\_date/end\_date) y filtro por ciclo de cultivo (temporada agrícola).
 
-**Fase 2:** Se integrará visualización geoespacial tipo mapa interactivo (API de Google Maps u otra) para predios y nodos. También se implementarán indicadores de color por umbrales (verde \= óptimo, amarillo \= exceso/riesgo leve, rojo \= falta de agua/nivel crítico) basados en rangos configurables por el usuario.
+**MVP Extendido (activo):** El sistema incluye centro de alertas y marcado de alertas leídas por rol.
+
+**Fase 2 Completa:** Se integrará visualización geoespacial tipo mapa interactivo (API de Google Maps u otra) y semáforos de umbral en dashboard principal.
 
 ### 3.1.2 Interfaces de Hardware {#3.1.2-interfaces-de-hardware}
 
@@ -294,7 +302,7 @@ El sistema ofrecerá una interfaz web (SPA en React) accesible desde navegador:
 
 **Despliegue:** **Docker Compose** en VPS Linux a través de **Dokploy**. Tres contenedores: MySQL, Backend (FastAPI \+ Uvicorn) y Frontend. El tráfico público entra por **Traefik** (puertos 80/443) que redirige SSL automáticamente.
 
-**Fase 2:** Integración con API de mapas (Google Maps u otra) para renderizar ubicación de predios.
+**Fase 2 Completa (futuro):** Integración con API de mapas (Google Maps u otra) para renderizar ubicación de predios.
 
 ### 3.1.4 Interfaces de Comunicación {#3.1.4-interfaces-de-comunicación}
 
@@ -312,14 +320,14 @@ Respuestas en JSON. Paginación obligatoria en endpoints de listado (?page=1\&pe
 
 **REQ-funcional-01 (Roles):** El sistema debe soportar al menos dos roles:
 
-* **Administrador General:** Acceso total a la plataforma. Gestiona clientes, predios, áreas de riego, catálogo de cultivos, ciclos de cultivo y nodos IoT. Puede supervisar el dashboard e histórico de cualquier cliente/predio/área. *(Fase 2: podrá ver logs de auditoría)*.
-* **Usuario (Cliente):** Acceso limitado a sus propios predios y áreas de riego. **Solo visualización** en el MVP: dashboard multicategoría, histórico con filtros y exportación de datos. *(Fase 2: podrá configurar umbrales de alertas por área)*.
+* **Administrador General:** Acceso total a la plataforma. Gestiona clientes, predios, áreas de riego, catálogo de cultivos, ciclos de cultivo y nodos IoT. Puede supervisar el dashboard e histórico de cualquier cliente/predio/área. *(Fase 2 Completa: podrá ver logs de auditoría).*
+* **Usuario (Cliente):** Acceso limitado a sus propios predios y áreas de riego. En MVP Extendido (Fase 2 Lite) puede visualizar dashboard, histórico, exportación y alertas de sus áreas. *(Fase 2 Completa: podrá configurar umbrales de alertas por área).*
 
 **REQ-funcional-02 (Gestión de Clientes):** El Administrador podrá dar de alta nuevos clientes con los siguientes datos: nombre de empresa, correo electrónico, contraseña (para crear su usuario asociado), teléfono y dirección. Se crea simultáneamente un registro en la tabla de usuarios (con rol ‘cliente’) y uno en la tabla de clientes (relación 1:1).
 
 **REQ-funcional-03 (Seguridad por Predio):** El sistema debe validar que un usuario con rol ‘cliente’ solo pueda visualizar los predios y áreas asignados a su ID de cliente. El Administrador puede ver datos de cualquier cliente.
 
-**REQ-funcional-04 (Autenticación):** El sistema implementará autenticación mediante **JWT** (JSON Web Tokens) para usuarios web. El login retorna un access token y un refresh token. Las contraseñas se almacenan con hash **bcrypt**. Los nodos IoT se autentican con una **API Key fija** única por nodo, enviada en el header X-API-Key. *(Fase 2: se implementará flujo de recuperación de contraseña por correo electrónico)*.
+**REQ-funcional-04 (Autenticación):** El sistema implementará autenticación mediante **JWT** (JSON Web Tokens) para usuarios web. El login retorna un access token y un refresh token. Las contraseñas se almacenan con hash **bcrypt**. Los nodos IoT se autentican con una **API Key fija** única por nodo, enviada en el header X-API-Key. *(Fase 2 Completa: se implementará flujo de recuperación de contraseña por correo electrónico).*
 
 ### 3.2.2 Configuración del Sistema {#3.2.2-configuración-del-sistema}
 
@@ -339,7 +347,7 @@ Cliente → N Predios (con nombre y ubicación) → N Áreas de Riego (con nombr
 * **API Key** (única, autogenerada) — credencial para autenticar envíos de datos. ○ **GPS:** Latitud y longitud (coordenadas estáticas, se registran al configurar el nodo, no se envían en cada lectura).
 * **Vinculación 1:1** a un área de riego específica. Un nodo solo puede estar asignado a un área, y un área solo puede tener un nodo.
 
-**REQ-funcional-09 (Parametrización de Alertas) \- Fase 2:** El usuario (cliente) podrá definir rangos personalizados para alertas de humedad por cada área de riego (ej. Rango Óptimo 20-30%, Déficit \<10%). *Esta funcionalidad requiere el sistema de alertas y umbrales, que se implementará en la Fase 2 junto con la integración de IA y notificaciones. No está incluida en el MVP.*
+**REQ-funcional-09 (Parametrización de Alertas por Cliente) \- Fase 2 Completa:** El usuario (cliente) podrá definir rangos personalizados para alertas por área de riego (ej. Rango Óptimo 20-30%, Déficit \<10%). *En MVP Extendido, el sistema de umbrales/alertas existe pero su configuración está limitada al rol Administrador.*
 
 ### 3.2.3 Monitoreo y Visualización {#3.2.3-monitoreo-y-visualización}
 
@@ -382,15 +390,17 @@ Campo timestamp obligatorio (ISO 8601 UTC). Campos no disponibles se envían com
 
 **MVP (Fase 1):**
 
-**REQ-funcional-14b (Indicador de Frescura \- Pasivo):** El dashboard muestra el timestamp del último dato recibido y el tiempo transcurrido por cada nodo/área. Este es un indicador visual pasivo, sin notificaciones push ni alertas automáticas.
+**REQ-funcional-14b (Indicador de Frescura \- Pasivo):** El dashboard muestra el timestamp del último dato recibido y el tiempo transcurrido por cada nodo/área.
 
-**Fase 2 (Planificado \- No implementado en el MVP):**
+**MVP Extendido (Fase 2 Lite \- activo):**
 
-**REQ-funcional-15 (Sistema de Alertas) \- Fase 2:** El sistema generará alertas automáticas cuando los valores de los sensores salgan de los rangos configurados por el usuario (umbrales). Requiere nuevas tablas en BD (umbrales, alertas) y nuevos endpoints. Se implementará junto con el módulo de IA y agentes.
+**REQ-funcional-15 (Sistema de Alertas básico):** El sistema genera alertas automáticas cuando los valores de sensores incumplen umbrales activos (configurados por Admin) y las expone en UI para Admin/Cliente según ownership.
 
-**REQ-funcional-16 (Envío de Notificaciones) \- Fase 2:** Las alertas críticas podrán configurarse para ser enviadas por medios externos (**correo electrónico** o **WhatsApp**). Requiere integración con servicio de email (SMTP o cloud) y API de WhatsApp Business.
+**REQ-funcional-17 (Alerta Activa por Inactividad):** Cuando un nodo acumula >=20 minutos sin envío, el backend genera alerta de inactividad mediante escaneo programado.
 
-**REQ-funcional-17 (Alerta Activa por Inactividad) \-  Fase 2:** Cuando un nodo lleve ≥20 minutos (2 lecturas consecutivas perdidas) sin enviar datos, el sistema generará una alerta backend activa con notificación push al usuario.
+**Fase 2 Completa (futuro):**
+
+**REQ-funcional-16 (Envío de Notificaciones externas):** Las alertas críticas podrán enviarse por correo y/o WhatsApp según preferencias.
 
 ### 3.2.5 Reportes e Históricos {#3.2.5-reportes-e-históricos}
 
@@ -406,7 +416,7 @@ Campo timestamp obligatorio (ISO 8601 UTC). Campos no disponibles se envían com
 
 ## 3.3 Requisitos de Rendimiento {#3.3-requisitos-de-rendimiento}
 
-**REQ-Rendimiento-01:** El sistema debe ser capaz de procesar y almacenar la entrada de datos de múltiples nodos concurrentemente. El MVP opera en un **único VPS con Docker Compose** (escalabilidad vertical). El diseño de la base de datos (IDs BIGINT, índices compuestos, normalización) prepara el terreno para escalabilidad futura. Volumen estimado: 144 lecturas/día × N nodos × 4 filas por lectura (1 parent \+ 3 categorías).
+**REQ-Rendimiento-01:** El sistema debe ser capaz de procesar y almacenar la entrada de datos de múltiples nodos concurrentemente. El MVP opera en un **único VPS con Docker Compose** (escalabilidad vertical). El diseño de la base de datos (IDs BIGINT, índices compuestos, normalización) prepara el terreno para escalabilidad futura. Volumen estimado: 144 lecturas/día × N nodos × 1 fila unificada por lectura.
 
 **REQ-Rendimiento-02:** La carga del dashboard y la creación de gráficas con datos históricos para ventanas de tiempo de hasta 1 mes no debe exceder los 5 segundos. Respaldado por índice compuesto (nodo\_id, marca\_tiempo) en la tabla de lecturas.
 
@@ -416,7 +426,7 @@ Campo timestamp obligatorio (ISO 8601 UTC). Campos no disponibles se envían com
 
 **REQ-Diseño-02:** La base de datos (**MySQL 8** relacional) debe optimizarse para consultas por rango de tiempo mediante índices compuestos (nodo\_id, marca\_tiempo) y un índice simple (marca\_tiempo) para extracciones masivas futuras. Se contempla particionamiento por rango de marca\_tiempo (mensual o trimestral) cuando el volumen crezca significativamente.
 
-**REQ-Diseño-03:** El almacenamiento de lecturas usa **3 tablas de categoría** (lecturas\_suelo, lecturas\_riego, lecturas\_ambiental) enlazadas 1:1 a una tabla parent (lecturas), permitiendo consultas por categoría sin cargar datos innecesarios.
+**REQ-Diseño-03:** El almacenamiento de lecturas usa **tabla unificada (wide table)** en `lecturas`, con 12 campos dinámicos y timestamp por registro, optimizando lectura para dashboard/histórico y simplificando ingestión transaccional.
 
 **REQ-Diseño-04:** Todas las entidades principales implementan **soft delete** (campo eliminado\_en) para preservar historial y trazabilidad. Las lecturas de sensores **no** se eliminan (ni física ni lógicamente).
 
@@ -424,7 +434,7 @@ Campo timestamp obligatorio (ISO 8601 UTC). Campos no disponibles se envían com
 
 **3.5.1 Seguridad:** Autenticación mediante **JWT** (access token \+ refresh token) para usuarios web y **API Key** (X-API-Key header) para nodos IoT. Contraseñas almacenadas con hash **bcrypt**. Encriptación de datos en tránsito mediante **HTTPS** (Traefik gestionando Let's Encrypt automáticamente). Los refresh tokens se almacenan en BD y pueden revocarse (tabla tokens\_refresco).
 
-**3.5.2 Mantenibilidad:** El sistema sigue una arquitectura modular con separación clara: backend (FastAPI — API REST y lógica de negocio), frontend (React — SPA desacoplada) y base de datos (MySQL 8 vía SQLAlchemy ORM). Cada componente corre en su propio contenedor Docker. Las migraciones de esquema se gestionan con Alembic. El ingesta de lecturas usa **transacciones atómicas** (1 INSERT parent \+ 3 INSERTs de categoría en un solo commit — si uno falla, se revierten todos).
+**3.5.2 Mantenibilidad:** El sistema sigue una arquitectura modular con separación clara: backend (FastAPI - API REST y lógica de negocio), frontend (React - SPA desacoplada) y base de datos (MySQL 8 vía SQLAlchemy ORM). Cada componente corre en su propio contenedor Docker. Las migraciones de esquema se gestionan con Alembic. La ingesta de lecturas usa **transacciones atómicas por lectura** (inserción en tabla unificada `lecturas` y evaluación asociada en el mismo flujo; si algo falla, se hace rollback).
 
 **3.5.3 Disponibilidad:** El sistema en la VPS debe garantizar un tiempo de actividad de al menos 99% para el acceso al dashboard con datos históricos, aunque la recepción de datos en tiempo real pueda verse afectada por la conectividad de campo.
 

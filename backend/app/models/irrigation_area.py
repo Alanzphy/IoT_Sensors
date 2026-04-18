@@ -35,6 +35,12 @@ class IrrigationArea(Base, TimestampMixin, SoftDeleteMixin):
     node: Mapped["Node | None"] = relationship(
         "Node", back_populates="irrigation_area", uselist=False
     )
+    thresholds: Mapped[list["Threshold"]] = relationship(
+        "Threshold", back_populates="irrigation_area"
+    )
+    alerts: Mapped[list["Alert"]] = relationship(
+        "Alert", back_populates="irrigation_area"
+    )
 
     __table_args__ = (
         Index("idx_areas_riego_predio_id", "predio_id"),

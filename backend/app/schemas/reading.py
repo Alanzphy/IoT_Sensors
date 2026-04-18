@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -107,3 +107,11 @@ class ReadingResponse(BaseModel):
     soil: SoilResponse | None = None
     irrigation: IrrigationResponse | None = None
     environmental: EnvironmentalResponse | None = None
+
+
+class ReadingAvailabilityResponse(BaseModel):
+    """Availability metadata for date-range pickers."""
+
+    min_date: date | None = None
+    max_date: date | None = None
+    available_dates: list[date] = Field(default_factory=list)

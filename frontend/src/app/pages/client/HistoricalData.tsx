@@ -1,10 +1,11 @@
-import { endOfDay, format, parseISO, startOfDay, subDays } from "date-fns";
+import { differenceInCalendarDays, endOfDay, format, parseISO, startOfDay, subDays } from "date-fns";
 import { es } from "date-fns/locale";
-import { Calendar, Download, Loader2 } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { BentoCard } from "../../components/BentoCard";
 import { PillButton } from "../../components/PillButton";
+import { ReadingDateRangeSelector } from "../../components/ReadingDateRangeSelector";
 import { useSelection } from "../../context/SelectionContext";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { api } from "../../services/api";
@@ -14,8 +15,7 @@ export function HistoricalData() {
   const { selectedArea } = useSelection();
   const isMobile = useIsMobile();
 
-  const [dateRange, setDateRange] = useState<"Semana" | "Mes" | "Año">("Semana");
-  const [category, setCategory] = useState("Todo");
+  const [dateRange, setDateRange] = useState<"Semana" | "Mes" | "Año" | "Personalizado">("Semana");
 
   const [startDate, setStartDate] = useState<Date>(startOfDay(subDays(new Date(), 7)));
   const [endDate, setEndDate] = useState<Date>(endOfDay(new Date()));
@@ -26,8 +26,22 @@ export function HistoricalData() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
 
+  const [soilEnvSeries, setSoilEnvSeries] = useState({
+    soilHumidity: true,
+    relativeHumidity: true,
+    soilTemp: true,
+    airTemp: true,
+  });
+
+  const [irrigationSeries, setIrrigationSeries] = useState({
+    waterFlow: true,
+    eto: true,
+  });
+
   // Update dates when preset changes
   useEffect(() => {
+    if (dateRange === "Personalizado") return;
+
     const end = endOfDay(new Date());
     let start = startOfDay(new Date());
 
@@ -40,6 +54,26 @@ export function HistoricalData() {
     setPage(1);
   }, [dateRange]);
 
+  const handleStartDateChange = (date: Date) => {
+    const nextStart = startOfDay(date);
+    setDateRange("Personalizado");
+    setStartDate(nextStart);
+    if (nextStart > endDate) {
+      setEndDate(endOfDay(nextStart));
+    }
+    setPage(1);
+  };
+
+  const handleEndDateChange = (date: Date) => {
+    const nextEnd = endOfDay(date);
+    setDateRange("Personalizado");
+    setEndDate(nextEnd);
+    if (nextEnd < startDate) {
+      setStartDate(startOfDay(nextEnd));
+    }
+    setPage(1);
+  };
+
   // Fetch API
   useEffect(() => {
     if (!selectedArea) return;
@@ -49,10 +83,10 @@ export function HistoricalData() {
       try {
         const params = new URLSearchParams({
           irrigation_area_id: selectedArea.id.toString(),
-          start_date: startDate.toISOString().split("T")[0],
-          end_date: endDate.toISOString().split("T")[0],
+          start_date: format(startDate, "yyyy-MM-dd"),
+          end_date: format(endDate, "yyyy-MM-dd"),
           page: page.toString(),
-          per_page: "200"
+          per_page: "20"
         });
 
         // if cycle is selected, we could use it here. but backend filters by dates.
@@ -74,21 +108,48 @@ export function HistoricalData() {
   // Format array for Chart (reverse since it comes desc).
   const chartData = [...readings].reverse().map(r => {
     const parsedDate = parseISO(r.timestamp + (r.timestamp.endsWith("Z") ? "" : "Z"));
-    // Format based on the selected range for better visibility
-    let timeString = format(parsedDate, "HH:mm", { locale: es });
-    if (dateRange === "Semana") timeString = format(parsedDate, "EEE dd, HH:mm", { locale: es });
-    if (dateRange === "Mes" || dateRange === "Año") timeString = format(parsedDate, "dd MMM", { locale: es });
 
     return {
-      time: timeString,
-      fullTime: parsedDate,
+      timestampMs: parsedDate.getTime(),
       soilHumidity: r.soil?.humidity ?? 0,
       waterFlow: r.irrigation?.flow_per_minute ?? 0,
       soilTemp: r.soil?.temperature ?? 0,
       airTemp: r.environmental?.temperature ?? 0,
-      humidity: r.environmental?.relative_humidity ?? 0,
+      relativeHumidity: r.environmental?.relative_humidity ?? 0,
+      eto: r.environmental?.eto ?? 0,
     };
   });
+
+  const daySpan = Math.max(1, differenceInCalendarDays(endDate, startDate));
+
+  const getXAxisTickLabel = (value: number) => {
+    const date = new Date(value);
+
+    if (daySpan <= 1) return format(date, "HH:mm", { locale: es });
+    if (daySpan <= 31) return format(date, "dd MMM", { locale: es });
+    return format(date, "dd MMM yy", { locale: es });
+  };
+
+  const getLineValueFormatter = (value: number, lineName: string) => {
+    if (lineName.includes("(%)")) return [`${value.toFixed(1)} %`, lineName] as const;
+    if (lineName.includes("(°C)")) return [`${value.toFixed(1)} °C`, lineName] as const;
+    if (lineName.includes("(L/min)")) return [`${value.toFixed(1)} L/min`, lineName] as const;
+    if (lineName.includes("(mm/día)")) return [`${value.toFixed(2)} mm/día`, lineName] as const;
+    return [value.toFixed(1), lineName] as const;
+  };
+
+  const toggleSoilEnvSeries = (key: keyof typeof soilEnvSeries) => {
+    setSoilEnvSeries((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const toggleIrrigationSeries = (key: keyof typeof irrigationSeries) => {
+    setIrrigationSeries((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const showSoilEnvPercentAxis = soilEnvSeries.soilHumidity || soilEnvSeries.relativeHumidity;
+  const showSoilEnvTempAxis = soilEnvSeries.soilTemp || soilEnvSeries.airTemp;
+  const showIrrigationFlowAxis = irrigationSeries.waterFlow;
+  const showIrrigationEtoAxis = irrigationSeries.eto;
 
   const handleExport = async (formatType: string) => {
     if (!selectedArea) return;
@@ -107,7 +168,7 @@ export function HistoricalData() {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      const extension = formatType === 'excel' ? 'xlsx' : formatType;
+      const extension = formatType;
       link.setAttribute('download', `export_${selectedArea.name}_${format(new Date(), 'yyyy-MM-dd')}.${extension}`);
       document.body.appendChild(link);
       link.click();
@@ -145,98 +206,234 @@ export function HistoricalData() {
               ))}
             </div>
           </div>
-
-          <div className="flex-1">
-            <label className="block text-sm text-[#6E6359] mb-2">Categoría</label>
-            <div className="flex flex-wrap gap-2">
-              {["Todo", "Suelo", "Riego", "Ambiental"].map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setCategory(cat)}
-                  className={`px-3 py-1.5 rounded-full text-sm transition-all ${
-                    category === cat
-                      ? "bg-[#6D7E5E] text-[#F4F1EB]"
-                      : "bg-[#E2D4B7] text-[#2C2621] hover:bg-[#D5C5A5]"
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* Date pickers */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-          <div>
-            <label className="block text-sm text-[#6E6359] mb-2">Fecha inicio</label>
-            <div className="flex items-center gap-3 px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] text-[#2C2621]">
-              <Calendar className="w-5 h-5 text-[#6E6359]" />
-              <span>{format(startDate, "dd MMM yyyy", { locale: es })}</span>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm text-[#6E6359] mb-2">Fecha fin</label>
-            <div className="flex items-center gap-3 px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] text-[#2C2621]">
-              <Calendar className="w-5 h-5 text-[#6E6359]" />
-              <span>{format(endDate, "dd MMM yyyy", { locale: es })}</span>
-            </div>
-          </div>
+        <div className="mt-4">
+          <ReadingDateRangeSelector
+            variant="soft"
+            irrigationAreaId={selectedArea?.id}
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={handleStartDateChange}
+            onEndDateChange={handleEndDateChange}
+          />
         </div>
       </BentoCard>
 
       {/* Multi-line Chart */}
       <BentoCard variant="light" className="mb-6">
         <h3 className="text-lg text-[#2C2621] mb-6">Gráfica de Métricas</h3>
-        <div className="h-[400px] min-h-[400px] relative">
-          {loading && (
-             <div className="absolute inset-0 z-10 bg-[#FAF7F2]/50 flex items-center justify-center">
-               <Loader2 className="w-8 h-8 text-[#6D7E5E] animate-spin" />
-             </div>
-          )}
-          {readings.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E6E1D8" />
-                <XAxis
-                  dataKey="time"
-                  stroke="#6E6359"
-                  style={{ fontSize: '12px' }}
-                />
-                <YAxis
-                  stroke="#6E6359"
-                  style={{ fontSize: '12px' }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#F9F8F4',
-                    border: '1px solid #E6E1D8',
-                    borderRadius: '16px',
-                    padding: '12px'
-                  }}
-                  labelStyle={{ color: '#2C2621', marginBottom: '4px' }}
-                />
-                <Legend />
-                {(category === "Todo" || category === "Suelo") && (
-                  <Line type="monotone" dataKey="soilHumidity" name="Humedad suelo (%)" stroke="#6D7E5E" strokeWidth={2} dot={false} />
-                )}
-                {(category === "Todo" || category === "Riego") && (
-                  <Line type="monotone" dataKey="waterFlow" name="Flujo agua (L/min)" stroke="#A68A61" strokeWidth={2} dot={false} />
-                )}
-                {(category === "Todo" || category === "Suelo") && (
-                  <Line type="monotone" dataKey="soilTemp" name="Temp. suelo (°C)" stroke="#705541" strokeWidth={2} dot={false} />
-                )}
-                {(category === "Todo" || category === "Ambiental") && (
-                  <Line type="monotone" dataKey="airTemp" name="Temp. aire (°C)" stroke="#E2D4B7" strokeWidth={2} dot={false} />
-                )}
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-             <div className="w-full h-full flex items-center justify-center text-[#6E6359]">
-               {!loading && "No hay datos para el rango seleccionado"}
-             </div>
-          )}
-        </div>
+
+        {readings.length > 0 ? (
+          <div className="space-y-8">
+            <div className="relative h-[320px] min-h-[320px]">
+              {loading && (
+                <div className="absolute inset-0 z-10 bg-[#FAF7F2]/50 flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 text-[#6D7E5E] animate-spin" />
+                </div>
+              )}
+
+              <div className="flex flex-col gap-3 mb-2">
+                <h4 className="text-sm md:text-base text-[#2C2621]">Suelo + Ambiental (Temperaturas y Humedades)</h4>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => toggleSoilEnvSeries("soilHumidity")}
+                    className={`px-3 py-1.5 rounded-full text-xs md:text-sm transition-all ${
+                      soilEnvSeries.soilHumidity
+                        ? "bg-[#6D7E5E] text-[#F4F1EB]"
+                        : "bg-[#E2D4B7] text-[#2C2621] hover:bg-[#D5C5A5]"
+                    }`}
+                  >
+                    Humedad suelo
+                  </button>
+                  <button
+                    onClick={() => toggleSoilEnvSeries("relativeHumidity")}
+                    className={`px-3 py-1.5 rounded-full text-xs md:text-sm transition-all ${
+                      soilEnvSeries.relativeHumidity
+                        ? "bg-[#A68A61] text-[#F4F1EB]"
+                        : "bg-[#E2D4B7] text-[#2C2621] hover:bg-[#D5C5A5]"
+                    }`}
+                  >
+                    H. Relativa
+                  </button>
+                  <button
+                    onClick={() => toggleSoilEnvSeries("soilTemp")}
+                    className={`px-3 py-1.5 rounded-full text-xs md:text-sm transition-all ${
+                      soilEnvSeries.soilTemp
+                        ? "bg-[#705541] text-[#F4F1EB]"
+                        : "bg-[#E2D4B7] text-[#2C2621] hover:bg-[#D5C5A5]"
+                    }`}
+                  >
+                    Temp. suelo
+                  </button>
+                  <button
+                    onClick={() => toggleSoilEnvSeries("airTemp")}
+                    className={`px-3 py-1.5 rounded-full text-xs md:text-sm transition-all ${
+                      soilEnvSeries.airTemp
+                        ? "bg-[#C8AE85] text-[#2C2621]"
+                        : "bg-[#E2D4B7] text-[#2C2621] hover:bg-[#D5C5A5]"
+                    }`}
+                  >
+                    Temp. aire
+                  </button>
+                </div>
+              </div>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E6E1D8" />
+                  <XAxis
+                    dataKey="timestampMs"
+                    type="number"
+                    scale="time"
+                    domain={["dataMin", "dataMax"]}
+                    tickFormatter={getXAxisTickLabel}
+                    minTickGap={isMobile ? 36 : 24}
+                    stroke="#6E6359"
+                    style={{ fontSize: '12px' }}
+                  />
+                  {showSoilEnvPercentAxis && (
+                    <YAxis
+                      yAxisId="percent"
+                      domain={[0, 100]}
+                      tickFormatter={(v) => `${v}%`}
+                      stroke="#6E6359"
+                      style={{ fontSize: '12px' }}
+                    />
+                  )}
+                  {showSoilEnvTempAxis && (
+                    <YAxis
+                      yAxisId="temp"
+                      orientation="right"
+                      domain={["dataMin - 2", "dataMax + 2"]}
+                      tickFormatter={(v) => `${v}°C`}
+                      stroke="#705541"
+                      style={{ fontSize: '12px' }}
+                    />
+                  )}
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#F9F8F4',
+                      border: '1px solid #E6E1D8',
+                      borderRadius: '16px',
+                      padding: '12px'
+                    }}
+                    labelFormatter={(value) =>
+                      format(new Date(Number(value)), "dd MMM yyyy, HH:mm", { locale: es })
+                    }
+                    formatter={(value: number, name: string) => getLineValueFormatter(value, name)}
+                    labelStyle={{ color: '#2C2621', marginBottom: '4px' }}
+                  />
+                  <Legend />
+                  {soilEnvSeries.soilHumidity && (
+                    <Line yAxisId="percent" type="monotone" dataKey="soilHumidity" name="Humedad suelo (%)" stroke="#6D7E5E" strokeWidth={2.5} dot={false} />
+                  )}
+                  {soilEnvSeries.relativeHumidity && (
+                    <Line yAxisId="percent" type="monotone" dataKey="relativeHumidity" name="H. Relativa (%)" stroke="#A68A61" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                  )}
+                  {soilEnvSeries.soilTemp && (
+                    <Line yAxisId="temp" type="monotone" dataKey="soilTemp" name="Temp. suelo (°C)" stroke="#705541" strokeWidth={2.2} dot={false} />
+                  )}
+                  {soilEnvSeries.airTemp && (
+                    <Line yAxisId="temp" type="monotone" dataKey="airTemp" name="Temp. aire (°C)" stroke="#C8AE85" strokeWidth={2} dot={false} />
+                  )}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="relative h-[280px] min-h-[280px]">
+              {loading && (
+                <div className="absolute inset-0 z-10 bg-[#FAF7F2]/50 flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 text-[#6D7E5E] animate-spin" />
+                </div>
+              )}
+
+              <div className="flex flex-col gap-3 mb-2">
+                <h4 className="text-sm md:text-base text-[#2C2621]">Riego + E.T.O.</h4>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => toggleIrrigationSeries("waterFlow")}
+                    className={`px-3 py-1.5 rounded-full text-xs md:text-sm transition-all ${
+                      irrigationSeries.waterFlow
+                        ? "bg-[#A68A61] text-[#F4F1EB]"
+                        : "bg-[#E2D4B7] text-[#2C2621] hover:bg-[#D5C5A5]"
+                    }`}
+                  >
+                    Flujo agua
+                  </button>
+                  <button
+                    onClick={() => toggleIrrigationSeries("eto")}
+                    className={`px-3 py-1.5 rounded-full text-xs md:text-sm transition-all ${
+                      irrigationSeries.eto
+                        ? "bg-[#6D7E5E] text-[#F4F1EB]"
+                        : "bg-[#E2D4B7] text-[#2C2621] hover:bg-[#D5C5A5]"
+                    }`}
+                  >
+                    E.T.O.
+                  </button>
+                </div>
+              </div>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E6E1D8" />
+                  <XAxis
+                    dataKey="timestampMs"
+                    type="number"
+                    scale="time"
+                    domain={["dataMin", "dataMax"]}
+                    tickFormatter={getXAxisTickLabel}
+                    minTickGap={isMobile ? 36 : 24}
+                    stroke="#6E6359"
+                    style={{ fontSize: '12px' }}
+                  />
+                  {showIrrigationFlowAxis && (
+                    <YAxis
+                      yAxisId="flow"
+                      domain={[0, "dataMax + 2"]}
+                      tickFormatter={(v) => `${v} L/min`}
+                      stroke="#A68A61"
+                      style={{ fontSize: '12px' }}
+                    />
+                  )}
+                  {showIrrigationEtoAxis && (
+                    <YAxis
+                      yAxisId="eto"
+                      orientation="right"
+                      domain={[0, "dataMax + 1"]}
+                      tickFormatter={(v) => `${v} mm/día`}
+                      stroke="#6D7E5E"
+                      style={{ fontSize: '12px' }}
+                    />
+                  )}
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#F9F8F4',
+                      border: '1px solid #E6E1D8',
+                      borderRadius: '16px',
+                      padding: '12px'
+                    }}
+                    labelFormatter={(value) =>
+                      format(new Date(Number(value)), "dd MMM yyyy, HH:mm", { locale: es })
+                    }
+                    formatter={(value: number, name: string) => getLineValueFormatter(value, name)}
+                    labelStyle={{ color: '#2C2621', marginBottom: '4px' }}
+                  />
+                  <Legend />
+                  {irrigationSeries.waterFlow && (
+                    <Line yAxisId="flow" type="monotone" dataKey="waterFlow" name="Flujo agua (L/min)" stroke="#A68A61" strokeWidth={2.5} dot={false} />
+                  )}
+                  {irrigationSeries.eto && (
+                    <Line yAxisId="eto" type="monotone" dataKey="eto" name="E.T.O. (mm/día)" stroke="#6D7E5E" strokeWidth={2.2} dot={false} />
+                  )}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        ) : (
+          <div className="w-full h-[120px] flex items-center justify-center text-[#6E6359]">
+            {!loading && "No hay datos para el rango seleccionado"}
+          </div>
+        )}
       </BentoCard>
 
       {/* Data Table */}
@@ -247,7 +444,7 @@ export function HistoricalData() {
             <PillButton variant="secondary" className="text-sm flex items-center gap-2" onClick={() => handleExport('csv')}>
               <Download className="w-4 h-4" /> CSV
             </PillButton>
-            <PillButton variant="secondary" className="text-sm flex items-center gap-2" onClick={() => handleExport('excel')}>
+            <PillButton variant="secondary" className="text-sm flex items-center gap-2" onClick={() => handleExport('xlsx')}>
               <Download className="w-4 h-4" /> Excel
             </PillButton>
             <PillButton variant="secondary" className="text-sm flex items-center gap-2" onClick={() => handleExport('pdf')}>
