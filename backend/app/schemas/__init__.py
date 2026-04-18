@@ -37,6 +37,7 @@ from app.schemas.threshold import (
     ThresholdUpdate,
 )
 from app.schemas.alert import AlertReadUpdate, AlertResponse
+from app.schemas.audit_log import AuditLogResponse, AuditLogUserSummary
 from app.schemas.user import UserCreate, UserResponse, UserUpdate
 
 __all__ = [
@@ -82,4 +83,6 @@ __all__ = [
     "ThresholdResponse",
     "AlertReadUpdate",
     "AlertResponse",
+    "AuditLogUserSummary",
+    "AuditLogResponse",
 ]

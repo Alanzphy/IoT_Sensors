@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
     alerts,
+    audit_logs,
     auth,
     clients,
     crop_cycles,
@@ -39,3 +40,8 @@ api_v1_router.include_router(
     tags=["Thresholds"],
 )
 api_v1_router.include_router(alerts.router, prefix="/alerts", tags=["Alerts"])
+api_v1_router.include_router(
+    audit_logs.router,
+    prefix="/audit-logs",
+    tags=["Audit Logs"],
+)

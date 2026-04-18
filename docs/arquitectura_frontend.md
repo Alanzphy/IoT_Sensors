@@ -45,7 +45,7 @@ src/app/
 Actualmente el frontend está en fase de **transición de datos estáticos hacia consumo real del backend FastAPI**, con parte de Fase 2 Lite activa.
 
 - **Fase 1 (Completada)**: Autenticación. `LoginPage` conecta a `/api/v1/auth/login`. El JWT se decodifica con `jwt-decode`, se guarda en `localStorage` y se gestiona mediante `AuthContext`. El `api.ts` de Axios inyecta automáticamente el header `Authorization: Bearer <token>` y maneja las redirecciones por `401 Unauthorized`.
-- **Fase 2 Lite (Implementada parcialmente)**: Centro de alertas y popover de notificaciones conectados a `/api/v1/alerts`, con marcado de lectura y filtros por rol.
+- **Fase 2 Lite (Implementada parcialmente)**: Centro de alertas y popover de notificaciones conectados a `/api/v1/alerts`, más bitácora administrativa conectada a `/api/v1/audit-logs`.
 - **Fase 3 (En proceso)**: Reemplazo gradual de `mockData` en dashboard/histórico por datos reales (`/api/v1/readings`, `/api/v1/readings/latest`, `/api/v1/readings/availability`).
 - **Fase 4 (Pendiente)**: CRUD de umbrales en interfaz Admin y semáforos de color por umbrales en dashboard.
 
@@ -55,6 +55,12 @@ Actualmente el frontend está en fase de **transición de datos estáticos hacia
 - `pages/shared/AlertsCenterPage.tsx`: listado completo con filtros, paginación y marcado de leídas.
 - `services/alerts.ts`: cliente HTTP para `/api/v1/alerts` y `/api/v1/alerts/{id}/read`.
 - Integración en layouts de Admin y Cliente para visibilidad transversal.
+
+### 3.2 Módulo de Auditoría en UI (Activo - Admin)
+
+- `pages/admin/AuditLogsPage.tsx`: listado con filtros, paginación y detalle por evento.
+- `services/auditLogs.ts`: cliente HTTP para `/api/v1/audit-logs` y `/api/v1/audit-logs/{id}`.
+- Ruta protegida: `/admin/auditoria`.
 
 ---
 

@@ -2,6 +2,7 @@ import {
     Bell,
     ChevronLeft,
     ChevronRight,
+    ClipboardList,
     Clock,
     Download,
     LayoutDashboard,
@@ -38,6 +39,7 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
     { path: "/admin/nodos", icon: Radio, label: "Nodos" },
     { path: "/admin/cultivos", icon: Sprout, label: "Catálogo" },
     { path: "/admin/alertas", icon: Bell, label: "Alertas" },
+    { path: "/admin/auditoria", icon: ClipboardList, label: "Auditoría" },
   ];
 
   const navItems = role === "client" ? clientNavItems : adminNavItems;

@@ -18,6 +18,7 @@ import { AlertsCenterPage } from "./pages/shared/AlertsCenterPage";
 
 // Admin pages
 import { AdminDashboard } from "./pages/admin/AdminDashboard";
+import { AuditLogsPage } from "./pages/admin/AuditLogsPage";
 import { ClientManagement } from "./pages/admin/ClientManagement";
 import { CropCycleManagement } from "./pages/admin/CropCycleManagement";
 import { CropTypeManagement } from "./pages/admin/CropTypeManagement";
@@ -116,6 +117,10 @@ export const router = createBrowserRouter([
               {
                 path: "alertas",
                 Component: AlertsCenterPage,
+              },
+              {
+                path: "auditoria",
+                Component: AuditLogsPage,
               },
             ]
           }

@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
-import { Users, MapPin, Radio, Database, AlertCircle, Plus } from "lucide-react";
+import { AlertCircle, Database, MapPin, Plus, Radio, Users } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router"; // or react-router-dom depending on your setup
 import { BentoCard } from "../../components/BentoCard";
 import { PillButton } from "../../components/PillButton";
-import { Link } from "react-router"; // or react-router-dom depending on your setup
 import { api } from "../../services/api";
 
 export function AdminDashboard() {
@@ -20,7 +20,7 @@ export function AdminDashboard() {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        
+
         // Parallel requests for all counts
         const [clientsRes, propsRes, nodesRes, readingsRes] = await Promise.all([
           api.get("/clients?per_page=1"),
@@ -32,7 +32,7 @@ export function AdminDashboard() {
         const totalClients = clientsRes.data.total || 0;
         const totalProps = propsRes.data.total || 0;
         const totalReadings = readingsRes.data.total || 0;
-        
+
         const nodesData = nodesRes.data.data || nodesRes.data || [];
         const totalNodes = nodesRes.data.total || nodesData.length || 0;
         const activeNodes = nodesData.filter((n: any) => n.is_active || n.activo).length;
@@ -45,7 +45,7 @@ export function AdminDashboard() {
           nodesActive: activeNodes,
           readingsToday: totalReadings
         });
-        
+
         setOfflineNodes(inactiveNodes);
       } catch (error) {
         console.error("Error fetching dashboard stats:", error);
@@ -53,7 +53,7 @@ export function AdminDashboard() {
         setLoading(false);
       }
     };
-    
+
     fetchDashboardData();
   }, []);
 
@@ -178,13 +178,17 @@ export function AdminDashboard() {
                 </div>
               </BentoCard>
 
-              {/* Recent activity is mocked for now as MVP doesn't have an audit log yet */}
               <BentoCard variant="sand">
                 <h3 className="text-lg text-[#2C2621] mb-4">Actividad Reciente</h3>
                 <div className="space-y-3">
-                  <p className="text-sm text-[#6E6359] italic">
-                    El registro de actividad estará disponible en la próxima versión.
+                  <p className="text-sm text-[#6E6359]">
+                    Consulta la bitácora completa de eventos administrativos y operativos.
                   </p>
+                  <Link to="/admin/auditoria" className="block">
+                    <PillButton variant="secondary" className="w-full justify-center">
+                      Ver Auditoría
+                    </PillButton>
+                  </Link>
                 </div>
               </BentoCard>
             </div>

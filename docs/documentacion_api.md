@@ -22,6 +22,9 @@
    - 5.7 [Crop Cycles (Ciclos de Cultivo)](#57-crop-cycles-ciclos-de-cultivo)
    - 5.8 [Nodes (Nodos IoT)](#58-nodes-nodos-iot)
    - 5.9 [Readings (Lecturas)](#59-readings-lecturas)
+  - 5.10 [Alerts (Alertas)](#510-alerts-alertas)
+  - 5.11 [Thresholds (Umbrales)](#511-thresholds-umbrales)
+  - 5.12 [Audit Logs (Bitácora)](#512-audit-logs-bitácora)
 6. [Flujo de Ejemplo Completo](#6-flujo-de-ejemplo-completo)
 7. [Referencia Rápida de Endpoints](#7-referencia-rápida-de-endpoints)
 
@@ -1176,6 +1179,67 @@ Permite actualizar cualquiera de los campos del umbral.
 #### Eliminar umbral — `DELETE /api/v1/thresholds/{id}`
 
 Realiza eliminación lógica (`active=false` + marca interna de eliminación) y retorna el registro actualizado.
+
+---
+
+### 5.12. Audit Logs (Bitácora)
+
+Consulta administrativa del historial de acciones realizadas en la plataforma.
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| `GET` | `/api/v1/audit-logs` | Listado paginado con filtros | JWT (Admin) |
+| `GET` | `/api/v1/audit-logs/{id}` | Detalle de evento de auditoría | JWT (Admin) |
+
+#### Listar eventos — `GET /api/v1/audit-logs`
+
+**Query params:**
+
+| Param | Tipo | Requerido | Notas |
+|-------|------|-----------|-------|
+| `page` | integer | No | Default: 1 |
+| `per_page` | integer | No | Default: 50, máx: 200 |
+| `user_id` | integer | No | Filtrar por usuario que ejecutó la acción |
+| `action` | string | No | Ej.: `create`, `update`, `delete`, `execute` |
+| `entity` | string | No | Ej.: `threshold`, `alert`, `inactivity_scan` |
+| `start_date` | date | No | Formato `YYYY-MM-DD` |
+| `end_date` | date | No | Formato `YYYY-MM-DD` |
+
+**Response 200:**
+```json
+{
+  "page": 1,
+  "per_page": 50,
+  "total": 2,
+  "data": [
+    {
+      "id": 18,
+      "user_id": 1,
+      "action": "update",
+      "entity": "alert",
+      "entity_id": "9",
+      "detail": "Set read=true",
+      "created_at": "2026-04-17T18:20:00Z",
+      "user": {
+        "id": 1,
+        "email": "admin@sensores.com",
+        "full_name": "Administrador",
+        "role": "admin"
+      }
+    }
+  ]
+}
+```
+
+#### Detalle de evento — `GET /api/v1/audit-logs/{id}`
+
+Retorna un registro específico de auditoría con el mismo esquema del listado.
+
+#### Errores comunes
+
+- `401 Unauthorized`: token ausente o inválido.
+- `403 Forbidden`: usuario no administrador.
+- `404 Not Found`: evento no existente.
 
 ---
 

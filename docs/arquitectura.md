@@ -318,10 +318,10 @@ Esta sección separa lo que ya está activo en el sistema de lo que continúa co
 Componentes activos a la fecha:
 
 - Tablas activas en base de datos: `umbrales`, `alertas`, `audit_log`.
-- Endpoints activos: `/api/v1/thresholds`, `/api/v1/alerts`, `/api/v1/alerts/scan-inactivity`.
+- Endpoints activos: `/api/v1/thresholds`, `/api/v1/alerts`, `/api/v1/alerts/scan-inactivity`, `/api/v1/audit-logs`.
 - Evaluación de umbrales durante la ingesta de `POST /api/v1/readings`.
 - Escaneo periódico de inactividad con `inactivity_scheduler` en Docker Compose.
-- Visualización en frontend: campana de notificaciones y centro de alertas para Admin/Cliente.
+- Visualización en frontend: campana de notificaciones, centro de alertas y vista administrativa de auditoría.
 
 ```mermaid
 graph TD
@@ -402,11 +402,11 @@ Funcionalidades que permanecen en roadmap y no forman parte de la implementació
 - [x] Listado/detalle/marcado de alertas (Admin/Cliente por ownership).
 - [x] Escaneo de inactividad (`/api/v1/alerts/scan-inactivity`) y scheduler en compose.
 - [x] UI de alertas (popover + centro de alertas).
+- [x] Endpoint y vista de auditoría administrativa (`/api/v1/audit-logs`, `/admin/auditoria`).
 
 #### Pendiente (Fase 2 Completa)
 - [ ] Notificaciones externas por email.
 - [ ] Notificaciones externas por WhatsApp.
-- [ ] Endpoint y vista de auditoría administrativa.
 - [ ] Recuperación de contraseña (`forgot-password`, `reset-password`).
 - [ ] Integración IA/n8n.
 - [ ] Módulo de mapas.

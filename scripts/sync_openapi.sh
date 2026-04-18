@@ -47,7 +47,7 @@ for target in targets:
     print(f"updated: {target} ({fmt})")
 
 paths = obj.get("paths", {})
-for required in ("/api/v1/alerts", "/api/v1/thresholds"):
+for required in ("/api/v1/alerts", "/api/v1/thresholds", "/api/v1/audit-logs"):
     if required not in paths:
         print(f"warning: expected path not found in runtime schema: {required}", file=sys.stderr)
 PY

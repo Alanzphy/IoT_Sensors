@@ -87,6 +87,11 @@ thresholds_code="$(printf '%s' "$thresholds_resp" | extract_code)"
 [[ "$thresholds_code" == "200" ]] || fail "Thresholds list failed (HTTP $thresholds_code)"
 echo "[OK] thresholds list"
 
+audit_logs_resp="$(request GET "$BASE_API_URL/audit-logs?page=1&per_page=5" "$access_token")"
+audit_logs_code="$(printf '%s' "$audit_logs_resp" | extract_code)"
+[[ "$audit_logs_code" == "200" ]] || fail "Audit logs list failed (HTTP $audit_logs_code)"
+echo "[OK] audit logs list"
+
 # 5) Readings latest (discover one irrigation area id)
 areas_resp="$(request GET "$BASE_API_URL/irrigation-areas?page=1&per_page=1" "$access_token")"
 areas_code="$(printf '%s' "$areas_resp" | extract_code)"
@@ -149,7 +154,7 @@ openapi_code="$(printf '%s' "$openapi_resp" | extract_code)"
 openapi_body="$(printf '%s' "$openapi_resp" | extract_body)"
 [[ "$openapi_code" == "200" ]] || fail "OpenAPI endpoint failed (HTTP $openapi_code)"
 
-printf '%s' "$openapi_body" | rg -q '/api/v1/alerts|/api/v1/thresholds' || fail "OpenAPI does not include alerts/thresholds"
-echo "[OK] openapi contains alerts/thresholds"
+printf '%s' "$openapi_body" | rg -q '/api/v1/alerts|/api/v1/thresholds|/api/v1/audit-logs' || fail "OpenAPI does not include alerts/thresholds/audit-logs"
+echo "[OK] openapi contains alerts/thresholds/audit-logs"
 
 echo "== Smoke backend completed successfully =="
