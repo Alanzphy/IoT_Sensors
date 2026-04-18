@@ -5,6 +5,10 @@ BASE_API_URL="${BASE_API_URL:-http://127.0.0.1:5050/api/v1}"
 BASE_ROOT_URL="${BASE_ROOT_URL:-http://127.0.0.1:5050}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@sensores.com}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin123}"
+CLIENT_EMAIL="${CLIENT_EMAIL:-}"
+CLIENT_PASSWORD="${CLIENT_PASSWORD:-}"
+CLIENT_OWN_AREA_ID="${CLIENT_OWN_AREA_ID:-}"
+CLIENT_FOREIGN_AREA_ID="${CLIENT_FOREIGN_AREA_ID:-}"
 
 fail() {
   echo "[FAIL] $1" >&2
@@ -42,6 +46,10 @@ extract_body() {
   sed '$d'
 }
 
+parse_access_token() {
+  sed -n 's/.*"access_token"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1
+}
+
 echo "== Smoke backend =="
 echo "API: $BASE_API_URL"
 
@@ -58,7 +66,7 @@ login_code="$(printf '%s' "$login_resp" | extract_code)"
 login_body="$(printf '%s' "$login_resp" | extract_body)"
 [[ "$login_code" == "200" ]] || fail "Login failed (HTTP $login_code)"
 
-access_token="$(printf '%s' "$login_body" | sed -n 's/.*"access_token"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)"
+access_token="$(printf '%s' "$login_body" | parse_access_token)"
 [[ -n "$access_token" ]] || fail "Could not parse access_token from login response"
 echo "[OK] auth/login"
 
@@ -101,7 +109,41 @@ else
   echo "[SKIP] readings latest (no irrigation areas found in current database)"
 fi
 
-# 6) OpenAPI endpoint versioned
+# 6) Optional multi-tenant isolation checks for client role
+if [[ -n "$CLIENT_EMAIL" && -n "$CLIENT_PASSWORD" && -n "$CLIENT_FOREIGN_AREA_ID" ]]; then
+  client_login_payload="{\"email\":\"$CLIENT_EMAIL\",\"password\":\"$CLIENT_PASSWORD\"}"
+  client_login_resp="$(request POST "$BASE_API_URL/auth/login" "" "$client_login_payload")"
+  client_login_code="$(printf '%s' "$client_login_resp" | extract_code)"
+  client_login_body="$(printf '%s' "$client_login_resp" | extract_body)"
+  [[ "$client_login_code" == "200" ]] || fail "Client login failed (HTTP $client_login_code)"
+
+  client_token="$(printf '%s' "$client_login_body" | parse_access_token)"
+  [[ -n "$client_token" ]] || fail "Could not parse client access_token"
+
+  foreign_list_resp="$(request GET "$BASE_API_URL/readings?irrigation_area_id=$CLIENT_FOREIGN_AREA_ID" "$client_token")"
+  foreign_list_code="$(printf '%s' "$foreign_list_resp" | extract_code)"
+  [[ "$foreign_list_code" == "403" ]] || fail "Client can list readings from foreign area (expected 403, got $foreign_list_code)"
+
+  foreign_latest_resp="$(request GET "$BASE_API_URL/readings/latest?irrigation_area_id=$CLIENT_FOREIGN_AREA_ID" "$client_token")"
+  foreign_latest_code="$(printf '%s' "$foreign_latest_resp" | extract_code)"
+  [[ "$foreign_latest_code" == "403" ]] || fail "Client can get latest from foreign area (expected 403, got $foreign_latest_code)"
+
+  foreign_export_resp="$(request GET "$BASE_API_URL/readings/export?format=csv&irrigation_area_id=$CLIENT_FOREIGN_AREA_ID" "$client_token")"
+  foreign_export_code="$(printf '%s' "$foreign_export_resp" | extract_code)"
+  [[ "$foreign_export_code" == "403" ]] || fail "Client can export foreign area readings (expected 403, got $foreign_export_code)"
+
+  if [[ -n "$CLIENT_OWN_AREA_ID" ]]; then
+    own_list_resp="$(request GET "$BASE_API_URL/readings?irrigation_area_id=$CLIENT_OWN_AREA_ID" "$client_token")"
+    own_list_code="$(printf '%s' "$own_list_resp" | extract_code)"
+    [[ "$own_list_code" == "200" ]] || fail "Client cannot access own area readings (HTTP $own_list_code)"
+  fi
+
+  echo "[OK] client multi-tenant access control"
+else
+  echo "[SKIP] client multi-tenant check (set CLIENT_EMAIL, CLIENT_PASSWORD, CLIENT_FOREIGN_AREA_ID; optional CLIENT_OWN_AREA_ID)"
+fi
+
+# 7) OpenAPI endpoint versioned
 openapi_resp="$(request GET "$BASE_API_URL/openapi.json")"
 openapi_code="$(printf '%s' "$openapi_resp" | extract_code)"
 openapi_body="$(printf '%s' "$openapi_resp" | extract_body)"

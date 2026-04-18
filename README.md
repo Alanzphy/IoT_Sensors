@@ -206,6 +206,31 @@ Notas:
 OPENAPI_URL="http://localhost:5050/api/v1/openapi.json" ./scripts/sync_openapi.sh
 ```
 
+### Smoke Backend (incluye check multi-tenant opcional)
+
+Script:
+
+```bash
+./scripts/smoke_backend.sh
+```
+
+Variables opcionales para validar aislamiento de cliente en lecturas:
+
+- `CLIENT_EMAIL`
+- `CLIENT_PASSWORD`
+- `CLIENT_FOREIGN_AREA_ID` (área que NO pertenece al cliente; debe devolver 403)
+- `CLIENT_OWN_AREA_ID` (opcional, área propia para validar acceso 200)
+
+Ejemplo:
+
+```bash
+CLIENT_EMAIL="cliente@sensores.com" \
+CLIENT_PASSWORD="cliente123" \
+CLIENT_FOREIGN_AREA_ID="10" \
+CLIENT_OWN_AREA_ID="2" \
+./scripts/smoke_backend.sh
+```
+
 ## Documentación
 
 | Documento | Descripción |
