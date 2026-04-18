@@ -1,7 +1,11 @@
 from app.schemas.auth import (
+    ForgotPasswordRequest,
+    ForgotPasswordResponse,
     LoginRequest,
     RefreshRequest,
     RefreshResponse,
+    ResetPasswordRequest,
+    ResetPasswordResponse,
     TokenResponse,
 )
 from app.schemas.base import PaginatedResponse, PaginationParams
@@ -54,8 +58,12 @@ from app.schemas.user import UserCreate, UserResponse, UserUpdate
 
 __all__ = [
     "LoginRequest",
+    "ForgotPasswordRequest",
+    "ForgotPasswordResponse",
     "RefreshRequest",
     "RefreshResponse",
+    "ResetPasswordRequest",
+    "ResetPasswordResponse",
     "TokenResponse",
     "PaginatedResponse",
     "PaginationParams",

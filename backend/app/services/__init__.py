@@ -7,6 +7,7 @@ from app.services import (
     irrigation_area,
     node,
     notification_preference,
+    password_reset,
     property,
     reading,
     threshold,
@@ -24,6 +25,7 @@ __all__ = [
     "crop_cycle",
     "node",
     "notification_preference",
+    "password_reset",
     "reading",
     "threshold",
 ]

@@ -393,7 +393,6 @@ Funcionalidades que permanecen en roadmap y no forman parte de la implementació
 
 - Integración de IA conversacional con Azure OpenAI.
 - Automatización asíncrona con n8n.
-- Recuperación de contraseña por correo.
 - Visualización geoespacial avanzada en mapas.
 - Configuración de umbrales por cliente final (self-service).
 
@@ -407,12 +406,12 @@ Funcionalidades que permanecen en roadmap y no forman parte de la implementació
 - [x] Despacho de notificaciones de alertas (`/api/v1/alerts/dispatch-notifications`) por backend directo.
 - [x] Integración externa configurable: SMTP (email) y WhatsApp Cloud API.
 - [x] Preferencias de notificación por cliente/área/severidad/canal (`/api/v1/notification-preferences`) y switch global (`/api/v1/clients/me/notification-settings`).
+- [x] Recuperación de contraseña por correo (`/api/v1/auth/forgot-password`, `/api/v1/auth/reset-password`) con token temporal de un solo uso.
 - [x] UI de alertas (popover + centro de alertas).
 - [x] Endpoint y vista de auditoría administrativa (`/api/v1/audit-logs`, `/admin/auditoria`).
 - [x] UI admin de umbrales (`/admin/umbrales`).
 - [x] Semáforos visuales de umbral en dashboard cliente (parámetros prioritarios).
 
 #### Pendiente (Fase 2 Completa)
-- [ ] Recuperación de contraseña (`forgot-password`, `reset-password`).
 - [ ] Integración IA/n8n.
 - [ ] Módulo de mapas.

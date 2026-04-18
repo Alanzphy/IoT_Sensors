@@ -1,6 +1,10 @@
 """Tests de integración para /api/v1/auth (login, refresh, logout)."""
 
 import pytest
+from sqlalchemy import select
+
+from app.models.password_reset_token import PasswordResetToken
+from app.services import password_reset as password_reset_service
 
 
 VALID_ADMIN = {"email": "admin@test.com", "password": "adminpass"}
@@ -83,7 +87,9 @@ class TestLogout:
 
     def test_logout_same_token_twice_returns_404(self, client, admin_user):
         tokens = client.post("/api/v1/auth/login", json=VALID_ADMIN).json()
-        client.post("/api/v1/auth/logout", json={"refresh_token": tokens["refresh_token"]})
+        client.post(
+            "/api/v1/auth/logout", json={"refresh_token": tokens["refresh_token"]}
+        )
         resp = client.post(
             "/api/v1/auth/logout",
             json={"refresh_token": tokens["refresh_token"]},
@@ -92,9 +98,111 @@ class TestLogout:
 
     def test_revoked_token_cannot_be_refreshed(self, client, admin_user):
         tokens = client.post("/api/v1/auth/login", json=VALID_ADMIN).json()
-        client.post("/api/v1/auth/logout", json={"refresh_token": tokens["refresh_token"]})
+        client.post(
+            "/api/v1/auth/logout", json={"refresh_token": tokens["refresh_token"]}
+        )
         resp = client.post(
             "/api/v1/auth/refresh",
             json={"refresh_token": tokens["refresh_token"]},
         )
         assert resp.status_code == 401
+
+
+class TestPasswordRecovery:
+    def test_forgot_password_existing_user_creates_reset_token(
+        self,
+        client,
+        admin_user,
+        db,
+        monkeypatch,
+    ):
+        raw_token = "tok_" + "a" * 44
+        monkeypatch.setattr(
+            password_reset_service, "_generate_raw_reset_token", lambda: raw_token
+        )
+        monkeypatch.setattr(
+            password_reset_service, "_send_reset_email", lambda **kwargs: True
+        )
+
+        resp = client.post(
+            "/api/v1/auth/forgot-password",
+            json={"email": "admin@test.com"},
+        )
+        assert resp.status_code == 200
+
+        token_hash = password_reset_service._hash_reset_token(raw_token)
+        db_token = db.execute(
+            select(PasswordResetToken).where(
+                PasswordResetToken.token_hash == token_hash
+            )
+        ).scalar_one_or_none()
+        assert db_token is not None
+        assert db_token.usuario_id == admin_user.id
+
+    def test_forgot_password_nonexistent_email_returns_generic_message(
+        self,
+        client,
+        db,
+        monkeypatch,
+    ):
+        monkeypatch.setattr(
+            password_reset_service, "_send_reset_email", lambda **kwargs: True
+        )
+        resp = client.post(
+            "/api/v1/auth/forgot-password",
+            json={"email": "nadie@test.com"},
+        )
+        assert resp.status_code == 200
+
+        tokens = db.execute(select(PasswordResetToken)).scalars().all()
+        assert len(tokens) == 0
+
+    def test_reset_password_invalid_token_returns_400(self, client):
+        resp = client.post(
+            "/api/v1/auth/reset-password",
+            json={"token": "tok_" + "z" * 44, "new_password": "nuevaClave123"},
+        )
+        assert resp.status_code == 400
+
+    def test_reset_password_success_and_revokes_existing_refresh_tokens(
+        self,
+        client,
+        admin_user,
+        monkeypatch,
+    ):
+        existing_tokens = client.post("/api/v1/auth/login", json=VALID_ADMIN).json()
+
+        raw_token = "tok_" + "b" * 44
+        monkeypatch.setattr(
+            password_reset_service, "_generate_raw_reset_token", lambda: raw_token
+        )
+        monkeypatch.setattr(
+            password_reset_service, "_send_reset_email", lambda **kwargs: True
+        )
+
+        forgot = client.post(
+            "/api/v1/auth/forgot-password",
+            json={"email": "admin@test.com"},
+        )
+        assert forgot.status_code == 200
+
+        reset = client.post(
+            "/api/v1/auth/reset-password",
+            json={"token": raw_token, "new_password": "nuevaClave123"},
+        )
+        assert reset.status_code == 200
+
+        old_login = client.post("/api/v1/auth/login", json=VALID_ADMIN)
+        assert old_login.status_code == 401
+
+        refresh_after_reset = client.post(
+            "/api/v1/auth/refresh",
+            json={"refresh_token": existing_tokens["refresh_token"]},
+        )
+        assert refresh_after_reset.status_code == 401
+
+        new_login = client.post(
+            "/api/v1/auth/login",
+            json={"email": "admin@test.com", "password": "nuevaClave123"},
+        )
+        assert new_login.status_code == 200

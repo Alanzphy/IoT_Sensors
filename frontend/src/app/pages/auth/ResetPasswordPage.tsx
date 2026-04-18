@@ -1,49 +1,47 @@
-import { jwtDecode } from "jwt-decode";
 import { Leaf } from "lucide-react";
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { useMemo, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router";
+
 import { PillButton } from "../../components/PillButton";
-import { useAuth } from "../../context/AuthContext";
 import { api } from "../../services/api";
 
-export function LoginPage() {
+export function ResetPasswordPage() {
   const navigate = useNavigate();
-  const { login, isAuthenticated, user } = useAuth();
+  const [searchParams] = useSearchParams();
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const token = useMemo(() => searchParams.get("token") || "", [searchParams]);
+
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      navigate(user.rol === "admin" ? "/admin" : "/cliente");
-    }
-  }, [isAuthenticated, user, navigate]);
+  const [detail, setDetail] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     setError("");
+    setDetail("");
 
+    if (!token) {
+      setError("El token de recuperacion no esta presente en el enlace.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError("Las contrasenas no coinciden.");
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      const response = await api.post("/auth/login", {
-        email,
-        password
+      const response = await api.post("/auth/reset-password", {
+        token,
+        new_password: newPassword,
       });
-
-      const { access_token, refresh_token } = response.data;
-
-      // Save tokens in context/storage
-      login(access_token, refresh_token);
-
-      // Decode locally to navigate immediately without waiting for context refresh cycle
-      const decoded: any = jwtDecode(access_token);
-      navigate(decoded.rol === "admin" ? "/admin" : "/cliente");
-
+      setDetail(response.data?.detail || "Contrasena actualizada exitosamente.");
+      setTimeout(() => navigate("/"), 1200);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Error al iniciar sesión");
+      setError(err.response?.data?.detail || "No se pudo actualizar la contrasena");
     } finally {
       setIsLoading(false);
     }
@@ -53,16 +51,17 @@ export function LoginPage() {
     <div className="min-h-screen bg-[#F4F1EB] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="bg-[#F9F8F4] rounded-[32px] p-8 md:p-10 shadow-sm border border-[#2C2621]/5">
-          {/* Logo */}
           <div className="flex justify-center mb-8">
             <div className="w-20 h-20 rounded-full bg-[#6D7E5E] flex items-center justify-center shadow-inner">
               <Leaf className="w-10 h-10 text-[#F4F1EB]" />
             </div>
           </div>
 
-          <h1 className="text-center mb-2 text-3xl font-medium tracking-tight text-[#2C2621]">Sensores Agrícolas</h1>
+          <h1 className="text-center mb-2 text-3xl font-medium tracking-tight text-[#2C2621]">
+            Restablecer contrasena
+          </h1>
           <p className="text-center text-[#6E6359] mb-8">
-            Sistema de Monitoreo de Riego IoT
+            Define una nueva contrasena para tu cuenta.
           </p>
 
           {error && (
@@ -71,17 +70,24 @@ export function LoginPage() {
             </div>
           )}
 
+          {detail && (
+            <div className="mb-6 p-4 bg-[#EEF4E8] text-[#2F5D2A] rounded-[16px] text-sm text-center">
+              {detail}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-[#2C2621] mb-2">
-                Correo Electrónico
+                Nueva contrasena
               </label>
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="usuario@ejemplo.mx"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Minimo 8 caracteres"
                 className="w-full px-5 py-3 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] placeholder:text-[#6E6359]/50 focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
+                minLength={8}
                 required
                 disabled={isLoading}
               />
@@ -89,32 +95,30 @@ export function LoginPage() {
 
             <div>
               <label className="block text-sm font-medium text-[#2C2621] mb-2">
-                Contraseña
+                Confirmar contrasena
               </label>
               <input
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Repite tu nueva contrasena"
                 className="w-full px-5 py-3 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] placeholder:text-[#6E6359]/50 focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
+                minLength={8}
                 required
                 disabled={isLoading}
               />
             </div>
 
-            <div className="flex justify-end">
-              <Link
-                to="/recuperar-contrasena"
-                className="text-sm text-[#6E6359] hover:text-[#6D7E5E] transition-colors"
-              >
-                Olvide mi contrasena
-              </Link>
-            </div>
-
             <PillButton type="submit" variant="primary" className="w-full" disabled={isLoading}>
-              {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
+              {isLoading ? "Actualizando..." : "Actualizar contrasena"}
             </PillButton>
           </form>
+
+          <div className="mt-6 text-center">
+            <Link to="/" className="text-sm text-[#6E6359] hover:text-[#6D7E5E] transition-colors">
+              Volver a inicio de sesion
+            </Link>
+          </div>
         </div>
       </div>
     </div>

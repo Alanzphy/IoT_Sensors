@@ -119,13 +119,13 @@ El desarrollo se estructura en tres capas de evolución. Este SRS detalla el MVP
 ● Preferencias de notificación por cliente (área, tipo de alerta, severidad y canal), más switch global de activación.
 ● Semáforos de umbral para parámetros prioritarios en dashboard cliente.
 ● Vista administrativa de auditoría.
+● Recuperación de contraseña por correo electrónico con token temporal de un solo uso.
 
 **Fase 2 Completa** \- Funcionalidades planificadas (no activas aún):
 
 ● Integración con IA (Azure OpenAI) y automatización con n8n.
 ● Visualización geoespacial de predios y nodos en mapa interactivo.
 ● NDVI (Índice de Vegetación) como parámetro adicional del sensor.
-● Recuperación de contraseña por correo electrónico.
 ● Preferencias avanzadas de notificación (ej. horarios de silencio o ventanas de envío).
 
 Este sistema es exclusivamente de monitoreo: no enviará comandos de control hacia equipos de campo. La comunicación con el módulo de control es estrictamente unidireccional (el servidor solo recibe datos).
@@ -331,7 +331,7 @@ Respuestas en JSON. Paginación obligatoria en endpoints de listado (?page=1\&pe
 
 **REQ-funcional-03 (Seguridad por Predio):** El sistema debe validar que un usuario con rol ‘cliente’ solo pueda visualizar los predios y áreas asignados a su ID de cliente. El Administrador puede ver datos de cualquier cliente.
 
-**REQ-funcional-04 (Autenticación):** El sistema implementará autenticación mediante **JWT** (JSON Web Tokens) para usuarios web. El login retorna un access token y un refresh token. Las contraseñas se almacenan con hash **bcrypt**. Los nodos IoT se autentican con una **API Key fija** única por nodo, enviada en el header X-API-Key. *(Fase 2 Completa: se implementará flujo de recuperación de contraseña por correo electrónico).*
+**REQ-funcional-04 (Autenticación):** El sistema implementará autenticación mediante **JWT** (JSON Web Tokens) para usuarios web. El login retorna un access token y un refresh token. Las contraseñas se almacenan con hash **bcrypt**. Los nodos IoT se autentican con una **API Key fija** única por nodo, enviada en el header X-API-Key. En MVP Extendido (Fase 2 Lite) se habilita el flujo de recuperación de contraseña por correo electrónico mediante token temporal de un solo uso.
 
 ### 3.2.2 Configuración del Sistema {#3.2.2-configuración-del-sistema}
 

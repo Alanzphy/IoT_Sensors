@@ -494,6 +494,7 @@ Estas reglas **no están en el SQL** (la base de datos no las valida por sí mis
 
 | Tabla | Estado | Propósito |
 |------|--------|-----------|
+| `tokens_recuperacion` | Activa | Tokens temporales de un solo uso para el flujo "Olvidé mi contraseña" |
 | `umbrales` | Activa | Rangos por parámetro y área para evaluación automática |
 | `alertas` | Activa | Historial de alertas por umbral e inactividad |
 | `preferencias_notificacion` | Activa | Reglas por cliente/área/tipo/severidad/canal para despacho externo |
@@ -501,28 +502,25 @@ Estas reglas **no están en el SQL** (la base de datos no las valida por sí mis
 
 ### 10.2 Futuro (Fase 2 Completa)
 
-| Tabla futura | Propósito | Se relaciona con... |
-|-------------|-----------|---------------------|
-| `tokens_recuperacion` | Tokens temporales de un solo uso para el flujo "Olvidé mi contraseña". | `usuarios` |
-
 Además, se evaluará agregar un campo `ndvi` a `lecturas` cuando se defina una fuente estable de datos de vegetación.
 
 ---
 
-## Referencia Rápida — 13 Tablas Activas
+## Referencia Rápida — 14 Tablas Activas
 
 | # | Tabla | Grupo | Propósito en una línea | ID tipo |
 |---|-------|-------|----------------------|---------|
 | 1 | `usuarios` | Usuarios | Credenciales y rol de cada persona que accede al sistema | INT |
 | 2 | `tokens_refresco` | Usuarios | Refresh tokens para mantener la sesión JWT | INT |
-| 3 | `clientes` | Usuarios | Datos comerciales del agricultor (empresa, teléfono) | INT |
-| 4 | `predios` | Campo | Terrenos/ranchos que posee cada cliente | INT |
-| 5 | `tipos_cultivo` | Campo | Catálogo administrable de cultivos (Nogal, Alfalfa...) | INT |
-| 6 | `areas_riego` | Campo | Parcelas con cultivo asignado — entidad central del sistema | INT |
-| 7 | `ciclos_cultivo` | Campo | Temporadas agrícolas (inicio/fin) por área | INT |
-| 8 | `nodos` | Hardware | Sensores IoT con API Key y coordenadas GPS | INT |
-| 9 | `lecturas` | Lecturas | Registro centralizado con las 12 métricas dinámicas | BIGINT |
-| 10 | `umbrales` | Alertas | Rangos por parámetro para disparo automático | INT |
-| 11 | `alertas` | Alertas | Eventos de umbral/inactividad y estado de lectura | BIGINT |
-| 12 | `preferencias_notificacion` | Alertas | Preferencias por cliente/área/severidad/canal para notificaciones | INT |
-| 13 | `audit_log` | Auditoría | Registro de acciones de sistema y usuarios | BIGINT |
+| 3 | `tokens_recuperacion` | Usuarios | Tokens de recuperación de contraseña de un solo uso | INT |
+| 4 | `clientes` | Usuarios | Datos comerciales del agricultor (empresa, teléfono) | INT |
+| 5 | `predios` | Campo | Terrenos/ranchos que posee cada cliente | INT |
+| 6 | `tipos_cultivo` | Campo | Catálogo administrable de cultivos (Nogal, Alfalfa...) | INT |
+| 7 | `areas_riego` | Campo | Parcelas con cultivo asignado — entidad central del sistema | INT |
+| 8 | `ciclos_cultivo` | Campo | Temporadas agrícolas (inicio/fin) por área | INT |
+| 9 | `nodos` | Hardware | Sensores IoT con API Key y coordenadas GPS | INT |
+| 10 | `lecturas` | Lecturas | Registro centralizado con las 12 métricas dinámicas | BIGINT |
+| 11 | `umbrales` | Alertas | Rangos por parámetro para disparo automático | INT |
+| 12 | `alertas` | Alertas | Eventos de umbral/inactividad y estado de lectura | BIGINT |
+| 13 | `preferencias_notificacion` | Alertas | Preferencias por cliente/área/severidad/canal para notificaciones | INT |
+| 14 | `audit_log` | Auditoría | Registro de acciones de sistema y usuarios | BIGINT |

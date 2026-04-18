@@ -29,6 +29,7 @@ from app.models import (  # noqa: F401 – importar todos para que Base los regi
     IrrigationArea,
     Node,
     NotificationPreference,
+    PasswordResetToken,
     Property,
     Reading,
     RefreshToken,

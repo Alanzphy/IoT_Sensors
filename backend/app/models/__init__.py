@@ -1,5 +1,6 @@
 from app.models.user import User
 from app.models.refresh_token import RefreshToken
+from app.models.password_reset_token import PasswordResetToken
 from app.models.client import Client
 from app.models.property import Property
 from app.models.crop_type import CropType
@@ -15,6 +16,7 @@ from app.models.notification_preference import NotificationPreference
 __all__ = [
     "User",
     "RefreshToken",
+    "PasswordResetToken",
     "Client",
     "Property",
     "CropType",

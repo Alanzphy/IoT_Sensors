@@ -126,16 +126,25 @@ JWT (JSON Web Token) es un token encriptado que el backend genera al hacer login
    ↓
    Response 200: {
      "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVC...(nuevo)...",
-     "refresh_token": "bmV3IHJlZnJlc2ggdG9rZW4...(nuevo, rotado)...",
      "token_type": "bearer"
    }
 
 4. LOGOUT — Revoca el refresh_token:
    POST /api/v1/auth/logout
    Body: { "refresh_token": "dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4..." }
-   Header: Authorization: Bearer eyJhbGci...
    ↓
-   Response 200: { "message": "Successfully logged out" }
+  Response 200: { "detail": "Sesión cerrada exitosamente" }
+
+5. RECUPERACIÓN — Solicita enlace y restablece contraseña:
+  POST /api/v1/auth/forgot-password
+  Body: { "email": "admin@sensores.com" }
+  ↓
+  Response 200: { "detail": "Si el correo existe y esta activo, se envio un enlace de recuperacion." }
+
+  POST /api/v1/auth/reset-password
+  Body: { "token": "token_de_un_solo_uso", "new_password": "NuevaClave123" }
+  ↓
+  Response 200: { "detail": "Contrasena actualizada exitosamente" }
 ```
 
 **¿Qué contiene el access_token?** (decodificado)
@@ -151,7 +160,7 @@ JWT (JSON Web Token) es un token encriptado que el backend genera al hacer login
 
 | Endpoint | Admin | Cliente |
 |----------|-------|---------|
-| Auth (login/refresh/logout) | ✅ | ✅ |
+| Auth (login/refresh/logout/forgot/reset) | ✅ | ✅ |
 | Users CRUD | ✅ | ❌ |
 | Clients CRUD | ✅ | ❌ |
 | Properties — GET | ✅ (todos) | ✅ (solo suyos) |
@@ -314,13 +323,15 @@ Ejemplo de mapeo:
 
 ### 5.1. Auth
 
-Endpoints de autenticación. No requieren token previo (excepto logout).
+Endpoints de autenticación y recuperación de contraseña.
 
 | Método | Endpoint | Descripción | Auth |
 |--------|----------|-------------|------|
 | `POST` | `/api/v1/auth/login` | Iniciar sesión | Ninguna (público) |
 | `POST` | `/api/v1/auth/refresh` | Renovar access token | Ninguna (usa refresh_token en body) |
-| `POST` | `/api/v1/auth/logout` | Cerrar sesión (revocar refresh token) | Bearer JWT |
+| `POST` | `/api/v1/auth/logout` | Cerrar sesión (revocar refresh token) | Ninguna (usa refresh_token en body) |
+| `POST` | `/api/v1/auth/forgot-password` | Solicitar enlace de recuperación | Ninguna (público) |
+| `POST` | `/api/v1/auth/reset-password` | Restablecer contraseña con token | Ninguna (público) |
 
 #### `POST /api/v1/auth/login`
 
@@ -352,7 +363,13 @@ Endpoints de autenticación. No requieren token previo (excepto logout).
 }
 ```
 
-**Response 200:** Misma estructura que login (nuevos tokens). El refresh token anterior se revoca automáticamente (rotación).
+**Response 200:**
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIs...",
+  "token_type": "bearer"
+}
+```
 
 **Errores:** 401 (token inválido, expirado o revocado).
 
@@ -368,9 +385,46 @@ Endpoints de autenticación. No requieren token previo (excepto logout).
 **Response 200:**
 ```json
 {
-  "message": "Successfully logged out"
+  "detail": "Sesión cerrada exitosamente"
 }
 ```
+
+#### `POST /api/v1/auth/forgot-password`
+
+**Request:**
+```json
+{
+  "email": "admin@sensores.com"
+}
+```
+
+**Response 200:**
+```json
+{
+  "detail": "Si el correo existe y esta activo, se envio un enlace de recuperacion."
+}
+```
+
+> El endpoint siempre responde 200 para evitar enumeración de usuarios.
+
+#### `POST /api/v1/auth/reset-password`
+
+**Request:**
+```json
+{
+  "token": "token_de_un_solo_uso",
+  "new_password": "NuevaClave123"
+}
+```
+
+**Response 200:**
+```json
+{
+  "detail": "Contrasena actualizada exitosamente"
+}
+```
+
+**Errores:** 400 (token inválido, expirado o ya utilizado).
 
 ---
 
@@ -1525,13 +1579,15 @@ Header: Authorization: Bearer eyJ...(cliente)...
 
 ## 7. Referencia Rápida de Endpoints
 
-### Auth (3 endpoints)
+### Auth (5 endpoints)
 
 | Método | Endpoint | Auth | Descripción |
 |--------|----------|------|-------------|
 | POST | `/api/v1/auth/login` | — | Login |
 | POST | `/api/v1/auth/refresh` | — | Renovar token |
-| POST | `/api/v1/auth/logout` | JWT | Cerrar sesión |
+| POST | `/api/v1/auth/logout` | — | Cerrar sesión |
+| POST | `/api/v1/auth/forgot-password` | — | Solicitar recuperación |
+| POST | `/api/v1/auth/reset-password` | — | Restablecer contraseña |
 
 ### Users (5 endpoints) — Admin only
 

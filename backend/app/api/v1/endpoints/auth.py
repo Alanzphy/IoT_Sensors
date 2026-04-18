@@ -14,11 +14,16 @@ from app.db.session import get_db
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
 from app.schemas.auth import (
+    ForgotPasswordRequest,
+    ForgotPasswordResponse,
     LoginRequest,
     RefreshRequest,
     RefreshResponse,
+    ResetPasswordRequest,
+    ResetPasswordResponse,
     TokenResponse,
 )
+from app.services import password_reset as password_reset_service
 
 router = APIRouter()
 
@@ -85,7 +90,11 @@ def refresh(body: RefreshRequest, db: Session = Depends(get_db)):
             detail="Refresh token revocado o no encontrado",
         )
 
-    token_data = {"sub": payload["sub"], "rol": payload["rol"], "nombre": payload.get("nombre", "")}
+    token_data = {
+        "sub": payload["sub"],
+        "rol": payload["rol"],
+        "nombre": payload.get("nombre", ""),
+    }
     new_access_token = create_access_token(token_data)
 
     return RefreshResponse(access_token=new_access_token)
@@ -111,3 +120,38 @@ def logout(body: RefreshRequest, db: Session = Depends(get_db)):
     db.commit()
 
     return {"detail": "Sesión cerrada exitosamente"}
+
+
+@router.post(
+    "/forgot-password",
+    response_model=ForgotPasswordResponse,
+    status_code=status.HTTP_200_OK,
+)
+def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    """Generate a one-time reset token and email a recovery link."""
+    password_reset_service.request_password_reset(db=db, email=body.email)
+    return {
+        "detail": (
+            "Si el correo existe y esta activo, se envio un enlace de recuperacion."
+        )
+    }
+
+
+@router.post(
+    "/reset-password",
+    response_model=ResetPasswordResponse,
+    status_code=status.HTTP_200_OK,
+)
+def reset_password(body: ResetPasswordRequest, db: Session = Depends(get_db)):
+    """Reset password using a valid one-time recovery token."""
+    ok = password_reset_service.reset_password(
+        db=db,
+        raw_token=body.token,
+        new_password=body.new_password,
+    )
+    if not ok:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token invalido, expirado o ya utilizado",
+        )
+    return {"detail": "Contrasena actualizada exitosamente"}

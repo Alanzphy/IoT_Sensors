@@ -5,7 +5,9 @@ import { ClientLayout } from "./layouts/ClientLayout";
 import { RootLayout } from "./layouts/RootLayout";
 
 // Auth pages
+import { ForgotPasswordPage } from "./pages/auth/ForgotPasswordPage";
 import { LoginPage } from "./pages/auth/LoginPage";
+import { ResetPasswordPage } from "./pages/auth/ResetPasswordPage";
 
 // Client pages
 import { AreaSelector } from "./pages/client/AreaSelector";
@@ -37,6 +39,14 @@ export const router = createBrowserRouter([
       {
         index: true,
         Component: LoginPage,
+      },
+      {
+        path: "recuperar-contrasena",
+        Component: ForgotPasswordPage,
+      },
+      {
+        path: "restablecer-contrasena",
+        Component: ResetPasswordPage,
       },
       {
         path: "cliente",
