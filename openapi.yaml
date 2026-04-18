@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: "Sistema IoT Riego Agr\xEDcola"
+  title: Sistema IoT Riego Agrícola
   version: 0.1.0
 paths:
   /api/v1/auth/login:
@@ -1326,6 +1326,45 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/readings/availability:
+    get:
+      tags:
+      - Readings
+      summary: Get Readings Availability
+      operationId: get_readings_availability_api_v1_readings_availability_get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: irrigation_area_id
+        in: query
+        required: true
+        schema:
+          type: integer
+          title: Irrigation Area Id
+      - name: month_start
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          description: Any date inside the target month (YYYY-MM-DD)
+          title: Month Start
+        description: Any date inside the target month (YYYY-MM-DD)
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadingAvailabilityResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/readings/export:
     get:
       tags:
@@ -1386,6 +1425,389 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/thresholds:
+    get:
+      tags:
+      - Thresholds
+      summary: List Thresholds
+      operationId: list_thresholds_api_v1_thresholds_get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 50
+          title: Per Page
+      - name: irrigation_area_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Irrigation Area Id
+      - name: parameter
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Parameter
+      - name: active
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Active
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse_ThresholdResponse_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      tags:
+      - Thresholds
+      summary: Create Threshold
+      operationId: create_threshold_api_v1_thresholds_post
+      security:
+      - OAuth2PasswordBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ThresholdCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThresholdResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/thresholds/{threshold_id}:
+    get:
+      tags:
+      - Thresholds
+      summary: Get Threshold
+      operationId: get_threshold_api_v1_thresholds__threshold_id__get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: threshold_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Threshold Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThresholdResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    put:
+      tags:
+      - Thresholds
+      summary: Update Threshold
+      operationId: update_threshold_api_v1_thresholds__threshold_id__put
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: threshold_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Threshold Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ThresholdUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThresholdResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - Thresholds
+      summary: Delete Threshold
+      operationId: delete_threshold_api_v1_thresholds__threshold_id__delete
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: threshold_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Threshold Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThresholdResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/alerts:
+    get:
+      tags:
+      - Alerts
+      summary: List Alerts
+      operationId: list_alerts_api_v1_alerts_get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 50
+          title: Per Page
+      - name: irrigation_area_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Irrigation Area Id
+      - name: node_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Node Id
+      - name: severity
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Severity
+      - name: read
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Read
+      - name: alert_type
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Alert Type
+      - name: start_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Start Date
+      - name: end_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: End Date
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse_AlertResponse_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/alerts/{alert_id}:
+    get:
+      tags:
+      - Alerts
+      summary: Get Alert
+      operationId: get_alert_api_v1_alerts__alert_id__get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: alert_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Alert Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/alerts/{alert_id}/read:
+    patch:
+      tags:
+      - Alerts
+      summary: Mark Alert Read
+      operationId: mark_alert_read_api_v1_alerts__alert_id__read_patch
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: alert_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Alert Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlertReadUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/alerts/scan-inactivity:
+    post:
+      tags:
+      - Alerts
+      summary: Scan Inactivity Alerts
+      operationId: scan_inactivity_alerts_api_v1_alerts_scan_inactivity_post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: minutes_without_data
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 1440
+          minimum: 1
+          default: 20
+          title: Minutes Without Data
+      - name: node_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Node Id
+      - name: irrigation_area_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Irrigation Area Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InactivityScanResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /health:
     get:
       summary: Health Check
@@ -1398,6 +1820,91 @@ paths:
               schema: {}
 components:
   schemas:
+    AlertReadUpdate:
+      properties:
+        read:
+          type: boolean
+          title: Read
+          default: true
+      type: object
+      title: AlertReadUpdate
+    AlertResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        node_id:
+          type: integer
+          title: Node Id
+        irrigation_area_id:
+          type: integer
+          title: Irrigation Area Id
+        threshold_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Threshold Id
+        type:
+          type: string
+          title: Type
+        parameter:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Parameter
+        detected_value:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Detected Value
+        severity:
+          type: string
+          title: Severity
+        message:
+          type: string
+          title: Message
+        timestamp:
+          type: string
+          format: date-time
+          title: Timestamp
+        read:
+          type: boolean
+          title: Read
+        read_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Read At
+        notified_email:
+          type: boolean
+          title: Notified Email
+        notified_whatsapp:
+          type: boolean
+          title: Notified Whatsapp
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - id
+      - node_id
+      - irrigation_area_id
+      - type
+      - severity
+      - message
+      - timestamp
+      - read
+      - notified_email
+      - notified_whatsapp
+      - created_at
+      - updated_at
+      title: AlertResponse
     ClientCreate:
       properties:
         email:
@@ -1696,6 +2203,28 @@ components:
           title: Detail
       type: object
       title: HTTPValidationError
+    InactivityScanResponse:
+      properties:
+        scanned_nodes:
+          type: integer
+          title: Scanned Nodes
+        inactive_nodes:
+          type: integer
+          title: Inactive Nodes
+        created_alerts:
+          type: integer
+          title: Created Alerts
+        executed_at:
+          type: string
+          format: date-time
+          title: Executed At
+      type: object
+      required:
+      - scanned_nodes
+      - inactive_nodes
+      - created_alerts
+      - executed_at
+      title: InactivityScanResponse
     IrrigationAreaCreate:
       properties:
         property_id:
@@ -1941,6 +2470,29 @@ components:
           title: Is Active
       type: object
       title: NodeUpdate
+    PaginatedResponse_AlertResponse_:
+      properties:
+        page:
+          type: integer
+          title: Page
+        per_page:
+          type: integer
+          title: Per Page
+        total:
+          type: integer
+          title: Total
+        data:
+          items:
+            $ref: '#/components/schemas/AlertResponse'
+          type: array
+          title: Data
+      type: object
+      required:
+      - page
+      - per_page
+      - total
+      - data
+      title: PaginatedResponse[AlertResponse]
     PaginatedResponse_ClientResponse_:
       properties:
         page:
@@ -2102,6 +2654,29 @@ components:
       - total
       - data
       title: PaginatedResponse[ReadingResponse]
+    PaginatedResponse_ThresholdResponse_:
+      properties:
+        page:
+          type: integer
+          title: Page
+        per_page:
+          type: integer
+          title: Per Page
+        total:
+          type: integer
+          title: Total
+        data:
+          items:
+            $ref: '#/components/schemas/ThresholdResponse'
+          type: array
+          title: Data
+      type: object
+      required:
+      - page
+      - per_page
+      - total
+      - data
+      title: PaginatedResponse[ThresholdResponse]
     PaginatedResponse_UserResponse_:
       properties:
         page:
@@ -2189,6 +2764,29 @@ components:
           title: Location
       type: object
       title: PropertyUpdate
+    ReadingAvailabilityResponse:
+      properties:
+        min_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Min Date
+        max_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Max Date
+        available_dates:
+          items:
+            type: string
+            format: date
+          type: array
+          title: Available Dates
+      type: object
+      title: ReadingAvailabilityResponse
+      description: Availability metadata for date-range pickers.
     ReadingCreate:
       properties:
         timestamp:
@@ -2333,6 +2931,150 @@ components:
           title: Water Potential
       type: object
       title: SoilResponse
+    ThresholdCreate:
+      properties:
+        irrigation_area_id:
+          type: integer
+          title: Irrigation Area Id
+        parameter:
+          type: string
+          enum:
+          - soil.conductivity
+          - soil.temperature
+          - soil.humidity
+          - soil.water_potential
+          - irrigation.active
+          - irrigation.accumulated_liters
+          - irrigation.flow_per_minute
+          - environmental.temperature
+          - environmental.relative_humidity
+          - environmental.wind_speed
+          - environmental.solar_radiation
+          - environmental.eto
+          title: Parameter
+        min_value:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Min Value
+        max_value:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Max Value
+        severity:
+          type: string
+          enum:
+          - info
+          - warning
+          - critical
+          title: Severity
+          default: warning
+        active:
+          type: boolean
+          title: Active
+          default: true
+      type: object
+      required:
+      - irrigation_area_id
+      - parameter
+      title: ThresholdCreate
+    ThresholdResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        irrigation_area_id:
+          type: integer
+          title: Irrigation Area Id
+        parameter:
+          type: string
+          title: Parameter
+        min_value:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Min Value
+        max_value:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Max Value
+        severity:
+          type: string
+          title: Severity
+        active:
+          type: boolean
+          title: Active
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - id
+      - irrigation_area_id
+      - parameter
+      - severity
+      - active
+      - created_at
+      - updated_at
+      title: ThresholdResponse
+    ThresholdUpdate:
+      properties:
+        irrigation_area_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Irrigation Area Id
+        parameter:
+          anyOf:
+          - type: string
+            enum:
+            - soil.conductivity
+            - soil.temperature
+            - soil.humidity
+            - soil.water_potential
+            - irrigation.active
+            - irrigation.accumulated_liters
+            - irrigation.flow_per_minute
+            - environmental.temperature
+            - environmental.relative_humidity
+            - environmental.wind_speed
+            - environmental.solar_radiation
+            - environmental.eto
+          - type: 'null'
+          title: Parameter
+        min_value:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Min Value
+        max_value:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Max Value
+        severity:
+          anyOf:
+          - type: string
+            enum:
+            - info
+            - warning
+            - critical
+          - type: 'null'
+          title: Severity
+        active:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Active
+      type: object
+      title: ThresholdUpdate
     TokenResponse:
       properties:
         access_token:

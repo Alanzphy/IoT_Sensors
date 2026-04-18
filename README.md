@@ -182,6 +182,29 @@ Checklist DoD:
 - [ ] SRS actualizado (`docs/srs/`): requisitos activos vs roadmap, roles y restricciones.
 - [ ] Consistencia transversal validada: misma terminología, mismos nombres de endpoint/campos, mismos estados de fase.
 
+### Sincronizar OpenAPI (Contrato Runtime -> Archivos)
+
+Cuando el backend ya está levantado, puedes regenerar ambos archivos de contrato (`openapi.yaml` y `docs/openapi.yaml`) desde el schema real expuesto por FastAPI:
+
+```bash
+./scripts/sync_openapi.sh
+```
+
+Atajo recomendado:
+
+```bash
+make openapi-sync
+```
+
+Notas:
+
+- URL por defecto: `http://127.0.0.1:5050/api/v1/openapi.json`
+- Puedes cambiarla temporalmente con `OPENAPI_URL`:
+
+```bash
+OPENAPI_URL="http://localhost:5050/api/v1/openapi.json" ./scripts/sync_openapi.sh
+```
+
 ## Documentación
 
 | Documento | Descripción |
