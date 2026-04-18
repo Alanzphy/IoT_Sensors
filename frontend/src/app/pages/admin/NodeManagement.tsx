@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
-import { Plus, Eye, EyeOff, Copy, Search, ChevronRight, Trash2 } from "lucide-react";
+import { Plus, Eye, EyeOff, Copy, MapPin, Radio, Trash2, X } from "lucide-react";
 import { BentoCard } from "../../components/BentoCard";
 import { PillButton } from "../../components/PillButton";
-import { FreshnessIndicator } from "../../components/FreshnessIndicator";
 import { Link } from "react-router";
 import { api } from "../../services/api";
 
@@ -22,16 +21,70 @@ interface NodeData {
   is_active: boolean;
 }
 
+function FormField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--text-muted)" }}>
+        {label}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+function GlassInput({ ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      {...props}
+      className="w-full px-4 py-2.5 rounded-xl text-sm transition-all duration-200"
+      style={{
+        background: "rgba(255,255,255,0.05)",
+        border: "1px solid var(--border-glass)",
+        color: "var(--text-primary)",
+        outline: "none",
+        ...props.style,
+      }}
+      onFocus={e => {
+        e.target.style.borderColor = "var(--border-accent)";
+        e.target.style.background = "rgba(255,255,255,0.07)";
+        e.target.style.boxShadow = "0 0 0 3px rgba(143,175,122,0.1)";
+      }}
+      onBlur={e => {
+        e.target.style.borderColor = "var(--border-glass)";
+        e.target.style.background = "rgba(255,255,255,0.05)";
+        e.target.style.boxShadow = "none";
+      }}
+    />
+  );
+}
+
+function GlassSelect({ children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { children: React.ReactNode }) {
+  return (
+    <select
+      {...props}
+      className="w-full px-4 py-2.5 rounded-xl text-sm transition-all duration-200 appearance-none"
+      style={{
+        background: "rgba(255,255,255,0.05)",
+        border: "1px solid var(--border-glass)",
+        color: "var(--text-primary)",
+        outline: "none",
+        ...props.style,
+      }}
+    >
+      {children}
+    </select>
+  );
+}
+
 export function NodeManagement() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [nodes, setNodes] = useState<NodeData[]>([]);
   const [areas, setAreas] = useState<IrrigationArea[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [visibleApiKeys, setVisibleApiKeys] = useState<Record<number, boolean>>({});
-  
-  // Form State
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+
   const [formName, setFormName] = useState("");
   const [formSerialNumber, setFormSerialNumber] = useState("");
   const [formLat, setFormLat] = useState("");
@@ -42,36 +95,27 @@ export function NodeManagement() {
     try {
       setLoading(true);
       setError(null);
-      
       const nodesRes = await api.get("/nodes?per_page=100");
       const areasRes = await api.get("/irrigation-areas?per_page=100");
-
       setNodes(nodesRes.data.data || nodesRes.data);
       setAreas(areasRes.data.data || areasRes.data);
     } catch (err: any) {
       const errorDetail = err.response?.data?.detail;
       let errorMessage = "Error loading nodes";
-      if (typeof errorDetail === "string") {
-        errorMessage = errorDetail;
-      } else if (Array.isArray(errorDetail)) {
-        errorMessage = errorDetail.map((e: any) => e.msg || JSON.stringify(e)).join(", ");
-      } else if (errorDetail) {
-        errorMessage = JSON.stringify(errorDetail);
-      }
+      if (typeof errorDetail === "string") errorMessage = errorDetail;
+      else if (Array.isArray(errorDetail)) errorMessage = errorDetail.map((e: any) => e.msg || JSON.stringify(e)).join(", ");
+      else if (errorDetail) errorMessage = JSON.stringify(errorDetail);
       setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formAreaId) return;
-
     try {
       setLoading(true);
       await api.post("/nodes", {
@@ -80,14 +124,10 @@ export function NodeManagement() {
         serial_number: formSerialNumber || null,
         latitude: formLat ? parseFloat(formLat) : null,
         longitude: formLng ? parseFloat(formLng) : null,
-        is_active: true
+        is_active: true,
       });
       setShowCreateForm(false);
-      setFormName("");
-      setFormSerialNumber("");
-      setFormLat("");
-      setFormLng("");
-      setFormAreaId("");
+      setFormName(""); setFormSerialNumber(""); setFormLat(""); setFormLng(""); setFormAreaId("");
       fetchData();
     } catch (err: any) {
       setError(err.response?.data?.detail || "Error creating node");
@@ -108,216 +148,199 @@ export function NodeManagement() {
   };
 
   const toggleApiKeyVisibility = (nodeId: number) => {
-    setVisibleApiKeys(prev => ({
-      ...prev,
-      [nodeId]: !prev[nodeId]
-    }));
+    setVisibleApiKeys(prev => ({ ...prev, [nodeId]: !prev[nodeId] }));
   };
 
-  const copyToClipboard = (text: string) => {
+  const copyToClipboard = (nodeId: number, text: string) => {
     navigator.clipboard.writeText(text);
-    alert("API Key copiada al portapapeles");
+    setCopiedId(nodeId);
+    setTimeout(() => setCopiedId(null), 1500);
   };
 
   const getAreaName = (id: number) => {
     const area = areas.find(a => a.id === id);
-    return area ? area.nombre : "Desconocida";
+    return area ? area.nombre : "No asignada";
   };
 
-  if (loading && nodes.length === 0) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <p className="text-[#6E6359]">Cargando nodos...</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen p-4 md:p-6 lg:p-8">
-      <div className="flex items-center justify-between mb-6">
+    <div className="page-wrapper">
+      {/* Header */}
+      <div className="flex items-start justify-between mb-7 animate-fade-in">
         <div>
-          <h1 className="text-2xl md:text-3xl text-[#2C2621] mb-2">Gestión de Nodos</h1>
-          <p className="text-[#6E6359]">Administra los sensores IoT del sistema</p>
+          <h1 className="page-title text-gradient">Gestión de Nodos</h1>
+          <p className="page-subtitle">Administra los sensores IoT del sistema</p>
         </div>
         <PillButton variant="primary" onClick={() => setShowCreateForm(true)}>
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className="w-4 h-4" />
           Nuevo Nodo
         </PillButton>
       </div>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
-          {error}
-        </div>
+        <div className="mb-4 p-3 rounded-xl text-sm badge-danger w-full">{error}</div>
       )}
 
       {/* Table */}
-      <BentoCard variant="light" className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-[#2C2621]/10">
-                <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Nombre</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Serie</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">API Key</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Área Vinculada</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">GPS</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Estado</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {nodes.map((node, i) => (
-                <tr key={node.id} className={i % 2 === 0 ? "bg-[#F4F1EB]/30" : ""}>
-                  <td className="py-4 px-4">
-                    <span className="font-medium text-[#2C2621]">
-                      {node.name || `Nodo #${node.id}`}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4 text-sm text-[#6E6359] font-mono">
-                    {node.serial_number || '-'}
-                  </td>
-                  <td className="py-4 px-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-[#6E6359] font-mono">
-                        {visibleApiKeys[node.id] 
-                          ? node.api_key 
-                          : '••••••••••••••••'
-                        }
-                      </span>
-                      <button 
-                        onClick={() => toggleApiKeyVisibility(node.id)}
-                        className="p-1 rounded hover:bg-[#E2D4B7]/50 transition-colors"
-                      >
-                        {visibleApiKeys[node.id] ? (
-                          <EyeOff className="w-4 h-4 text-[#6E6359]" />
-                        ) : (
-                          <Eye className="w-4 h-4 text-[#6E6359]" />
-                        )}
-                      </button>
-                      <button 
-                        onClick={() => copyToClipboard(node.api_key)}
-                        className="p-1 rounded hover:bg-[#E2D4B7]/50 transition-colors"
-                      >
-                        <Copy className="w-4 h-4 text-[#6E6359]" />
-                      </button>
-                    </div>
-                  </td>
-                  <td className="py-4 px-4 text-sm text-[#2C2621]">
-                    {getAreaName(node.irrigation_area_id)}
-                  </td>
-                  <td className="py-4 px-4 text-sm text-[#6E6359]">
-                    {node.latitude && node.longitude 
-                      ? `${node.latitude}, ${node.longitude}`
-                      : 'No configurado'
-                    }
-                  </td>
-                  <td className="py-4 px-4">
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      node.is_active 
-                        ? 'bg-[#6D7E5E]/10 text-[#6D7E5E] border border-[#6D7E5E]/20'
-                        : 'bg-[#DC2626]/10 text-[#DC2626] border border-[#DC2626]/20'
-                    }`}>
-                      {node.is_active ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4">
-                    <button 
-                      onClick={() => handleDelete(node.id)}
-                      className="p-2 rounded-full hover:bg-[#DC2626]/10 transition-colors"
-                      title="Eliminar nodo"
-                    >
-                      <Trash2 className="w-4 h-4 text-[#DC2626]" />
-                    </button>
-                  </td>
+      <div className="animate-fade-in-up">
+        <BentoCard variant="glass" padding="none" className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full table-dark">
+              <thead>
+                <tr>
+                  <th>Estado</th>
+                  <th>Nombre</th>
+                  <th>Serie</th>
+                  <th>API Key</th>
+                  <th>Área Vinculada</th>
+                  <th>GPS</th>
+                  <th className="text-right pr-5">Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          {nodes.length === 0 && !loading && (
-             <p className="text-[#6E6359] text-center py-6">No hay nodos registrados.</p>
-          )}
-        </div>
-      </BentoCard>
+              </thead>
+              <tbody>
+                {loading && nodes.length === 0 ? (
+                  [...Array(4)].map((_, i) => (
+                    <tr key={i}>
+                      {[...Array(7)].map((__, j) => (
+                        <td key={j}><div className="h-4 rounded shimmer" style={{ width: "70%" }} /></td>
+                      ))}
+                    </tr>
+                  ))
+                ) : nodes.map((node) => (
+                  <tr key={node.id}>
+                    <td>
+                      <span className={`status-dot ${node.is_active ? "active" : "inactive"}`} />
+                    </td>
+                    <td>
+                      <Link to={`/admin/nodos/${node.id}`} className="font-medium hover:underline" style={{ color: "var(--text-primary)" }}>
+                        {node.name || `Nodo #${node.id}`}
+                      </Link>
+                    </td>
+                    <td>
+                      <span className="font-data text-xs" style={{ color: "var(--text-muted)" }}>
+                        {node.serial_number || "—"}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-data text-xs" style={{ color: "var(--text-secondary)", letterSpacing: "0.02em" }}>
+                          {visibleApiKeys[node.id] ? node.api_key : "••••••••••••••••"}
+                        </span>
+                        <button
+                          onClick={() => toggleApiKeyVisibility(node.id)}
+                          className="p-1 rounded-lg transition-colors"
+                          style={{ color: "var(--text-muted)" }}
+                          onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
+                          onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                        >
+                          {visibleApiKeys[node.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                        <button
+                          onClick={() => copyToClipboard(node.id, node.api_key)}
+                          className="p-1 rounded-lg transition-all"
+                          style={{ color: copiedId === node.id ? "var(--status-active)" : "var(--text-muted)" }}
+                          onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
+                          onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                          title={copiedId === node.id ? "¡Copiado!" : "Copiar API Key"}
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                    <td style={{ color: "var(--text-secondary)" }}>{getAreaName(node.irrigation_area_id)}</td>
+                    <td>
+                      {node.latitude && node.longitude ? (
+                        <span className="font-data text-xs" style={{ color: "var(--text-muted)" }}>
+                          {node.latitude.toFixed(4)}, {node.longitude.toFixed(4)}
+                        </span>
+                      ) : (
+                        <span className="badge-inactive">Sin GPS</span>
+                      )}
+                    </td>
+                    <td className="text-right pr-5">
+                      <button
+                        onClick={() => handleDelete(node.id)}
+                        className="p-1.5 rounded-lg transition-colors"
+                        title="Eliminar nodo"
+                        style={{ color: "var(--text-muted)" }}
+                        onMouseEnter={e => {
+                          (e.currentTarget as HTMLElement).style.background = "var(--status-danger-bg)";
+                          (e.currentTarget as HTMLElement).style.color = "var(--status-danger)";
+                        }}
+                        onMouseLeave={e => {
+                          (e.currentTarget as HTMLElement).style.background = "transparent";
+                          (e.currentTarget as HTMLElement).style.color = "var(--text-muted)";
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {nodes.length === 0 && !loading && (
+                  <tr>
+                    <td colSpan={7} className="text-center py-8" style={{ color: "var(--text-muted)" }}>
+                      No hay nodos registrados.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </BentoCard>
+      </div>
 
-      {/* Create form */}
+      {/* Create modal */}
       {showCreateForm && (
-        <div className="fixed inset-0 bg-[#2C2621]/50 z-50 flex items-center justify-center p-4">
-          <BentoCard variant="light" className="w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl text-[#2C2621] mb-6">Nuevo Nodo IoT</h2>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div>
-                <label className="block text-sm text-[#6E6359] mb-2">Área de Riego (Obligatorio)</label>
-                <select 
-                  required
-                  value={formAreaId}
-                  onChange={(e) => setFormAreaId(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}
+        >
+          <div className="w-full max-w-md animate-fade-in-up">
+            <BentoCard variant="glass">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="section-title">Nuevo Nodo IoT</h2>
+                <button
+                  onClick={() => setShowCreateForm(false)}
+                  className="p-1.5 rounded-lg transition-colors"
+                  style={{ color: "var(--text-muted)" }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                 >
-                  <option value="">Seleccione un área</option>
-                  {areas.map(a => (
-                    <option key={a.id} value={a.id}>{a.nombre}</option>
-                  ))}
-                </select>
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-
-              <div>
-                <label className="block text-sm text-[#6E6359] mb-2">Nombre del Nodo</label>
-                <input
-                  type="text"
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  placeholder="Ej: Sensor Nogal-01"
-                  className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm text-[#6E6359] mb-2">Número de Serie</label>
-                <input
-                  type="text"
-                  value={formSerialNumber}
-                  onChange={(e) => setFormSerialNumber(e.target.value)}
-                  placeholder="SN-2026-001"
-                  className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm text-[#6E6359] mb-2">Latitud GPS</label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={formLat}
-                    onChange={(e) => setFormLat(e.target.value)}
-                    placeholder="28.6329"
-                    className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
-                  />
+              <form onSubmit={handleCreate} className="space-y-4">
+                <FormField label="Área de Riego (Obligatorio)">
+                  <GlassSelect required value={formAreaId} onChange={e => setFormAreaId(e.target.value)}>
+                    <option value="" style={{ background: "var(--bg-elevated)" }}>Seleccione un área</option>
+                    {areas.map(a => (
+                      <option key={a.id} value={a.id} style={{ background: "var(--bg-elevated)" }}>{a.nombre}</option>
+                    ))}
+                  </GlassSelect>
+                </FormField>
+                <FormField label="Nombre del Nodo">
+                  <GlassInput type="text" value={formName} onChange={e => setFormName(e.target.value)} placeholder="Ej: Sensor Nogal-01" />
+                </FormField>
+                <FormField label="Número de Serie">
+                  <GlassInput type="text" value={formSerialNumber} onChange={e => setFormSerialNumber(e.target.value)} placeholder="SN-2026-001" />
+                </FormField>
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField label="Latitud GPS">
+                    <GlassInput type="number" step="any" value={formLat} onChange={e => setFormLat(e.target.value)} placeholder="28.6329" />
+                  </FormField>
+                  <FormField label="Longitud GPS">
+                    <GlassInput type="number" step="any" value={formLng} onChange={e => setFormLng(e.target.value)} placeholder="-106.0691" />
+                  </FormField>
                 </div>
-                <div>
-                  <label className="block text-sm text-[#6E6359] mb-2">Longitud GPS</label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={formLng}
-                    onChange={(e) => setFormLng(e.target.value)}
-                    placeholder="-106.0691"
-                    className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
-                  />
+                <div className="flex gap-3 pt-2">
+                  <PillButton variant="ghost" type="button" className="flex-1" onClick={() => setShowCreateForm(false)}>Cancelar</PillButton>
+                  <PillButton variant="primary" type="submit" className="flex-1" disabled={loading}>
+                    {loading ? "Guardando..." : "Crear Nodo"}
+                  </PillButton>
                 </div>
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <PillButton variant="secondary" type="button" className="flex-1" onClick={() => setShowCreateForm(false)}>
-                  Cancelar
-                </PillButton>
-                <PillButton variant="primary" type="submit" className="flex-1" disabled={loading}>
-                  {loading ? 'Guardando...' : 'Crear Nodo'}
-                </PillButton>
-              </div>
-            </form>
-          </BentoCard>
+              </form>
+            </BentoCard>
+          </div>
         </div>
       )}
     </div>

@@ -1,9 +1,17 @@
 import { useState, useEffect } from "react";
-import { Users, MapPin, Radio, Database, AlertCircle, Plus } from "lucide-react";
+import { Users, MapPin, Radio, Database, AlertCircle, Plus, Activity, ArrowRight } from "lucide-react";
 import { BentoCard } from "../../components/BentoCard";
 import { PillButton } from "../../components/PillButton";
-import { Link } from "react-router"; // or react-router-dom depending on your setup
+import { Link } from "react-router";
 import { api } from "../../services/api";
+
+interface StatCard {
+  label: string;
+  value: string | number;
+  icon: typeof Users;
+  accent: string;
+  accentBg: string;
+}
 
 export function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -11,7 +19,7 @@ export function AdminDashboard() {
     properties: 0,
     nodesTotal: 0,
     nodesActive: 0,
-    readingsToday: 0
+    readingsToday: 0,
   });
   const [offlineNodes, setOfflineNodes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,176 +28,258 @@ export function AdminDashboard() {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        
-        // Parallel requests for all counts
         const [clientsRes, propsRes, nodesRes, readingsRes] = await Promise.all([
           api.get("/clients?per_page=1"),
           api.get("/properties?per_page=1"),
-          api.get("/nodes?per_page=200"), // Get more nodes to find inactive ones
-          api.get(`/readings?per_page=1&start_date=${new Date().toISOString().split('T')[0]}`)
+          api.get("/nodes?per_page=200"),
+          api.get(`/readings?per_page=1&start_date=${new Date().toISOString().split("T")[0]}`),
         ]);
 
         const totalClients = clientsRes.data.total || 0;
         const totalProps = propsRes.data.total || 0;
         const totalReadings = readingsRes.data.total || 0;
-        
         const nodesData = nodesRes.data.data || nodesRes.data || [];
         const totalNodes = nodesRes.data.total || nodesData.length || 0;
         const activeNodes = nodesData.filter((n: any) => n.is_active || n.activo).length;
-        const inactiveNodes = nodesData.filter((n: any) => !(n.is_active || n.activo));
 
         setStats({
           clients: totalClients,
           properties: totalProps,
           nodesTotal: totalNodes,
           nodesActive: activeNodes,
-          readingsToday: totalReadings
+          readingsToday: totalReadings,
         });
-        
-        setOfflineNodes(inactiveNodes);
+        setOfflineNodes(nodesData.filter((n: any) => !(n.is_active || n.activo)));
       } catch (error) {
         console.error("Error fetching dashboard stats:", error);
       } finally {
         setLoading(false);
       }
     };
-    
     fetchDashboardData();
   }, []);
 
+  const statCards: StatCard[] = [
+    {
+      label: "Total Clientes",
+      value: stats.clients,
+      icon: Users,
+      accent: "var(--accent-green)",
+      accentBg: "rgba(143,175,122,0.12)",
+    },
+    {
+      label: "Total Predios",
+      value: stats.properties,
+      icon: MapPin,
+      accent: "var(--accent-gold)",
+      accentBg: "rgba(196,164,109,0.12)",
+    },
+    {
+      label: "Nodos Activos",
+      value: `${stats.nodesActive}/${stats.nodesTotal}`,
+      icon: Radio,
+      accent: "var(--status-active)",
+      accentBg: "var(--status-active-bg)",
+    },
+    {
+      label: "Lecturas Hoy",
+      value: stats.readingsToday.toLocaleString(),
+      icon: Database,
+      accent: "#5B9BD5",
+      accentBg: "rgba(91,155,213,0.1)",
+    },
+  ];
+
+  const quickActions = [
+    { label: "Nuevo Cliente", to: "/admin/clientes", icon: Users, accent: "var(--accent-green)" },
+    { label: "Nuevo Predio", to: "/admin/clientes", icon: MapPin, accent: "var(--accent-gold)" },
+    { label: "Nuevo Nodo", to: "/admin/nodos", icon: Radio, accent: "#5B9BD5" },
+  ];
+
   return (
-    <div className="min-h-screen p-4 md:p-6 lg:p-8">
-      <div className="mb-6">
-        <h1 className="text-2xl md:text-3xl text-[#2C2621] mb-2">Panel de Administración</h1>
-        <p className="text-[#6E6359]">
-          {new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+    <div className="page-wrapper">
+      {/* Header */}
+      <div className="mb-8 animate-fade-in">
+        <div className="flex items-center gap-3 mb-1">
+          <Activity className="w-5 h-5" style={{ color: "var(--accent-green)" }} />
+          <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--accent-green)" }}>
+            Panel de Control
+          </span>
+        </div>
+        <h1 className="page-title text-gradient">Panel de Administración</h1>
+        <p className="page-subtitle">
+          {new Date().toLocaleDateString("es-MX", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
         </p>
       </div>
 
       {loading ? (
-         <div className="flex justify-center items-center py-12">
-            <p className="text-[#6E6359]">Cargando métricas...</p>
-         </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="glass-card rounded-2xl p-5 h-[120px] shimmer" />
+          ))}
+        </div>
       ) : (
-        <>
-          {/* Summary cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <BentoCard variant="sand">
-              <div className="flex items-start justify-between mb-4">
-                <div className="p-3 rounded-[24px] bg-[#6D7E5E]">
-                  <Users className="w-6 h-6 text-[#F4F1EB]" />
-                </div>
-              </div>
-              <p className="text-sm text-[#6E6359] mb-1">Total Clientes</p>
-              <p className="text-3xl font-bold text-[#2C2621]">{stats.clients}</p>
-            </BentoCard>
-
-            <BentoCard variant="sand">
-              <div className="flex items-start justify-between mb-4">
-                <div className="p-3 rounded-[24px] bg-[#6D7E5E]">
-                  <MapPin className="w-6 h-6 text-[#F4F1EB]" />
-                </div>
-              </div>
-              <p className="text-sm text-[#6E6359] mb-1">Total Predios</p>
-              <p className="text-3xl font-bold text-[#2C2621]">{stats.properties}</p>
-            </BentoCard>
-
-            <BentoCard variant="sand">
-              <div className="flex items-start justify-between mb-4">
-                <div className="p-3 rounded-[24px] bg-[#6D7E5E]">
-                  <Radio className="w-6 h-6 text-[#F4F1EB]" />
-                </div>
-              </div>
-              <p className="text-sm text-[#6E6359] mb-1">Nodos Activos</p>
-              <p className="text-3xl font-bold text-[#2C2621]">
-                {stats.nodesActive}/{stats.nodesTotal}
-              </p>
-            </BentoCard>
-
-            <BentoCard variant="sand">
-              <div className="flex items-start justify-between mb-4">
-                <div className="p-3 rounded-[24px] bg-[#6D7E5E]">
-                  <Database className="w-6 h-6 text-[#F4F1EB]" />
-                </div>
-              </div>
-              <p className="text-sm text-[#6E6359] mb-1">Lecturas Hoy</p>
-              <p className="text-3xl font-bold text-[#2C2621]">
-                {stats.readingsToday.toLocaleString()}
-              </p>
-            </BentoCard>
+        <div className="animate-fade-in-up stagger">
+          {/* Stat cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {statCards.map((card) => {
+              const Icon = card.icon;
+              return (
+                <BentoCard key={card.label} variant="glass" className="flex flex-col gap-3">
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center"
+                    style={{ background: card.accentBg, border: `1px solid ${card.accentBg}` }}
+                  >
+                    <Icon className="w-5 h-5" style={{ color: card.accent }} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium mb-1" style={{ color: "var(--text-muted)" }}>
+                      {card.label}
+                    </p>
+                    <p
+                      className="font-data font-bold text-3xl"
+                      style={{ color: "var(--text-primary)", letterSpacing: "-0.04em" }}
+                    >
+                      {card.value}
+                    </p>
+                  </div>
+                </BentoCard>
+              );
+            })}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Alerts section */}
+          {/* Body grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            {/* Offline nodes panel */}
             <div className="lg:col-span-2">
-              <BentoCard variant="light">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg text-[#2C2621]">Nodos Inactivos / Sin Comunicación</h3>
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#DC2626]/10">
-                    <AlertCircle className="w-4 h-4 text-[#DC2626]" />
-                    <span className="text-sm font-medium text-[#DC2626]">{offlineNodes.length}</span>
+              <BentoCard variant="glass">
+                <div className="section-header">
+                  <h3 className="section-title">Nodos Sin Comunicación</h3>
+                  <div
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-full"
+                    style={{
+                      background: offlineNodes.length > 0 ? "var(--status-danger-bg)" : "var(--status-active-bg)",
+                      border: `1px solid ${offlineNodes.length > 0 ? "rgba(248,113,113,0.2)" : "rgba(74,222,128,0.2)"}`,
+                    }}
+                  >
+                    <AlertCircle
+                      className="w-3.5 h-3.5"
+                      style={{ color: offlineNodes.length > 0 ? "var(--status-danger)" : "var(--status-active)" }}
+                    />
+                    <span
+                      className="text-xs font-semibold"
+                      style={{ color: offlineNodes.length > 0 ? "var(--status-danger)" : "var(--status-active)" }}
+                    >
+                      {offlineNodes.length} offline
+                    </span>
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  {offlineNodes.map((node) => (
-                    <div key={node.id} className="p-4 rounded-[24px] bg-[#F4F1EB] border-l-4 border-[#DC2626]">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h4 className="font-medium text-[#2C2621]">{node.name || `Nodo #${node.id}`}</h4>
-                          <p className="text-sm text-[#6E6359]">Serial: {node.serial_number || '-'}</p>
-                        </div>
-                        <span className="px-3 py-1 rounded-full bg-[#DC2626]/10 text-[#DC2626] text-xs font-medium">
-                          Sin conexión / Inactivo
-                        </span>
-                      </div>
+                {offlineNodes.length === 0 ? (
+                  <div className="flex items-center gap-3 py-6">
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ background: "var(--status-active-bg)" }}
+                    >
+                      <Radio className="w-5 h-5" style={{ color: "var(--status-active)" }} />
                     </div>
-                  ))}
-                  {offlineNodes.length === 0 && (
-                    <p className="text-sm text-[#6E6359]">Todos los nodos registrados están activos y operando correctamente.</p>
-                  )}
-                </div>
+                    <div>
+                      <p className="font-medium text-sm" style={{ color: "var(--text-primary)" }}>
+                        Todos los nodos operando correctamente
+                      </p>
+                      <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
+                        No hay nodos sin comunicación en este momento.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {offlineNodes.map((node) => (
+                      <div
+                        key={node.id}
+                        className="flex items-center gap-4 p-3.5 rounded-xl"
+                        style={{
+                          background: "rgba(255,255,255,0.03)",
+                          border: "1px solid var(--border-subtle)",
+                          borderLeft: "3px solid var(--status-danger)",
+                        }}
+                      >
+                        <div className="status-dot danger flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate" style={{ color: "var(--text-primary)" }}>
+                            {node.name || `Nodo #${node.id}`}
+                          </p>
+                          <p className="text-xs truncate" style={{ color: "var(--text-muted)" }}>
+                            Serial: {node.serial_number || "—"}
+                          </p>
+                        </div>
+                        <span className="badge-danger flex-shrink-0">Sin conexión</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </BentoCard>
             </div>
 
-            {/* Quick Actions & Recent Activity */}
-            <div className="space-y-6">
-              <BentoCard variant="light">
-                <h3 className="text-lg text-[#2C2621] mb-6">Acciones Rápidas</h3>
-                <div className="space-y-3">
-                  <Link to="/admin/clientes" className="block">
-                    <PillButton variant="primary" className="w-full justify-center">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Nuevo Cliente
-                    </PillButton>
-                  </Link>
-                  <Link to="/admin/predios" className="block">
-                    <PillButton variant="secondary" className="w-full justify-center">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Nuevo Predio
-                    </PillButton>
-                  </Link>
-                  <Link to="/admin/nodos" className="block">
-                    <PillButton variant="secondary" className="w-full justify-center">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Nuevo Nodo
-                    </PillButton>
-                  </Link>
+            {/* Quick actions */}
+            <div className="space-y-4">
+              <BentoCard variant="glass">
+                <h3 className="section-title mb-4">Acciones Rápidas</h3>
+                <div className="space-y-2">
+                  {quickActions.map((action) => {
+                    const Icon = action.icon;
+                    return (
+                      <Link key={action.label} to={action.to} className="block">
+                        <div
+                          className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group"
+                          style={{
+                            background: "rgba(255,255,255,0.03)",
+                            border: "1px solid var(--border-subtle)",
+                          }}
+                          onMouseEnter={e => {
+                            (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)";
+                            (e.currentTarget as HTMLElement).style.borderColor = "var(--border-glass)";
+                          }}
+                          onMouseLeave={e => {
+                            (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.03)";
+                            (e.currentTarget as HTMLElement).style.borderColor = "var(--border-subtle)";
+                          }}
+                        >
+                          <div
+                            className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                            style={{ background: `${action.accent}18` }}
+                          >
+                            <Plus className="w-4 h-4" style={{ color: action.accent }} />
+                          </div>
+                          <span className="flex-1 font-medium text-sm" style={{ color: "var(--text-primary)" }}>
+                            {action.label}
+                          </span>
+                          <ArrowRight
+                            className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1"
+                            style={{ color: "var(--text-muted)" }}
+                          />
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
               </BentoCard>
 
-              {/* Recent activity is mocked for now as MVP doesn't have an audit log yet */}
               <BentoCard variant="sand">
-                <h3 className="text-lg text-[#2C2621] mb-4">Actividad Reciente</h3>
-                <div className="space-y-3">
-                  <p className="text-sm text-[#6E6359] italic">
-                    El registro de actividad estará disponible en la próxima versión.
+                <h3 className="section-title mb-3">Actividad Reciente</h3>
+                <div
+                  className="flex flex-col items-center justify-center py-6 space-y-2"
+                  style={{ opacity: 0.5 }}
+                >
+                  <Activity className="w-8 h-8" style={{ color: "var(--text-muted)" }} />
+                  <p className="text-xs text-center" style={{ color: "var(--text-muted)" }}>
+                    El registro de actividad estará disponible próximamente.
                   </p>
                 </div>
               </BentoCard>
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

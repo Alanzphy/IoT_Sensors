@@ -2,32 +2,54 @@ import { ReactNode } from "react";
 
 interface BentoCardProps {
   children: ReactNode;
-  variant?: "light" | "sand" | "dark" | "brown";
+  variant?: "glass" | "priority" | "gold" | "sand" | "elevated" | "dark" | "light" | "brown";
   className?: string;
-  padding?: "sm" | "md" | "lg";
+  padding?: "none" | "sm" | "md" | "lg";
+  onClick?: () => void;
+  style?: React.CSSProperties;
 }
 
-export function BentoCard({ 
-  children, 
-  variant = "light", 
+export function BentoCard({
+  children,
+  variant = "glass",
   className = "",
-  padding = "md"
+  padding = "md",
+  onClick,
+  style,
 }: BentoCardProps) {
-  const backgrounds = {
-    light: "bg-[#F9F8F4]",
-    sand: "bg-[#E2D4B7]",
-    dark: "bg-[#3B312B] text-[#F4F1EB]",
-    brown: "bg-[#705541] text-[#F4F1EB]",
-  };
+  // Map old variant names to new ones for backward compatibility
+  const resolvedVariant = (() => {
+    if (variant === "light") return "glass";
+    if (variant === "dark" || variant === "brown") return "priority";
+    return variant;
+  })();
 
-  const paddings = {
+  const variantClass = {
+    glass: "glass-card",
+    priority: "card-priority",
+    gold: "card-gold",
+    sand: "card-sand",
+    elevated: "glass-card",
+    dark: "card-priority",
+    brown: "card-gold",
+    light: "glass-card",
+  }[variant] ?? "glass-card";
+
+  const paddingClass = {
+    none: "",
     sm: "p-4",
-    md: "p-6",
-    lg: "p-8",
-  };
+    md: "p-5",
+    lg: "p-7",
+  }[padding];
+
+  const radiusClass = "rounded-2xl";
 
   return (
-    <div className={`${backgrounds[variant]} ${paddings[padding]} rounded-[32px] ${className}`}>
+    <div
+      className={`${variantClass} ${paddingClass} ${radiusClass} ${className} ${onClick ? "cursor-pointer" : ""}`}
+      style={style}
+      onClick={onClick}
+    >
       {children}
     </div>
   );

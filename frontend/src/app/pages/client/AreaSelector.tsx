@@ -51,33 +51,42 @@ function AreaCard({
 
   return (
     <div onClick={onClick}>
-      <BentoCard variant="light" className="hover:shadow-lg transition-shadow cursor-pointer h-full flex flex-col justify-between">
+      <BentoCard variant="glass" className="h-full flex flex-col justify-between cursor-pointer group">
         <div>
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-[24px] bg-[#E2D4B7]">
-                <CropIcon className="w-6 h-6" />
+              <div
+                className="w-12 h-12 rounded-[16px] flex items-center justify-center transition-transform group-hover:scale-105"
+                style={{ background: "rgba(143,175,122,0.15)", border: "1px solid rgba(143,175,122,0.3)" }}
+              >
+                <CropIcon className="w-6 h-6" style={{ color: "var(--accent-green)" }} />
               </div>
               <div>
-                <h3 className="text-lg text-[#2C2621] font-medium">{area.name}</h3>
-                <p className="text-sm text-[#6E6359]">{area.area_size || 0} hectáreas</p>
+                <h3 className="section-title mb-0.5">{area.name}</h3>
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>{area.area_size || 0} hectáreas</p>
               </div>
             </div>
-            <ChevronRight className="w-5 h-5 text-[#6E6359]" />
+            <div className="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style={{ background: "rgba(255,255,255,0.05)" }}>
+              <ChevronRight className="w-4 h-4" style={{ color: "var(--text-muted)" }} />
+            </div>
           </div>
 
           {/* Current humidity */}
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E6359]">Humedad actual</span>
-              <span className="font-bold text-[#2C2621]">
+              <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Humedad actual</span>
+              <span className="font-data text-sm font-bold" style={{ color: "var(--accent-green)" }}>
                 {humidity !== null ? `${humidity.toFixed(1)}%` : "N/D"}
               </span>
             </div>
-            <div className="h-2 bg-[#E6E1D8] rounded-full overflow-hidden">
+            <div className="h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
               <div
-                className="h-full bg-[#6D7E5E] rounded-full transition-all"
-                style={{ width: humidity !== null ? `${Math.min(100, Math.max(0, humidity))}%` : "0%" }}
+                className="h-full rounded-full transition-all duration-1000"
+                style={{
+                  background: "linear-gradient(90deg, var(--accent-green), var(--accent-green-hover))",
+                  width: humidity !== null ? `${Math.min(100, Math.max(0, humidity))}%` : "0%",
+                  boxShadow: "0 0 10px rgba(143,175,122,0.4)"
+                }}
               />
             </div>
           </div>
@@ -95,63 +104,67 @@ export function AreaSelector() {
 
   if (loading) {
     return (
-      <div className="min-h-screen p-4 md:p-6 lg:p-8 flex items-center justify-center">
-        <p className="text-[#6E6359]">Cargando...</p>
+      <div className="page-wrapper flex items-center justify-center">
+        <p className="animate-pulse" style={{ color: "var(--text-muted)" }}>Cargando áreas...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen p-4 md:p-6 lg:p-8 flex items-center justify-center">
-        <p className="text-red-500">{error}</p>
+      <div className="page-wrapper flex items-center justify-center">
+        <p className="badge-danger">{error}</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen p-4 md:p-6 lg:p-8">
-      <div className="mb-6">
-        <h1 className="text-2xl md:text-3xl text-[#2C2621] mb-2">Predios y Áreas de Riego</h1>
-        <p className="text-[#6E6359]">Selecciona un área para ver sus datos en tiempo real</p>
+    <div className="page-wrapper">
+      <div className="mb-8 animate-fade-in">
+        <h1 className="page-title text-gradient">Predios y Áreas de Riego</h1>
+        <p className="page-subtitle">Selecciona un área para ver sus datos en tiempo real</p>
       </div>
 
-      {properties.map((property) => {
-        const propertyAreas = areas.filter((a) => a.property_id === property.id);
+      <div className="space-y-8 stagger">
+        {properties.map((property) => {
+          const propertyAreas = areas.filter((a) => a.property_id === property.id);
 
-        if (propertyAreas.length === 0) return null;
+          if (propertyAreas.length === 0) return null;
 
-        return (
-          <div key={property.id} className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl text-[#2C2621]">{property.name}</h2>
-              {property.location && (
-                <span className="text-sm text-[#6E6359]">{property.location}</span>
-              )}
+          return (
+            <div key={property.id} className="animate-fade-in-up">
+              <div className="flex items-center justify-between mb-4 border-b pb-2" style={{ borderColor: "var(--border-subtle)" }}>
+                <h2 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>{property.name}</h2>
+                {property.location && (
+                  <span className="text-sm px-3 py-1 rounded-full" style={{ background: "rgba(255,255,255,0.04)", color: "var(--text-muted)" }}>{property.location}</span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {propertyAreas.map((area) => (
+                  <AreaCard
+                    key={area.id}
+                    area={area}
+                    onClick={() => {
+                      setSelectedProperty(property);
+                      setSelectedArea(area);
+                      navigate("/cliente");
+                    }}
+                  />
+                ))}
+              </div>
             </div>
+          );
+        })}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {propertyAreas.map((area) => (
-                <AreaCard
-                  key={area.id}
-                  area={area}
-                  onClick={() => {
-                    setSelectedProperty(property);
-                    setSelectedArea(area);
-                    navigate("/cliente");
-                  }}
-                />
-              ))}
-            </div>
+        {properties.length === 0 && (
+          <div className="text-center py-12">
+            <BentoCard variant="glass" className="inline-block max-w-sm">
+              <p style={{ color: "var(--text-muted)" }}>No se encontraron predios disponibles.</p>
+            </BentoCard>
           </div>
-        );
-      })}
-
-      {properties.length === 0 && (
-        <div className="text-center py-10 text-[#6E6359]">
-          No se encontraron predios disponibles.
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

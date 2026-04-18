@@ -1,13 +1,13 @@
 import { Bell, ChevronDown, Droplets, Sun, Wind, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
-    Area,
-    AreaChart,
-    CartesianGrid,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis,
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from "recharts";
 import { BentoCard } from "../../components/BentoCard";
 import { FreshnessIndicator } from "../../components/FreshnessIndicator";
@@ -20,33 +20,24 @@ import { api } from "../../services/api";
 export function ClientDashboard() {
   const isMobile = useIsMobile();
   const { user } = useAuth();
-  const {
-    properties,
-    areas,
-    selectedProperty,
-    selectedArea,
-    setSelectedProperty,
-    setSelectedArea
-  } = useSelection();
+  const { properties, areas, selectedProperty, selectedArea, setSelectedProperty, setSelectedArea } = useSelection();
 
-  const filteredAreas = selectedProperty
-    ? areas.filter(a => a.property_id === selectedProperty.id)
-    : [];
+  const filteredAreas = selectedProperty ? areas.filter(a => a.property_id === selectedProperty.id) : [];
 
   const [currentReadings, setCurrentReadings] = useState({
-    soilHumidity: 0 as number | '-',
-    waterFlow: 0 as number | '-',
-    accumulatedWater: 0 as number | '-',
-    eto: 0 as number | '-',
+    soilHumidity: 0 as number | "-",
+    waterFlow: 0 as number | "-",
+    accumulatedWater: 0 as number | "-",
+    eto: 0 as number | "-",
     irrigationActive: false,
     irrigationElapsedTime: "N/A",
-    soilConductivity: 0 as number | '-',
-    soilTemp: 0 as number | '-',
-    waterPotential: 0 as number | '-',
-    airTemp: 0 as number | '-',
-    relativeHumidity: 0 as number | '-',
-    windSpeed: 0 as number | '-',
-    solarRadiation: 0 as number | '-',
+    soilConductivity: 0 as number | "-",
+    soilTemp: 0 as number | "-",
+    waterPotential: 0 as number | "-",
+    airTemp: 0 as number | "-",
+    relativeHumidity: 0 as number | "-",
+    windSpeed: 0 as number | "-",
+    solarRadiation: 0 as number | "-",
     lastUpdate: new Date(),
   });
 
@@ -60,7 +51,6 @@ export function ClientDashboard() {
 
   useEffect(() => {
     if (!selectedArea) return;
-
     let isMounted = true;
 
     const fetchData = async () => {
@@ -71,27 +61,27 @@ export function ClientDashboard() {
         if (isMounted) {
           if (latestData) {
             setCurrentReadings({
-              soilHumidity: latestData.soil?.humidity ?? '-',
-              waterFlow: latestData.irrigation?.flow_per_minute ?? '-',
-              accumulatedWater: latestData.irrigation?.accumulated_liters ?? '-',
-              eto: latestData.environmental?.eto ?? '-',
+              soilHumidity: latestData.soil?.humidity ?? "-",
+              waterFlow: latestData.irrigation?.flow_per_minute ?? "-",
+              accumulatedWater: latestData.irrigation?.accumulated_liters ?? "-",
+              eto: latestData.environmental?.eto ?? "-",
               irrigationActive: latestData.irrigation?.active ?? false,
               irrigationElapsedTime: latestData.irrigation?.active ? "Activo" : "N/A",
-              soilConductivity: latestData.soil?.conductivity ?? '-',
-              soilTemp: latestData.soil?.temperature ?? '-',
-              waterPotential: latestData.soil?.water_potential ?? '-',
-              airTemp: latestData.environmental?.temperature ?? '-',
-              relativeHumidity: latestData.environmental?.relative_humidity ?? '-',
-              windSpeed: latestData.environmental?.wind_speed ?? '-',
-              solarRadiation: latestData.environmental?.solar_radiation ?? '-',
+              soilConductivity: latestData.soil?.conductivity ?? "-",
+              soilTemp: latestData.soil?.temperature ?? "-",
+              waterPotential: latestData.soil?.water_potential ?? "-",
+              airTemp: latestData.environmental?.temperature ?? "-",
+              relativeHumidity: latestData.environmental?.relative_humidity ?? "-",
+              windSpeed: latestData.environmental?.wind_speed ?? "-",
+              solarRadiation: latestData.environmental?.solar_radiation ?? "-",
               lastUpdate: new Date(latestData.timestamp + (latestData.timestamp.endsWith("Z") ? "" : "Z")),
             });
           } else {
             setCurrentReadings({
-              soilHumidity: '-', waterFlow: '-', accumulatedWater: '-', eto: '-',
+              soilHumidity: "-", waterFlow: "-", accumulatedWater: "-", eto: "-",
               irrigationActive: false, irrigationElapsedTime: "N/A",
-              soilConductivity: '-', soilTemp: '-', waterPotential: '-',
-              airTemp: '-', relativeHumidity: '-', windSpeed: '-', solarRadiation: '-',
+              soilConductivity: "-", soilTemp: "-", waterPotential: "-",
+              airTemp: "-", relativeHumidity: "-", windSpeed: "-", solarRadiation: "-",
               lastUpdate: new Date(),
             });
           }
@@ -99,11 +89,10 @@ export function ClientDashboard() {
 
         const histRes = await api.get(`/readings?irrigation_area_id=${selectedArea.id}&per_page=12`);
         if (isMounted && histRes.data?.data) {
-          const rawItems = histRes.data.data;
-          const chartData = rawItems.reverse().map((item: any) => {
+          const chartData = histRes.data.data.reverse().map((item: any) => {
             const t = new Date(item.timestamp + (item.timestamp.endsWith("Z") ? "" : "Z"));
             return {
-              time: t.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+              time: t.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }),
               fullTime: t,
               soilHumidity: item.soil?.humidity ?? 0,
               waterFlow: item.irrigation?.flow_per_minute ?? 0,
@@ -117,86 +106,89 @@ export function ClientDashboard() {
     };
 
     fetchData();
-
-    // Auto-refresh interval set to 2 seconds for real-time visualization
-    const intervalId = setInterval(() => {
-      if (isMounted) {
-        fetchData();
-      }
-    }, 2000);
-
-    return () => {
-      isMounted = false;
-      clearInterval(intervalId);
-    };
+    const intervalId = setInterval(() => { if (isMounted) fetchData(); }, 2000);
+    return () => { isMounted = false; clearInterval(intervalId); };
   }, [selectedArea]);
 
-
   return (
-    <div className="min-h-screen p-4 md:p-6 lg:p-8 overflow-x-hidden">
+    <div className="page-wrapper overflow-x-hidden">
       {/* Header */}
       <div className="mb-6 md:mb-8">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-5 animate-fade-in">
           <div>
-            <h1 className="text-2xl md:text-3xl text-[#2C2621] mb-1">
-              Hola, {user?.nombre || 'Usuario'}
+            <h1 className="page-title">
+              Hola,{" "}
+              <span className="text-gradient">{user?.nombre?.split(" ")[0] || "Usuario"}</span>
             </h1>
-            <p className="text-[#6E6359]">
-              {new Date().toLocaleDateString("es-MX", {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
+            <p className="page-subtitle">
+              {new Date().toLocaleDateString("es-MX", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
             </p>
           </div>
-          <button className="p-3 rounded-full bg-[#F9F8F4] hover:bg-[#E2D4B7]/30 transition-colors">
-            <Bell className="w-5 h-5 text-[#6E6359]" />
-          </button>
         </div>
 
         {/* Breadcrumb selectors */}
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-2">
+          {/* Property selector */}
           <div className="relative">
             <select
-              className="appearance-none flex items-center gap-2 pl-4 pr-10 py-2 rounded-full bg-[#F9F8F4] text-[#2C2621] hover:bg-[#E2D4B7]/30 transition-colors font-medium outline-none cursor-pointer"
+              className="appearance-none pl-4 pr-9 py-2 rounded-full text-sm font-medium transition-all duration-200"
+              style={{
+                background: "rgba(255,255,255,0.06)",
+                border: "1px solid var(--border-glass)",
+                color: "var(--text-primary)",
+                outline: "none",
+              }}
               value={selectedProperty?.id ?? ""}
-              onChange={(e) => {
+              onChange={e => {
                 const prop = properties.find(p => p.id === Number(e.target.value));
                 setSelectedProperty(prop || null);
                 setSelectedArea(null);
               }}
             >
-              <option value="" disabled>Seleccione predio...</option>
+              <option value="" disabled style={{ background: "var(--bg-elevated)" }}>Seleccione predio...</option>
               {properties.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
+                <option key={p.id} value={p.id} style={{ background: "var(--bg-elevated)" }}>{p.name}</option>
               ))}
             </select>
-            <ChevronDown className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#2C2621]" />
+            <ChevronDown className="w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--text-muted)" }} />
           </div>
 
           {(selectedProperty || filteredAreas.length > 0) && (
             <div className="relative">
               <select
-                className="appearance-none flex items-center gap-2 pl-4 pr-10 py-2 rounded-full bg-[#F9F8F4] text-[#2C2621] hover:bg-[#E2D4B7]/30 transition-colors font-medium outline-none cursor-pointer"
+                className="appearance-none pl-4 pr-9 py-2 rounded-full text-sm font-medium transition-all duration-200"
+                style={{
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid var(--border-glass)",
+                  color: "var(--text-primary)",
+                  outline: "none",
+                }}
                 value={selectedArea?.id ?? ""}
-                onChange={(e) => {
+                onChange={e => {
                   const area = areas.find(a => a.id === Number(e.target.value));
                   setSelectedArea(area || null);
                 }}
               >
-                <option value="" disabled>Seleccione área...</option>
+                <option value="" disabled style={{ background: "var(--bg-elevated)" }}>Seleccione área...</option>
                 {filteredAreas.map(a => (
-                  <option key={a.id} value={a.id}>{a.name}</option>
+                  <option key={a.id} value={a.id} style={{ background: "var(--bg-elevated)" }}>{a.name}</option>
                 ))}
               </select>
-              <ChevronDown className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#2C2621]" />
+              <ChevronDown className="w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--text-muted)" }} />
+            </div>
+          )}
+
+          {/* Live indicator */}
+          {selectedArea && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-full" style={{ background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.15)" }}>
+              <span className="status-dot active" />
+              <span className="text-xs font-medium" style={{ color: "var(--status-active)" }}>En vivo</span>
             </div>
           )}
         </div>
       </div>
 
-      {/* Bento Grid Layout */}
+      {/* Dashboard content */}
       {isMobile ? (
         <MobileDashboard historicalData={historicalData} currentReadings={currentReadings} />
       ) : (
@@ -206,123 +198,146 @@ export function ClientDashboard() {
   );
 }
 
-function DesktopDashboard({ historicalData, currentReadings }: { historicalData: any[], currentReadings: any }) {
+// ── Custom chart tooltip ──────────────────────────────────────────────────────
+function CustomTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
   return (
-    <div className="grid grid-cols-12 gap-6">
-      {/* Priority Data - Dark Cards (Row 1) */}
+    <div
+      className="rounded-xl px-3 py-2 text-xs"
+      style={{
+        background: "rgba(20,20,18,0.95)",
+        border: "1px solid var(--border-glass)",
+        boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+        backdropFilter: "blur(12px)",
+      }}
+    >
+      <p className="font-medium mb-1" style={{ color: "var(--text-muted)" }}>{label}</p>
+      {payload.map((entry: any) => (
+        <p key={entry.dataKey} className="font-data" style={{ color: entry.color }}>
+          {entry.name ?? entry.dataKey}: <strong>{entry.value}</strong>
+        </p>
+      ))}
+    </div>
+  );
+}
+
+// ── Desktop layout ────────────────────────────────────────────────────────────
+function DesktopDashboard({ historicalData, currentReadings }: { historicalData: any[]; currentReadings: any }) {
+  const humidityPct = typeof currentReadings.soilHumidity === "number" ? currentReadings.soilHumidity : 0;
+  const strokeLen = 2 * Math.PI * 52;
+  const strokeOffset = strokeLen * (1 - humidityPct / 100);
+
+  return (
+    <div className="grid grid-cols-12 gap-5 animate-fade-in-up">
+      {/* ─ Row 1: Priority data (3 equal columns) ─ */}
+
+      {/* Soil Humidity */}
       <div className="col-span-4">
         <MetricCard
           title="Humedad del Suelo"
           value={currentReadings.soilHumidity}
           unit="%"
-          variant="dark"
+          variant="priority"
           subtitle="Dato prioritario"
           lastUpdate={currentReadings.lastUpdate}
           priority
+          accentColor="green"
         >
-          {/* Circular progress ring */}
-          <div className="relative w-32 h-32 mx-auto my-4">
-            <svg className="transform -rotate-90 w-32 h-32">
+          {/* Animated circular ring */}
+          <div className="relative w-28 h-28 mx-auto mt-2">
+            <svg className="w-28 h-28 transform -rotate-90" viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="52" stroke="rgba(255,255,255,0.06)" strokeWidth="7" fill="none" />
               <circle
-                cx="64"
-                cy="64"
-                r="56"
-                stroke="#F4F1EB"
-                strokeWidth="8"
-                fill="none"
-                opacity="0.2"
-              />
-              <circle
-                cx="64"
-                cy="64"
-                r="56"
-                stroke="#A68A61"
-                strokeWidth="8"
-                fill="none"
-                strokeDasharray={`${2 * Math.PI * 56}`}
-                strokeDashoffset={`${2 * Math.PI * 56 * (1 - (typeof currentReadings.soilHumidity === 'number' ? currentReadings.soilHumidity : 0) / 100)}`}
+                cx="60" cy="60" r="52"
+                stroke="url(#humGrad)"
+                strokeWidth="7" fill="none"
                 strokeLinecap="round"
+                strokeDasharray={strokeLen}
+                strokeDashoffset={strokeOffset}
+                style={{ transition: "stroke-dashoffset 0.8s ease" }}
               />
+              <defs>
+                <linearGradient id="humGrad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="var(--accent-green)" />
+                  <stop offset="100%" stopColor="var(--accent-gold)" />
+                </linearGradient>
+              </defs>
             </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="font-data text-xl font-bold" style={{ color: "var(--accent-green)" }}>{humidityPct}%</span>
+            </div>
           </div>
         </MetricCard>
       </div>
 
+      {/* Water Flow */}
       <div className="col-span-4">
         <MetricCard
           title="Flujo de Agua"
           value={currentReadings.waterFlow}
           unit="L/min"
-          variant="dark"
+          variant="priority"
           subtitle="Dato prioritario"
           lastUpdate={currentReadings.lastUpdate}
           priority
+          accentColor="green"
         >
           {/* Sparkline */}
-          <div className="h-16 min-h-[64px] -mx-2 mt-2">
+          <div className="h-14 -mx-2 mt-3">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={historicalData.slice(-12)}>
-                <Area
-                  type="monotone"
-                  dataKey="waterFlow"
-                  stroke="#A68A61"
-                  fill="#A68A61"
-                  fillOpacity={0.3}
-                  strokeWidth={2}
-                />
+                <defs>
+                  <linearGradient id="flowGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--accent-green)" stopOpacity={0.4} />
+                    <stop offset="100%" stopColor="var(--accent-green)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <Area type="monotone" dataKey="waterFlow" stroke="var(--accent-green)" fill="url(#flowGrad)" strokeWidth={2} dot={false} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
-          <p className="text-sm text-[#F4F1EB]/70 mt-2">
-            Acumulado: {currentReadings.accumulatedWater} L
+          <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+            Acumulado: <span className="font-data" style={{ color: "var(--text-secondary)" }}>{currentReadings.accumulatedWater} L</span>
           </p>
         </MetricCard>
       </div>
 
+      {/* ETO */}
       <div className="col-span-4">
         <MetricCard
           title="E.T.O."
           value={currentReadings.eto}
           unit="mm/día"
-          variant="dark"
+          variant="gold"
           subtitle="Evapotranspiración"
           lastUpdate={currentReadings.lastUpdate}
           priority
-        >
-          <div className="flex items-center gap-2 mt-4">
-            <div className="flex items-center gap-1 text-[#A68A61]">
-              <svg
-                className="w-4 h-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-              <span className="text-sm">+0.3 vs ayer</span>
-            </div>
-          </div>
-        </MetricCard>
+          accentColor="gold"
+        />
       </div>
 
-      {/* Irrigation Status (Row 2) */}
+      {/* ─ Row 2: Irrigation status + Soil ─ */}
       <div className="col-span-4">
-        <BentoCard variant="sand">
-          <div className="flex items-start justify-between mb-4">
-            <h3 className="text-lg text-[#2C2621]">Estado del Riego</h3>
-            <div className={`w-3 h-3 rounded-full ${currentReadings.irrigationActive ? 'bg-[#6D7E5E] animate-pulse' : 'bg-[#6E6359]'}`} />
+        <BentoCard variant="glass" className="h-full">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="section-title" style={{ fontSize: "0.95rem" }}>Estado del Riego</h3>
+            <div className="flex items-center gap-2">
+              <span className={`status-dot ${currentReadings.irrigationActive ? "active" : "inactive"}`} />
+            </div>
           </div>
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[#6E6359]">Estado</span>
-              <span className={`font-bold ${currentReadings.irrigationActive ? 'text-[#6D7E5E]' : 'text-[#6E6359]'}`}>
-                {currentReadings.irrigationActive ? 'ACTIVO' : 'INACTIVO'}
+            <div className="flex items-center justify-between py-2 border-b" style={{ borderColor: "var(--border-subtle)" }}>
+              <span className="text-sm" style={{ color: "var(--text-muted)" }}>Estado</span>
+              <span
+                className="text-sm font-semibold"
+                style={{ color: currentReadings.irrigationActive ? "var(--status-active)" : "var(--text-muted)" }}
+              >
+                {currentReadings.irrigationActive ? "ACTIVO" : "INACTIVO"}
               </span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[#6E6359]">Tiempo transcurrido</span>
-              <span className="font-bold text-[#2C2621]">
+            <div className="flex items-center justify-between py-2">
+              <span className="text-sm" style={{ color: "var(--text-muted)" }}>Tiempo transcurrido</span>
+              <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
                 {currentReadings.irrigationElapsedTime}
               </span>
             </div>
@@ -330,151 +345,103 @@ function DesktopDashboard({ historicalData, currentReadings }: { historicalData:
         </BentoCard>
       </div>
 
-      {/* Soil Metrics (Row 2) */}
       <div className="col-span-8">
-        <BentoCard variant="light">
-          <h3 className="text-lg text-[#2C2621] mb-4">Suelo</h3>
-          <div className="grid grid-cols-3 gap-6">
-            <div>
-              <p className="text-sm text-[#6E6359] mb-1">Conductividad</p>
-              <p className="text-2xl font-bold text-[#2C2621]">
-                {currentReadings.soilConductivity}{" "}
-                <span className="text-base text-[#6E6359]">dS/m</span>
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-[#6E6359] mb-1">Temperatura</p>
-              <p className="text-2xl font-bold text-[#2C2621]">
-                {currentReadings.soilTemp}{" "}
-                <span className="text-base text-[#6E6359]">°C</span>
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-[#6E6359] mb-1">Potencial hídrico</p>
-              <p className="text-2xl font-bold text-[#2C2621]">
-                {currentReadings.waterPotential}{" "}
-                <span className="text-base text-[#6E6359]">MPa</span>
-              </p>
-            </div>
+        <BentoCard variant="glass">
+          <h3 className="section-title mb-4" style={{ fontSize: "0.95rem" }}>Datos de Suelo</h3>
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { label: "Conductividad", val: currentReadings.soilConductivity, unit: "dS/m" },
+              { label: "Temperatura", val: currentReadings.soilTemp, unit: "°C" },
+              { label: "Potencial Hídrico", val: currentReadings.waterPotential, unit: "MPa" },
+            ].map(m => (
+              <div key={m.label}>
+                <p className="text-xs mb-1.5" style={{ color: "var(--text-muted)" }}>{m.label}</p>
+                <p className="font-data text-xl font-bold" style={{ color: "var(--text-primary)" }}>
+                  {m.val}
+                  <span className="text-sm font-normal ml-1" style={{ color: "var(--text-muted)" }}>{m.unit}</span>
+                </p>
+              </div>
+            ))}
           </div>
         </BentoCard>
       </div>
 
-      {/* Chart (Row 3) */}
+      {/* ─ Row 3: Chart + Environmental ─ */}
       <div className="col-span-8 row-span-2">
-        <BentoCard variant="light" className="h-full">
-          <h3 className="text-lg text-[#2C2621] mb-6">
-            Humedad del Suelo - Últimas 24 horas
-          </h3>
-          <div className="h-[300px] min-h-[300px]">
+        <BentoCard variant="glass" className="h-full">
+          <h3 className="section-title mb-5" style={{ fontSize: "0.95rem" }}>Humedad del Suelo — Últimas Lecturas</h3>
+          <div style={{ height: 280 }}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={historicalData}>
                 <defs>
-                  <linearGradient
-                    id="colorHumidity"
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop offset="5%" stopColor="#6D7E5E" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="#6D7E5E" stopOpacity={0} />
+                  <linearGradient id="humAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--accent-green)" stopOpacity={0.3} />
+                    <stop offset="90%" stopColor="var(--accent-green)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E6E1D8" />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
                 <XAxis
                   dataKey="time"
-                  stroke="#6E6359"
-                  style={{ fontSize: "12px" }}
+                  stroke="var(--text-muted)"
+                  tick={{ fontSize: 11, fill: "var(--text-muted)" }}
+                  axisLine={false}
+                  tickLine={false}
                   interval="preserveStartEnd"
                 />
                 <YAxis
-                  stroke="#6E6359"
-                  style={{ fontSize: "12px" }}
-                  domain={[30, 60]}
+                  stroke="var(--text-muted)"
+                  tick={{ fontSize: 11, fill: "var(--text-muted)" }}
+                  axisLine={false}
+                  tickLine={false}
+                  domain={["auto", "auto"]}
                 />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#F9F8F4",
-                    border: "1px solid #E6E1D8",
-                    borderRadius: "16px",
-                    padding: "12px",
-                  }}
-                />
+                <Tooltip content={<CustomTooltip />} />
                 <Area
                   type="monotone"
                   dataKey="soilHumidity"
-                  stroke="#6D7E5E"
-                  strokeWidth={3}
-                  fill="url(#colorHumidity)"
+                  name="Humedad"
+                  stroke="var(--accent-green)"
+                  strokeWidth={2.5}
+                  fill="url(#humAreaGrad)"
+                  dot={false}
+                  activeDot={{ r: 4, fill: "var(--accent-green)", strokeWidth: 0 }}
                 />
               </AreaChart>
             </ResponsiveContainer>
           </div>
-          <FreshnessIndicator lastUpdate={currentReadings.lastUpdate} />
+          <div className="mt-4">
+            <FreshnessIndicator lastUpdate={currentReadings.lastUpdate} />
+          </div>
         </BentoCard>
       </div>
 
-      {/* Environmental Metrics (Row 3-4) */}
+      {/* Environmental */}
       <div className="col-span-4">
-        <BentoCard variant="light" className="h-full">
-          <h3 className="text-lg text-[#2C2621] mb-4">Ambiental</h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-[24px] bg-[#F4F1EB]">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-[16px] bg-[#E2D4B7]">
-                  <Sun className="w-5 h-5 text-[#6D7E5E]" />
+        <BentoCard variant="glass" className="h-full">
+          <h3 className="section-title mb-4" style={{ fontSize: "0.95rem" }}>Ambiental</h3>
+          <div className="space-y-3">
+            {[
+              { icon: Sun, label: "Temp. Aire", val: currentReadings.airTemp, unit: "°C", accent: "#FBBF24" },
+              { icon: Droplets, label: "Hum. Relativa", val: currentReadings.relativeHumidity, unit: "%", accent: "var(--accent-green)" },
+              { icon: Wind, label: "Viento", val: currentReadings.windSpeed, unit: "km/h", accent: "#5B9BD5" },
+              { icon: Zap, label: "Rad. Solar", val: currentReadings.solarRadiation, unit: "W/m²", accent: "var(--accent-gold)" },
+            ].map(({ icon: Icon, label, val, unit, accent }) => (
+              <div
+                key={label}
+                className="flex items-center justify-between px-3 py-2.5 rounded-xl"
+                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--border-subtle)" }}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: `${accent}18` }}>
+                    <Icon className="w-3.5 h-3.5" style={{ color: accent }} />
+                  </div>
+                  <span className="text-xs" style={{ color: "var(--text-muted)" }}>{label}</span>
                 </div>
-                <div>
-                  <p className="text-sm text-[#6E6359]">Temperatura aire</p>
-                  <p className="font-bold text-[#2C2621]">
-                    {currentReadings.airTemp} °C
-                  </p>
-                </div>
+                <span className="font-data text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                  {val} <span className="font-normal text-xs" style={{ color: "var(--text-muted)" }}>{unit}</span>
+                </span>
               </div>
-            </div>
-
-            <div className="flex items-center justify-between p-3 rounded-[24px] bg-[#F4F1EB]">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-[16px] bg-[#E2D4B7]">
-                  <Droplets className="w-5 h-5 text-[#6D7E5E]" />
-                </div>
-                <div>
-                  <p className="text-sm text-[#6E6359]">Humedad relativa</p>
-                  <p className="font-bold text-[#2C2621]">
-                    {currentReadings.relativeHumidity} %
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-3 rounded-[24px] bg-[#F4F1EB]">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-[16px] bg-[#E2D4B7]">
-                  <Wind className="w-5 h-5 text-[#6D7E5E]" />
-                </div>
-                <div>
-                  <p className="text-sm text-[#6E6359]">Viento</p>
-                  <p className="font-bold text-[#2C2621]">
-                    {currentReadings.windSpeed} km/h
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-3 rounded-[24px] bg-[#F4F1EB]">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-[16px] bg-[#E2D4B7]">
-                  <Zap className="w-5 h-5 text-[#6D7E5E]" />
-                </div>
-                <div>
-                  <p className="text-sm text-[#6E6359]">Radiación solar</p>
-                  <p className="font-bold text-[#2C2621]">
-                    {currentReadings.solarRadiation} W/m²
-                  </p>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
         </BentoCard>
       </div>
@@ -482,155 +449,81 @@ function DesktopDashboard({ historicalData, currentReadings }: { historicalData:
   );
 }
 
-function MobileDashboard({ historicalData, currentReadings }: { historicalData: any[], currentReadings: any }) {
+// ── Mobile layout ─────────────────────────────────────────────────────────────
+function MobileDashboard({ historicalData, currentReadings }: { historicalData: any[]; currentReadings: any }) {
   return (
-    <div className="space-y-4">
-      {/* Priority cards first */}
-      <MetricCard
-        title="Humedad del Suelo"
-        value={currentReadings.soilHumidity}
-        unit="%"
-        variant="dark"
-        subtitle="Dato prioritario"
-        lastUpdate={currentReadings.lastUpdate}
-        priority
-      />
-
-      <MetricCard
-        title="Flujo de Agua"
-        value={currentReadings.waterFlow}
-        unit="L/min"
-        variant="dark"
-        subtitle="Dato prioritario"
-        lastUpdate={currentReadings.lastUpdate}
-      >
-        <p className="text-sm text-[#F4F1EB]/70 mt-2">
-          Acumulado: {currentReadings.accumulatedWater} L
-        </p>
+    <div className="space-y-4 animate-fade-in-up">
+      <MetricCard title="Humedad del Suelo" value={currentReadings.soilHumidity} unit="%" variant="priority" subtitle="Dato prioritario" lastUpdate={currentReadings.lastUpdate} priority accentColor="green" />
+      <MetricCard title="Flujo de Agua" value={currentReadings.waterFlow} unit="L/min" variant="priority" subtitle="Dato prioritario" lastUpdate={currentReadings.lastUpdate} accentColor="green">
+        <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>Acumulado: {currentReadings.accumulatedWater} L</p>
       </MetricCard>
-
-      <MetricCard
-        title="E.T.O."
-        value={currentReadings.eto}
-        unit="mm/día"
-        variant="dark"
-        subtitle="Evapotranspiración"
-        lastUpdate={currentReadings.lastUpdate}
-      />
+      <MetricCard title="E.T.O." value={currentReadings.eto} unit="mm/día" variant="gold" subtitle="Evapotranspiración" lastUpdate={currentReadings.lastUpdate} accentColor="gold" />
 
       {/* Chart */}
-      <BentoCard variant="light">
-        <h3 className="text-lg text-[#2C2621] mb-4">Últimas 24 horas</h3>
-        <div className="h-[200px] min-h-[200px]">
+      <BentoCard variant="glass">
+        <h3 className="section-title mb-3" style={{ fontSize: "0.9rem" }}>Últimas Lecturas</h3>
+        <div style={{ height: 200 }}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={historicalData}>
               <defs>
-                <linearGradient id="colorHumidity" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6D7E5E" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#6D7E5E" stopOpacity={0} />
+                <linearGradient id="mobHumGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--accent-green)" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="var(--accent-green)" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <XAxis
-                dataKey="time"
-                stroke="#6E6359"
-                style={{ fontSize: "10px" }}
-                interval="preserveStartEnd"
-              />
-              <YAxis
-                stroke="#6E6359"
-                style={{ fontSize: "10px" }}
-                domain={[30, 60]}
-              />
-              <Area
-                type="monotone"
-                dataKey="soilHumidity"
-                stroke="#6D7E5E"
-                strokeWidth={2}
-                fill="url(#colorHumidity)"
-              />
+              <XAxis dataKey="time" stroke="var(--text-muted)" tick={{ fontSize: 10, fill: "var(--text-muted)" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+              <YAxis stroke="var(--text-muted)" tick={{ fontSize: 10, fill: "var(--text-muted)" }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
+              <Area type="monotone" dataKey="soilHumidity" name="Humedad" stroke="var(--accent-green)" strokeWidth={2} fill="url(#mobHumGrad)" dot={false} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
       </BentoCard>
 
-      {/* Status */}
-      <BentoCard variant="sand">
-        <div className="flex items-start justify-between mb-4">
-          <h3 className="text-lg text-[#2C2621]">Estado del Riego</h3>
-          <div className={`w-3 h-3 rounded-full ${currentReadings.irrigationActive ? 'bg-[#6D7E5E] animate-pulse' : 'bg-[#6E6359]'}`} />
+      {/* Riego status */}
+      <BentoCard variant="glass">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="section-title" style={{ fontSize: "0.9rem" }}>Estado del Riego</h3>
+          <span className={`status-dot ${currentReadings.irrigationActive ? "active" : "inactive"}`} />
         </div>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-[#6E6359]">Estado</span>
-            <span className={`font-bold ${currentReadings.irrigationActive ? 'text-[#6D7E5E]' : 'text-[#6E6359]'}`}>
-              {currentReadings.irrigationActive ? 'ACTIVO' : 'INACTIVO'}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[#6E6359]">Tiempo transcurrido</span>
-            <span className="font-bold text-[#2C2621]">
-              {currentReadings.irrigationElapsedTime}
-            </span>
-          </div>
+        <div className="flex items-center justify-between">
+          <span className="text-sm" style={{ color: "var(--text-muted)" }}>Estado</span>
+          <span className="text-sm font-bold" style={{ color: currentReadings.irrigationActive ? "var(--status-active)" : "var(--text-muted)" }}>
+            {currentReadings.irrigationActive ? "ACTIVO" : "INACTIVO"}
+          </span>
         </div>
       </BentoCard>
 
-      {/* Horizontal scroll cards for secondary metrics */}
-      <div>
-        <h3 className="text-lg text-[#2C2621] mb-3">Métricas de Suelo</h3>
-        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
-          <BentoCard variant="sand" className="min-w-[200px]">
-            <p className="text-sm text-[#6E6359] mb-1">Conductividad</p>
-            <p className="text-2xl font-bold text-[#2C2621]">
-              {currentReadings.soilConductivity}{" "}
-              <span className="text-base text-[#6E6359]">dS/m</span>
+      {/* Soil metrics */}
+      <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4">
+        {[
+          { label: "Conductividad", val: currentReadings.soilConductivity, unit: "dS/m" },
+          { label: "Temperatura", val: currentReadings.soilTemp, unit: "°C" },
+          { label: "Potencial Hídrico", val: currentReadings.waterPotential, unit: "MPa" },
+        ].map(m => (
+          <BentoCard key={m.label} variant="sand" className="min-w-[160px] flex-shrink-0">
+            <p className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>{m.label}</p>
+            <p className="font-data text-xl font-bold" style={{ color: "var(--text-primary)" }}>
+              {m.val} <span className="text-xs font-normal" style={{ color: "var(--text-muted)" }}>{m.unit}</span>
             </p>
           </BentoCard>
-          <BentoCard variant="sand" className="min-w-[200px]">
-            <p className="text-sm text-[#6E6359] mb-1">Temperatura</p>
-            <p className="text-2xl font-bold text-[#2C2621]">
-              {currentReadings.soilTemp}{" "}
-              <span className="text-base text-[#6E6359]">°C</span>
-            </p>
-          </BentoCard>
-          <BentoCard variant="sand" className="min-w-[200px]">
-            <p className="text-sm text-[#6E6359] mb-1">Potencial hídrico</p>
-            <p className="text-2xl font-bold text-[#2C2621]">
-              {currentReadings.waterPotential}{" "}
-              <span className="text-base text-[#6E6359]">MPa</span>
-            </p>
-          </BentoCard>
-        </div>
+        ))}
       </div>
 
       {/* Environmental */}
-      <BentoCard variant="light">
-        <h3 className="text-lg text-[#2C2621] mb-4">Ambiental</h3>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-[#6E6359]">Temperatura aire</span>
-            <span className="font-bold text-[#2C2621]">
-              {currentReadings.airTemp} °C
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[#6E6359]">Humedad relativa</span>
-            <span className="font-bold text-[#2C2621]">
-              {currentReadings.relativeHumidity} %
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[#6E6359]">Viento</span>
-            <span className="font-bold text-[#2C2621]">
-              {currentReadings.windSpeed} km/h
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[#6E6359]">Radiación solar</span>
-            <span className="font-bold text-[#2C2621]">
-              {currentReadings.solarRadiation} W/m²
-            </span>
-          </div>
+      <BentoCard variant="glass">
+        <h3 className="section-title mb-3" style={{ fontSize: "0.9rem" }}>Ambiental</h3>
+        <div className="space-y-2.5">
+          {[
+            { label: "Temperatura aire", val: currentReadings.airTemp, unit: "°C" },
+            { label: "Humedad relativa", val: currentReadings.relativeHumidity, unit: "%" },
+            { label: "Viento", val: currentReadings.windSpeed, unit: "km/h" },
+            { label: "Radiación solar", val: currentReadings.solarRadiation, unit: "W/m²" },
+          ].map(m => (
+            <div key={m.label} className="flex items-center justify-between">
+              <span className="text-sm" style={{ color: "var(--text-muted)" }}>{m.label}</span>
+              <span className="font-data text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{m.val} {m.unit}</span>
+            </div>
+          ))}
         </div>
       </BentoCard>
     </div>

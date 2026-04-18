@@ -1,53 +1,42 @@
-import { format, subDays } from "date-fns";
-import { Calendar, Download, FileSpreadsheet, FileText, Filter } from "lucide-react";
+import { format, startOfDay, subDays } from "date-fns";
+import { Calendar, Download, FileSpreadsheet, FileText, Filter, Info } from "lucide-react";
 import { useState } from "react";
 import { BentoCard } from "../../components/BentoCard";
 import { PillButton } from "../../components/PillButton";
+import { ReadingDateRangeSelector } from "../../components/ReadingDateRangeSelector";
 import { useSelection } from "../../context/SelectionContext";
 import { api } from "../../services/api";
 
+type ExportFmt = "csv" | "xlsx" | "pdf";
+
+const formats: { id: ExportFmt; label: string; desc: string; icon: typeof FileText; accent: string }[] = [
+  { id: "csv", label: "CSV", desc: "Ligero y rápido", icon: FileText, accent: "var(--accent-green)" },
+  { id: "xlsx", label: "Excel", desc: "Análisis detallado", icon: FileSpreadsheet, accent: "#22C55E" },
+  { id: "pdf", label: "PDF", desc: "Imprimible", icon: FileText, accent: "var(--accent-gold)" },
+];
+
 export function ExportData() {
   const { areas, selectedArea, setSelectedArea } = useSelection();
-
-  const [startDate, setStartDate] = useState(format(subDays(new Date(), 7), "yyyy-MM-dd"));
-  const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [exportFormat, setExportFormat] = useState<"csv" | "excel" | "pdf">("csv");
+  const [startDate, setStartDate] = useState<Date>(startOfDay(subDays(new Date(), 7)));
+  const [endDate, setEndDate] = useState<Date>(startOfDay(new Date()));
+  const [exportFormat, setExportFormat] = useState<ExportFmt>("csv");
   const [loading, setLoading] = useState(false);
 
   const handleExport = async () => {
-    if (!selectedArea) {
-      alert("Por favor selecciona un área de riego");
-      return;
-    }
-
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays > 90) {
-      alert("El rango de fechas no puede ser mayor a 90 días.");
-      return;
-    }
-
+    if (!selectedArea) { alert("Por favor selecciona un área de riego"); return; }
     try {
       setLoading(true);
       const params = new URLSearchParams({
         irrigation_area_id: selectedArea.id.toString(),
-        start_date: new Date(startDate).toISOString().split("T")[0],
-        end_date: new Date(endDate).toISOString().split("T")[0],
-        format: exportFormat
+        start_date: format(startDate, "yyyy-MM-dd"),
+        end_date: format(endDate, "yyyy-MM-dd"),
+        format: exportFormat,
       });
-
-      const response = await api.get(`/readings/export?${params}`, {
-        responseType: "blob"
-      });
-
+      const response = await api.get(`/readings/export?${params}`, { responseType: "blob" });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
-      const extension = exportFormat === "excel" ? "xlsx" : exportFormat;
-      link.setAttribute("download", `export_${selectedArea.name}_${format(new Date(), "yyyy-MM-dd")}.${extension}`);
+      link.setAttribute("download", `export_${selectedArea.name}_${format(new Date(), "yyyy-MM-dd")}.${exportFormat}`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -60,164 +49,159 @@ export function ExportData() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF7F2] p-4 md:p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="page-wrapper">
+      <div className="max-w-3xl mx-auto space-y-5">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl md:text-3xl text-[#2C2621] mb-2">
-            Exportar Datos
-          </h1>
-          <p className="text-[#6B5E4C]">
-            Descarga el histórico de tus sensores en diferentes formatos
-          </p>
+        <div className="animate-fade-in">
+          <h1 className="page-title text-gradient">Exportar Datos</h1>
+          <p className="page-subtitle">Descarga el histórico de tus sensores en diferentes formatos</p>
         </div>
 
-        {/* Export Configuration */}
-        <BentoCard className="p-6">
-          <div className="space-y-6">
-            {/* Date Range */}
-            <div>
-              <label className="flex items-center gap-2 text-[#2C2621] mb-3">
-                <Calendar className="w-5 h-5 text-[#7C8F5C]" />
-                <span className="font-medium">Rango de Fechas</span>
-              </label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-[#6B5E4C] mb-2">
-                    Fecha Inicio
-                  </label>
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white border-2 border-[#E5DDD1] rounded-2xl text-[#2C2621] focus:outline-none focus:border-[#7C8F5C]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-[#6B5E4C] mb-2">
-                    Fecha Fin
-                  </label>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white border-2 border-[#E5DDD1] rounded-2xl text-[#2C2621] focus:outline-none focus:border-[#7C8F5C]"
-                  />
-                </div>
-              </div>
+        {/* Main config card */}
+        <BentoCard variant="glass" className="animate-fade-in-up space-y-6">
+          {/* Date range */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <Calendar className="w-4 h-4" style={{ color: "var(--accent-green)" }} />
+              <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
+                Rango de Fechas
+              </span>
             </div>
+            <ReadingDateRangeSelector
+              variant="bordered"
+              irrigationAreaId={selectedArea?.id}
+              startDate={startDate}
+              endDate={endDate}
+              onStartDateChange={(nextDate) => {
+                const normalized = startOfDay(nextDate);
+                setStartDate(normalized);
+                if (normalized > endDate) setEndDate(normalized);
+              }}
+              onEndDateChange={(nextDate) => {
+                const normalized = startOfDay(nextDate);
+                setEndDate(normalized);
+                if (normalized < startDate) setStartDate(normalized);
+              }}
+            />
+          </div>
 
-            {/* Area Selection */}
-            <div>
-              <label className="flex items-center gap-2 text-[#2C2621] mb-3">
-                <Filter className="w-5 h-5 text-[#7C8F5C]" />
-                <span className="font-medium">Filtros</span>
-              </label>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm text-[#6B5E4C] mb-2">
-                    Área de Riego
-                  </label>
-                  <select
-                    value={selectedArea?.id || ""}
-                    onChange={(e) => {
-                      const area = areas.find(a => a.id.toString() === e.target.value);
-                      if (area) setSelectedArea(area);
-                    }}
-                    className="w-full px-4 py-2.5 bg-white border-2 border-[#E5DDD1] rounded-2xl text-[#2C2621] focus:outline-none focus:border-[#7C8F5C]"
-                  >
-                    {!selectedArea && <option value="">Selecciona un área</option>}
-                    {areas.map(area => (
-                       <option key={area.id} value={area.id}>{area.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+          <div className="divider" />
+
+          {/* Area selector */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <Filter className="w-4 h-4" style={{ color: "var(--accent-green)" }} />
+              <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
+                Área de Riego
+              </span>
             </div>
-
-            {/* Format Selection */}
-            <div>
-              <label className="block text-[#2C2621] mb-3 font-medium">
-                Formato de Exportación
-              </label>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <button
-                  onClick={() => setExportFormat("csv")}
-                  className={`p-4 rounded-2xl border-2 transition-all ${
-                    exportFormat === "csv"
-                      ? "border-[#7C8F5C] bg-[#7C8F5C]/10"
-                      : "border-[#E5DDD1] bg-white hover:border-[#7C8F5C]/50"
-                  }`}
-                >
-                  <div className="text-center flex flex-col items-center">
-                    <div className="mb-2"><FileText className="w-8 h-8 text-[#2C2621]" /></div>
-                    <div className="font-medium text-[#2C2621]">CSV</div>
-                    <div className="text-xs text-[#6B5E4C]">Ligero y rápido</div>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => setExportFormat("excel")}
-                  className={`p-4 rounded-2xl border-2 transition-all ${
-                    exportFormat === "excel"
-                      ? "border-[#7C8F5C] bg-[#7C8F5C]/10"
-                      : "border-[#E5DDD1] bg-white hover:border-[#7C8F5C]/50"
-                  }`}
-                >
-                  <div className="text-center flex flex-col items-center">
-                    <div className="mb-2"><FileSpreadsheet className="w-8 h-8 text-[#2C2621]" /></div>
-                    <div className="font-medium text-[#2C2621]">Excel</div>
-                    <div className="text-xs text-[#6B5E4C]">Análisis detallado</div>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => setExportFormat("pdf")}
-                  className={`p-4 rounded-2xl border-2 transition-all ${
-                    exportFormat === "pdf"
-                      ? "border-[#7C8F5C] bg-[#7C8F5C]/10"
-                      : "border-[#E5DDD1] bg-white hover:border-[#7C8F5C]/50"
-                  }`}
-                >
-                  <div className="text-center flex flex-col items-center">
-                    <div className="mb-2"><FileText className="w-8 h-8 text-[#2C2621]" /></div>
-                    <div className="font-medium text-[#2C2621]">PDF</div>
-                    <div className="text-xs text-[#6B5E4C]">Imprimible</div>
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            {/* Export Button */}
-            <div className="pt-4">
-              <PillButton
-                variant="primary"
-                onClick={handleExport}
-                className="w-full md:w-auto px-8"
-                disabled={loading || !selectedArea}
+            <div className="relative">
+              <select
+                value={selectedArea?.id || ""}
+                onChange={e => {
+                  const area = areas.find(a => a.id.toString() === e.target.value);
+                  if (area) setSelectedArea(area);
+                }}
+                className="w-full px-4 py-2.5 rounded-xl text-sm appearance-none transition-all duration-200"
+                style={{
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid var(--border-glass)",
+                  color: "var(--text-primary)",
+                  outline: "none",
+                }}
               >
-                {loading ? "Generando..." : (
-                  <>
-                    <Download className="w-4 h-4 mr-2 inline" />
-                    Exportar Datos
-                  </>
-                )}
-              </PillButton>
+                {!selectedArea && <option value="" style={{ background: "var(--bg-elevated)" }}>Selecciona un área</option>}
+                {areas.map(area => (
+                  <option key={area.id} value={area.id} style={{ background: "var(--bg-elevated)" }}>{area.name}</option>
+                ))}
+              </select>
             </div>
+          </div>
+
+          <div className="divider" />
+
+          {/* Format picker */}
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-widest mb-4 block" style={{ color: "var(--text-muted)" }}>
+              Formato de Exportación
+            </span>
+            <div className="grid grid-cols-3 gap-3">
+              {formats.map(fmt => {
+                const Icon = fmt.icon;
+                const isActive = exportFormat === fmt.id;
+                return (
+                  <button
+                    key={fmt.id}
+                    onClick={() => setExportFormat(fmt.id)}
+                    className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all duration-200"
+                    style={{
+                      background: isActive ? `${fmt.accent}12` : "rgba(255,255,255,0.03)",
+                      border: `1px solid ${isActive ? `${fmt.accent}40` : "var(--border-subtle)"}`,
+                    }}
+                  >
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center"
+                      style={{ background: isActive ? `${fmt.accent}18` : "rgba(255,255,255,0.04)" }}
+                    >
+                      <Icon className="w-5 h-5" style={{ color: isActive ? fmt.accent : "var(--text-muted)" }} />
+                    </div>
+                    <div className="text-center">
+                      <p className="font-semibold text-sm" style={{ color: isActive ? fmt.accent : "var(--text-primary)" }}>{fmt.label}</p>
+                      <p className="text-xs" style={{ color: "var(--text-muted)" }}>{fmt.desc}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Export button */}
+          <div className="pt-2">
+            <PillButton
+              variant="primary"
+              onClick={handleExport}
+              disabled={loading || !selectedArea}
+              className="w-full md:w-auto px-8"
+            >
+              {loading ? (
+                <>
+                  <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Generando...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  Exportar Datos
+                </>
+              )}
+            </PillButton>
           </div>
         </BentoCard>
 
-        {/* Info Card */}
-        <BentoCard className="p-6 bg-[#7C8F5C]/10 border-2 border-[#7C8F5C]/20">
-          <h3 className="text-lg text-[#2C2621] mb-2">
-            📌 Información sobre exportación
-          </h3>
-          <ul className="space-y-1 text-sm text-[#6B5E4C]">
-            <li>• El archivo incluirá todos los datos del rango seleccionado</li>
-            <li>• Los datos se exportan en formato estándar UTC</li>
-            <li>• Las lecturas se muestran en sus unidades originales</li>
-            <li>• El límite máximo es de 90 días por exportación</li>
-          </ul>
+        {/* Info card */}
+        <BentoCard variant="sand" className="animate-fade-in-up">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(143,175,122,0.1)" }}>
+              <Info className="w-4 h-4" style={{ color: "var(--accent-green)" }} />
+            </div>
+            <div>
+              <h3 className="font-semibold text-sm mb-2" style={{ color: "var(--text-primary)" }}>Información sobre exportación</h3>
+              <ul className="space-y-1">
+                {[
+                  "El archivo incluirá todos los datos del rango seleccionado",
+                  "Los datos se exportan en formato estándar UTC",
+                  "Las lecturas se muestran en sus unidades originales",
+                ].map(item => (
+                  <li key={item} className="text-xs" style={{ color: "var(--text-muted)" }}>
+                    · {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
         </BentoCard>
       </div>
     </div>

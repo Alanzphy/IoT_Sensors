@@ -14,6 +14,7 @@ import { ExportData } from "./pages/client/ExportData";
 import { HistoricalData } from "./pages/client/HistoricalData";
 import { ProfilePage } from "./pages/client/ProfilePage";
 import { PropertyDetail } from "./pages/client/PropertyDetail";
+import { AlertsCenterPage } from "./pages/shared/AlertsCenterPage";
 
 // Admin pages
 import { AdminDashboard } from "./pages/admin/AdminDashboard";
@@ -56,6 +57,10 @@ export const router = createBrowserRouter([
               {
                 path: "exportar",
                 Component: ExportData,
+              },
+              {
+                path: "alertas",
+                Component: AlertsCenterPage,
               },
               {
                 path: "perfil",
@@ -107,6 +112,10 @@ export const router = createBrowserRouter([
               {
                 path: "nodos/:nodeId",
                 Component: NodeDetail,
+              },
+              {
+                path: "alertas",
+                Component: AlertsCenterPage,
               },
             ]
           }

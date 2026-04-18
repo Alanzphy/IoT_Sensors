@@ -3,43 +3,30 @@ interface FreshnessIndicatorProps {
   variant?: "light" | "dark";
 }
 
-export function FreshnessIndicator({ lastUpdate, variant = "light" }: FreshnessIndicatorProps) {
+export function FreshnessIndicator({ lastUpdate }: FreshnessIndicatorProps) {
   let minutesAgo = Math.floor((Date.now() - lastUpdate.getTime()) / (1000 * 60));
   if (minutesAgo < 0) minutesAgo = 0;
-  
-  let status: "recent" | "warning" | "error";
-  let dotColor: string;
-  
-  if (minutesAgo < 30) {
-    status = "recent";
-    dotColor = "#6D7E5E"; // green
-  } else if (minutesAgo < 120) {
-    status = "warning";
-    dotColor = "#D97706"; // orange
-  } else {
-    status = "error";
-    dotColor = "#DC2626"; // red
-  }
+
+  const isLive = minutesAgo < 2;
+  const isWarning = minutesAgo >= 2 && minutesAgo < 20;
+  const isStale = minutesAgo >= 20;
+
+  const dotClass = isLive ? "status-dot active" : isWarning ? "status-dot warning" : "status-dot danger";
 
   const getTimeText = () => {
-    if (minutesAgo < 60) {
-      return `hace ${minutesAgo} min`;
-    } else {
-      const hours = Math.floor(minutesAgo / 60);
-      const mins = minutesAgo % 60;
-      return `hace ${hours}h ${mins}min`;
-    }
+    if (minutesAgo === 0) return "ahora mismo";
+    if (minutesAgo < 60) return `hace ${minutesAgo} min`;
+    const hours = Math.floor(minutesAgo / 60);
+    const mins = minutesAgo % 60;
+    return mins > 0 ? `hace ${hours}h ${mins}min` : `hace ${hours}h`;
   };
 
-  const textColor = variant === "dark" ? "text-[#F4F1EB]/70" : "text-[#6E6359]";
-
   return (
-    <div className={`flex items-center gap-2 text-sm ${textColor}`}>
-      <div 
-        className="w-2 h-2 rounded-full"
-        style={{ backgroundColor: dotColor }}
-      />
-      <span>Último dato: {getTimeText()}</span>
+    <div className="flex items-center gap-2">
+      <span className={dotClass} style={{ flexShrink: 0 }} />
+      <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+        Último dato: {getTimeText()}
+      </span>
     </div>
   );
 }
