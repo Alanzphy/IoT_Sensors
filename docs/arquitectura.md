@@ -321,7 +321,8 @@ Componentes activos a la fecha:
 - Endpoints activos: `/api/v1/thresholds`, `/api/v1/alerts`, `/api/v1/alerts/scan-inactivity`, `/api/v1/audit-logs`.
 - Evaluación de umbrales durante la ingesta de `POST /api/v1/readings`.
 - Escaneo periódico de inactividad con `inactivity_scheduler` en Docker Compose.
-- Visualización en frontend: campana de notificaciones, centro de alertas y vista administrativa de auditoría.
+- Visualización en frontend: campana de notificaciones, centro de alertas, vista administrativa de auditoría y gestión de umbrales.
+- Semáforos de prioridad en dashboard cliente para humedad de suelo, flujo y ETO.
 
 ```mermaid
 graph TD
@@ -403,6 +404,8 @@ Funcionalidades que permanecen en roadmap y no forman parte de la implementació
 - [x] Escaneo de inactividad (`/api/v1/alerts/scan-inactivity`) y scheduler en compose.
 - [x] UI de alertas (popover + centro de alertas).
 - [x] Endpoint y vista de auditoría administrativa (`/api/v1/audit-logs`, `/admin/auditoria`).
+- [x] UI admin de umbrales (`/admin/umbrales`).
+- [x] Semáforos visuales de umbral en dashboard cliente (parámetros prioritarios).
 
 #### Pendiente (Fase 2 Completa)
 - [ ] Notificaciones externas por email.

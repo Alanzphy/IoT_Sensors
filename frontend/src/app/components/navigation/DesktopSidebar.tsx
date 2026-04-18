@@ -9,6 +9,7 @@ import {
     LogOut,
     MapPin,
     Radio,
+    SlidersHorizontal,
     Sprout,
     Users
 } from "lucide-react";
@@ -38,6 +39,7 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
     { path: "/admin/clientes", icon: Users, label: "Clientes" },
     { path: "/admin/nodos", icon: Radio, label: "Nodos" },
     { path: "/admin/cultivos", icon: Sprout, label: "Catálogo" },
+    { path: "/admin/umbrales", icon: SlidersHorizontal, label: "Umbrales" },
     { path: "/admin/alertas", icon: Bell, label: "Alertas" },
     { path: "/admin/auditoria", icon: ClipboardList, label: "Auditoría" },
   ];

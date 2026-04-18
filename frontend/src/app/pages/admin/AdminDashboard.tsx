@@ -175,6 +175,11 @@ export function AdminDashboard() {
                       Nuevo Nodo
                     </PillButton>
                   </Link>
+                  <Link to="/admin/umbrales" className="block">
+                    <PillButton variant="secondary" className="w-full justify-center">
+                      Configurar Umbrales
+                    </PillButton>
+                  </Link>
                 </div>
               </BentoCard>
 

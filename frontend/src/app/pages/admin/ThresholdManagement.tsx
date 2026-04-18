@@ -1,0 +1,520 @@
+import { Edit, Plus, SlidersHorizontal, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+
+import { BentoCard } from "../../components/BentoCard";
+import { PillButton } from "../../components/PillButton";
+import { api } from "../../services/api";
+import {
+  ThresholdCreatePayload,
+  ThresholdItem,
+  ThresholdParameter,
+  ThresholdSeverity,
+  createThreshold,
+  deleteThreshold,
+  listThresholds,
+  updateThreshold,
+} from "../../services/thresholds";
+
+type ThresholdFormState = {
+  irrigation_area_id: string;
+  parameter: ThresholdParameter;
+  min_value: string;
+  max_value: string;
+  severity: ThresholdSeverity;
+  active: boolean;
+};
+
+type IrrigationAreaItem = {
+  id: number;
+  name: string;
+  property_id: number;
+};
+
+const parameterOptions: Array<{ value: ThresholdParameter; label: string; unit: string }> = [
+  { value: "soil.conductivity", label: "Suelo: Conductividad", unit: "dS/m" },
+  { value: "soil.temperature", label: "Suelo: Temperatura", unit: "C" },
+  { value: "soil.humidity", label: "Suelo: Humedad", unit: "%" },
+  { value: "soil.water_potential", label: "Suelo: Potencial hidrico", unit: "MPa" },
+  { value: "irrigation.active", label: "Riego: Activo", unit: "bool" },
+  { value: "irrigation.accumulated_liters", label: "Riego: Litros acumulados", unit: "L" },
+  { value: "irrigation.flow_per_minute", label: "Riego: Flujo por minuto", unit: "L/min" },
+  { value: "environmental.temperature", label: "Ambiental: Temperatura", unit: "C" },
+  { value: "environmental.relative_humidity", label: "Ambiental: Humedad relativa", unit: "%" },
+  { value: "environmental.wind_speed", label: "Ambiental: Velocidad viento", unit: "km/h" },
+  { value: "environmental.solar_radiation", label: "Ambiental: Radiacion solar", unit: "W/m2" },
+  { value: "environmental.eto", label: "Ambiental: ETO", unit: "mm/dia" },
+];
+
+const defaultFormState: ThresholdFormState = {
+  irrigation_area_id: "",
+  parameter: "soil.humidity",
+  min_value: "",
+  max_value: "",
+  severity: "warning",
+  active: true,
+};
+
+function toNumberOrNull(value: string): number | null {
+  const normalized = value.trim();
+  if (!normalized) return null;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function ThresholdManagement() {
+  const [thresholds, setThresholds] = useState<ThresholdItem[]>([]);
+  const [areas, setAreas] = useState<IrrigationAreaItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [showForm, setShowForm] = useState(false);
+  const [editingThreshold, setEditingThreshold] = useState<ThresholdItem | null>(null);
+  const [form, setForm] = useState<ThresholdFormState>(defaultFormState);
+
+  const [filterAreaId, setFilterAreaId] = useState<string>("");
+  const [filterParameter, setFilterParameter] = useState<string>("");
+  const [filterActive, setFilterActive] = useState<string>("");
+
+  const areaNameMap = useMemo(() => {
+    return new Map(areas.map((area) => [area.id, area.name]));
+  }, [areas]);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const [areasRes, thresholdsRes] = await Promise.all([
+        api.get("/irrigation-areas?per_page=200"),
+        listThresholds({
+          page: 1,
+          per_page: 200,
+          irrigation_area_id: filterAreaId ? Number(filterAreaId) : undefined,
+          parameter: filterParameter ? (filterParameter as ThresholdParameter) : undefined,
+          active:
+            filterActive === ""
+              ? undefined
+              : filterActive === "true"
+                ? true
+                : false,
+        }),
+      ]);
+
+      setAreas((areasRes.data?.data ?? []) as IrrigationAreaItem[]);
+      setThresholds(thresholdsRes.data ?? []);
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      if (typeof detail === "string") {
+        setError(detail);
+      } else {
+        setError("No fue posible cargar los umbrales");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [filterAreaId, filterParameter, filterActive]);
+
+  const resetForm = () => {
+    setForm(defaultFormState);
+    setEditingThreshold(null);
+  };
+
+  const openCreate = () => {
+    resetForm();
+    setShowForm(true);
+  };
+
+  const openEdit = (threshold: ThresholdItem) => {
+    setEditingThreshold(threshold);
+    setForm({
+      irrigation_area_id: String(threshold.irrigation_area_id),
+      parameter: threshold.parameter,
+      min_value: threshold.min_value != null ? String(threshold.min_value) : "",
+      max_value: threshold.max_value != null ? String(threshold.max_value) : "",
+      severity: threshold.severity,
+      active: threshold.active,
+    });
+    setShowForm(true);
+  };
+
+  const submitForm = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError(null);
+
+    const irrigationAreaId = Number(form.irrigation_area_id);
+    if (!Number.isFinite(irrigationAreaId) || irrigationAreaId <= 0) {
+      setError("Selecciona un area de riego valida");
+      return;
+    }
+
+    const minValue = toNumberOrNull(form.min_value);
+    const maxValue = toNumberOrNull(form.max_value);
+
+    if (minValue === null && maxValue === null) {
+      setError("Debes capturar min_value o max_value");
+      return;
+    }
+
+    if (minValue !== null && maxValue !== null && minValue > maxValue) {
+      setError("min_value no puede ser mayor que max_value");
+      return;
+    }
+
+    const payload: ThresholdCreatePayload = {
+      irrigation_area_id: irrigationAreaId,
+      parameter: form.parameter,
+      min_value: minValue,
+      max_value: maxValue,
+      severity: form.severity,
+      active: form.active,
+    };
+
+    try {
+      setSaving(true);
+      if (editingThreshold) {
+        await updateThreshold(editingThreshold.id, payload);
+      } else {
+        await createThreshold(payload);
+      }
+      setShowForm(false);
+      resetForm();
+      await fetchData();
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      if (typeof detail === "string") {
+        setError(detail);
+      } else {
+        setError("No fue posible guardar el umbral");
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (thresholdId: number) => {
+    if (!window.confirm("Seguro que deseas eliminar este umbral?")) return;
+
+    try {
+      setLoading(true);
+      await deleteThreshold(thresholdId);
+      await fetchData();
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      if (typeof detail === "string") {
+        setError(detail);
+      } else {
+        setError("No fue posible eliminar el umbral");
+      }
+      setLoading(false);
+    }
+  };
+
+  const parameterLabelMap = useMemo(() => {
+    return new Map(parameterOptions.map((option) => [option.value, option.label]));
+  }, []);
+
+  return (
+    <div className="min-h-screen p-4 md:p-6 lg:p-8">
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl md:text-3xl text-[#2C2621] mb-2">Umbrales de Alertas</h1>
+          <p className="text-[#6E6359]">
+            Configura rangos para activar alertas automaticas por parametro
+          </p>
+        </div>
+        <PillButton variant="primary" onClick={openCreate}>
+          <Plus className="w-4 h-4 mr-2" />
+          Nuevo Umbral
+        </PillButton>
+      </div>
+
+      {error && (
+        <div className="mb-4 rounded-xl bg-red-100 p-4 text-red-700">{error}</div>
+      )}
+
+      <BentoCard variant="light" className="mb-4">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <label className="text-sm text-[#5F5549] flex flex-col gap-1">
+            Area de riego
+            <select
+              value={filterAreaId}
+              onChange={(event) => setFilterAreaId(event.target.value)}
+              className="rounded-xl border border-[#D9D0C4] bg-white px-3 py-2 text-[#2C2621]"
+            >
+              <option value="">Todas</option>
+              {areas.map((area) => (
+                <option key={area.id} value={area.id}>
+                  {area.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="text-sm text-[#5F5549] flex flex-col gap-1">
+            Parametro
+            <select
+              value={filterParameter}
+              onChange={(event) => setFilterParameter(event.target.value)}
+              className="rounded-xl border border-[#D9D0C4] bg-white px-3 py-2 text-[#2C2621]"
+            >
+              <option value="">Todos</option>
+              {parameterOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="text-sm text-[#5F5549] flex flex-col gap-1">
+            Estado
+            <select
+              value={filterActive}
+              onChange={(event) => setFilterActive(event.target.value)}
+              className="rounded-xl border border-[#D9D0C4] bg-white px-3 py-2 text-[#2C2621]"
+            >
+              <option value="">Todos</option>
+              <option value="true">Activos</option>
+              <option value="false">Inactivos</option>
+            </select>
+          </label>
+        </div>
+      </BentoCard>
+
+      <BentoCard variant="light" className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-[#2C2621]/10">
+                <th className="py-3 px-4 text-sm font-medium text-[#6E6359]">Area</th>
+                <th className="py-3 px-4 text-sm font-medium text-[#6E6359]">Parametro</th>
+                <th className="py-3 px-4 text-sm font-medium text-[#6E6359]">Min</th>
+                <th className="py-3 px-4 text-sm font-medium text-[#6E6359]">Max</th>
+                <th className="py-3 px-4 text-sm font-medium text-[#6E6359]">Severidad</th>
+                <th className="py-3 px-4 text-sm font-medium text-[#6E6359]">Estado</th>
+                <th className="py-3 px-4 text-sm font-medium text-[#6E6359]">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="py-6 text-center text-[#6E6359]">
+                    Cargando umbrales...
+                  </td>
+                </tr>
+              ) : thresholds.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-6 text-center text-[#6E6359]">
+                    No hay umbrales para los filtros actuales.
+                  </td>
+                </tr>
+              ) : (
+                thresholds.map((threshold, index) => (
+                  <tr key={threshold.id} className={index % 2 === 0 ? "bg-[#F4F1EB]/30" : ""}>
+                    <td className="py-4 px-4 text-[#2C2621]">
+                      {areaNameMap.get(threshold.irrigation_area_id) ?? `Area #${threshold.irrigation_area_id}`}
+                    </td>
+                    <td className="py-4 px-4 text-[#2C2621]">
+                      {parameterLabelMap.get(threshold.parameter) ?? threshold.parameter}
+                    </td>
+                    <td className="py-4 px-4 text-[#2C2621]">
+                      {threshold.min_value ?? "-"}
+                    </td>
+                    <td className="py-4 px-4 text-[#2C2621]">
+                      {threshold.max_value ?? "-"}
+                    </td>
+                    <td className="py-4 px-4 text-[#2C2621] uppercase">
+                      {threshold.severity}
+                    </td>
+                    <td className="py-4 px-4">
+                      <span
+                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          threshold.active
+                            ? "bg-[#6D7E5E]/10 text-[#6D7E5E] border border-[#6D7E5E]/20"
+                            : "bg-[#DC2626]/10 text-[#DC2626] border border-[#DC2626]/20"
+                        }`}
+                      >
+                        {threshold.active ? "Activo" : "Inactivo"}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => openEdit(threshold)}
+                          className="p-2 rounded-full hover:bg-[#E2D4B7]/50 transition-colors"
+                          title="Editar umbral"
+                        >
+                          <Edit className="w-4 h-4 text-[#6E6359]" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(threshold.id)}
+                          className="p-2 rounded-full hover:bg-[#DC2626]/10 transition-colors"
+                          title="Eliminar umbral"
+                        >
+                          <Trash2 className="w-4 h-4 text-[#DC2626]" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </BentoCard>
+
+      {showForm && (
+        <div className="fixed inset-0 bg-[#2C2621]/50 z-50 flex items-center justify-center p-4">
+          <BentoCard variant="light" className="w-full max-w-lg">
+            <h2 className="text-xl text-[#2C2621] mb-6">
+              {editingThreshold ? "Editar Umbral" : "Nuevo Umbral"}
+            </h2>
+
+            <form onSubmit={submitForm} className="space-y-4">
+              <div>
+                <label className="block text-sm text-[#6E6359] mb-2">Area de riego</label>
+                <select
+                  required
+                  value={form.irrigation_area_id}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, irrigation_area_id: event.target.value }))
+                  }
+                  className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
+                >
+                  <option value="">Selecciona un area</option>
+                  {areas.map((area) => (
+                    <option key={area.id} value={area.id}>
+                      {area.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm text-[#6E6359] mb-2">Parametro</label>
+                <select
+                  required
+                  value={form.parameter}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      parameter: event.target.value as ThresholdParameter,
+                    }))
+                  }
+                  className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
+                >
+                  {parameterOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label} ({option.unit})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm text-[#6E6359] mb-2">Minimo</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={form.min_value}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, min_value: event.target.value }))
+                    }
+                    className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-[#6E6359] mb-2">Maximo</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={form.max_value}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, max_value: event.target.value }))
+                    }
+                    className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm text-[#6E6359] mb-2">Severidad</label>
+                  <select
+                    value={form.severity}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        severity: event.target.value as ThresholdSeverity,
+                      }))
+                    }
+                    className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
+                  >
+                    <option value="info">Info</option>
+                    <option value="warning">Warning</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                </div>
+
+                <div className="flex items-end pb-2">
+                  <label className="inline-flex items-center gap-2 text-sm text-[#5F5549]">
+                    <input
+                      type="checkbox"
+                      checked={form.active}
+                      onChange={(event) =>
+                        setForm((prev) => ({ ...prev, active: event.target.checked }))
+                      }
+                      className="h-4 w-4"
+                    />
+                    Umbral activo
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <PillButton
+                  variant="secondary"
+                  type="button"
+                  className="flex-1"
+                  onClick={() => {
+                    setShowForm(false);
+                    resetForm();
+                  }}
+                >
+                  Cancelar
+                </PillButton>
+                <PillButton
+                  variant="primary"
+                  type="submit"
+                  className="flex-1"
+                  disabled={saving}
+                >
+                  {saving ? "Guardando..." : editingThreshold ? "Actualizar" : "Crear"}
+                </PillButton>
+              </div>
+            </form>
+          </BentoCard>
+        </div>
+      )}
+
+      <div className="mt-6">
+        <BentoCard variant="sand">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-[16px] bg-[#E2D4B7]">
+              <SlidersHorizontal className="w-5 h-5 text-[#6D7E5E]" />
+            </div>
+            <p className="text-sm text-[#5F5549]">
+              Tip: define al menos un rango para humedad de suelo, flujo de agua y ETO para habilitar semaforos completos en dashboard.
+            </p>
+          </div>
+        </BentoCard>
+      </div>
+    </div>
+  );
+}

@@ -45,9 +45,9 @@ src/app/
 Actualmente el frontend está en fase de **transición de datos estáticos hacia consumo real del backend FastAPI**, con parte de Fase 2 Lite activa.
 
 - **Fase 1 (Completada)**: Autenticación. `LoginPage` conecta a `/api/v1/auth/login`. El JWT se decodifica con `jwt-decode`, se guarda en `localStorage` y se gestiona mediante `AuthContext`. El `api.ts` de Axios inyecta automáticamente el header `Authorization: Bearer <token>` y maneja las redirecciones por `401 Unauthorized`.
-- **Fase 2 Lite (Implementada parcialmente)**: Centro de alertas y popover de notificaciones conectados a `/api/v1/alerts`, más bitácora administrativa conectada a `/api/v1/audit-logs`.
+- **Fase 2 Lite (Implementada)**: Centro de alertas y popover conectados a `/api/v1/alerts`, bitácora administrativa en `/api/v1/audit-logs`, y gestión Admin de umbrales.
 - **Fase 3 (En proceso)**: Reemplazo gradual de `mockData` en dashboard/histórico por datos reales (`/api/v1/readings`, `/api/v1/readings/latest`, `/api/v1/readings/availability`).
-- **Fase 4 (Pendiente)**: CRUD de umbrales en interfaz Admin y semáforos de color por umbrales en dashboard.
+- **Fase 4 (Parcial)**: Semáforos de estado para datos prioritarios en dashboard cliente usando alertas de umbral activas.
 
 ### 3.1 Módulo de Alertas en UI (Activo)
 
@@ -61,6 +61,20 @@ Actualmente el frontend está en fase de **transición de datos estáticos hacia
 - `pages/admin/AuditLogsPage.tsx`: listado con filtros, paginación y detalle por evento.
 - `services/auditLogs.ts`: cliente HTTP para `/api/v1/audit-logs` y `/api/v1/audit-logs/{id}`.
 - Ruta protegida: `/admin/auditoria`.
+
+### 3.3 Módulo de Umbrales en UI (Activo - Admin)
+
+- `pages/admin/ThresholdManagement.tsx`: CRUD de umbrales por área/parámetro/severidad.
+- `services/thresholds.ts`: cliente HTTP para `/api/v1/thresholds`.
+- Ruta protegida: `/admin/umbrales`.
+
+### 3.4 Semáforos de Prioridad en Dashboard Cliente (Activo)
+
+- `pages/client/ClientDashboard.tsx`: indicadores visuales (Optimo, Riesgo, Critico) para:
+	- `soil.humidity`
+	- `irrigation.flow_per_minute`
+	- `environmental.eto`
+- El estado se deriva de alertas de tipo `threshold` no leídas del área seleccionada.
 
 ---
 

@@ -17,6 +17,52 @@ import { useSelection } from "../../context/SelectionContext";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { api } from "../../services/api";
 
+type PriorityKey = "soil.humidity" | "irrigation.flow_per_minute" | "environmental.eto";
+type SemaphoreLevel = "optimal" | "warning" | "critical";
+
+type AlertLike = {
+  parameter: string | null;
+  severity: "info" | "warning" | "critical";
+};
+
+const severityRank: Record<AlertLike["severity"], number> = {
+  info: 1,
+  warning: 2,
+  critical: 3,
+};
+
+const levelFromRank: Record<number, SemaphoreLevel> = {
+  1: "warning",
+  2: "warning",
+  3: "critical",
+};
+
+const defaultSemaphore: Record<PriorityKey, SemaphoreLevel> = {
+  "soil.humidity": "optimal",
+  "irrigation.flow_per_minute": "optimal",
+  "environmental.eto": "optimal",
+};
+
+function getSemaphoreLabel(level: SemaphoreLevel): string {
+  if (level === "critical") return "Critico";
+  if (level === "warning") return "Riesgo";
+  return "Optimo";
+}
+
+function getSemaphoreClass(level: SemaphoreLevel): string {
+  if (level === "critical") return "bg-[#F8D2D2] text-[#7F1D1D]";
+  if (level === "warning") return "bg-[#F6E4B8] text-[#6B4B14]";
+  return "bg-[#D8E7D0] text-[#2E5C35]";
+}
+
+function SemaphorePill({ level }: { level: SemaphoreLevel }) {
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ${getSemaphoreClass(level)}`}>
+      {getSemaphoreLabel(level)}
+    </span>
+  );
+}
+
 export function ClientDashboard() {
   const isMobile = useIsMobile();
   const { user } = useAuth();
@@ -51,6 +97,7 @@ export function ClientDashboard() {
   });
 
   const [historicalData, setHistoricalData] = useState<any[]>([]);
+  const [prioritySemaphore, setPrioritySemaphore] = useState<Record<PriorityKey, SemaphoreLevel>>(defaultSemaphore);
 
   useEffect(() => {
     if (selectedProperty && filteredAreas.length > 0 && !selectedArea) {
@@ -110,6 +157,34 @@ export function ClientDashboard() {
             };
           });
           setHistoricalData(chartData);
+        }
+
+        const alertsRes = await api.get(
+          `/alerts?irrigation_area_id=${selectedArea.id}&alert_type=threshold&read=false&per_page=100`,
+        );
+        if (isMounted) {
+          const items: AlertLike[] = alertsRes.data?.data ?? [];
+          const ranks: Record<PriorityKey, number> = {
+            "soil.humidity": 0,
+            "irrigation.flow_per_minute": 0,
+            "environmental.eto": 0,
+          };
+
+          for (const item of items) {
+            if (!item.parameter) continue;
+            if (!(item.parameter in ranks)) continue;
+            const key = item.parameter as PriorityKey;
+            const nextRank = severityRank[item.severity] ?? 0;
+            if (nextRank > ranks[key]) {
+              ranks[key] = nextRank;
+            }
+          }
+
+          setPrioritySemaphore({
+            "soil.humidity": levelFromRank[ranks["soil.humidity"]] ?? "optimal",
+            "irrigation.flow_per_minute": levelFromRank[ranks["irrigation.flow_per_minute"]] ?? "optimal",
+            "environmental.eto": levelFromRank[ranks["environmental.eto"]] ?? "optimal",
+          });
         }
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
@@ -198,15 +273,31 @@ export function ClientDashboard() {
 
       {/* Bento Grid Layout */}
       {isMobile ? (
-        <MobileDashboard historicalData={historicalData} currentReadings={currentReadings} />
+        <MobileDashboard
+          historicalData={historicalData}
+          currentReadings={currentReadings}
+          prioritySemaphore={prioritySemaphore}
+        />
       ) : (
-        <DesktopDashboard historicalData={historicalData} currentReadings={currentReadings} />
+        <DesktopDashboard
+          historicalData={historicalData}
+          currentReadings={currentReadings}
+          prioritySemaphore={prioritySemaphore}
+        />
       )}
     </div>
   );
 }
 
-function DesktopDashboard({ historicalData, currentReadings }: { historicalData: any[], currentReadings: any }) {
+function DesktopDashboard({
+  historicalData,
+  currentReadings,
+  prioritySemaphore,
+}: {
+  historicalData: any[];
+  currentReadings: any;
+  prioritySemaphore: Record<PriorityKey, SemaphoreLevel>;
+}) {
   return (
     <div className="grid grid-cols-12 gap-6">
       {/* Priority Data - Dark Cards (Row 1) */}
@@ -220,6 +311,9 @@ function DesktopDashboard({ historicalData, currentReadings }: { historicalData:
           lastUpdate={currentReadings.lastUpdate}
           priority
         >
+          <div className="mb-2">
+            <SemaphorePill level={prioritySemaphore["soil.humidity"]} />
+          </div>
           {/* Circular progress ring */}
           <div className="relative w-32 h-32 mx-auto my-4">
             <svg className="transform -rotate-90 w-32 h-32">
@@ -258,6 +352,9 @@ function DesktopDashboard({ historicalData, currentReadings }: { historicalData:
           lastUpdate={currentReadings.lastUpdate}
           priority
         >
+          <div className="mb-2">
+            <SemaphorePill level={prioritySemaphore["irrigation.flow_per_minute"]} />
+          </div>
           {/* Sparkline */}
           <div className="h-16 min-h-[64px] -mx-2 mt-2">
             <ResponsiveContainer width="100%" height="100%">
@@ -289,6 +386,9 @@ function DesktopDashboard({ historicalData, currentReadings }: { historicalData:
           lastUpdate={currentReadings.lastUpdate}
           priority
         >
+          <div className="mb-2">
+            <SemaphorePill level={prioritySemaphore["environmental.eto"]} />
+          </div>
           <div className="flex items-center gap-2 mt-4">
             <div className="flex items-center gap-1 text-[#A68A61]">
               <svg
@@ -482,9 +582,35 @@ function DesktopDashboard({ historicalData, currentReadings }: { historicalData:
   );
 }
 
-function MobileDashboard({ historicalData, currentReadings }: { historicalData: any[], currentReadings: any }) {
+function MobileDashboard({
+  historicalData,
+  currentReadings,
+  prioritySemaphore,
+}: {
+  historicalData: any[];
+  currentReadings: any;
+  prioritySemaphore: Record<PriorityKey, SemaphoreLevel>;
+}) {
   return (
     <div className="space-y-4">
+      <BentoCard variant="light">
+        <h3 className="text-base text-[#2C2621] mb-3">Semaforos de Umbral</h3>
+        <div className="grid grid-cols-1 gap-2">
+          <div className="flex items-center justify-between rounded-[16px] bg-[#F4F1EB] px-3 py-2">
+            <span className="text-sm text-[#5F5549]">Humedad suelo</span>
+            <SemaphorePill level={prioritySemaphore["soil.humidity"]} />
+          </div>
+          <div className="flex items-center justify-between rounded-[16px] bg-[#F4F1EB] px-3 py-2">
+            <span className="text-sm text-[#5F5549]">Flujo agua</span>
+            <SemaphorePill level={prioritySemaphore["irrigation.flow_per_minute"]} />
+          </div>
+          <div className="flex items-center justify-between rounded-[16px] bg-[#F4F1EB] px-3 py-2">
+            <span className="text-sm text-[#5F5549]">ETO</span>
+            <SemaphorePill level={prioritySemaphore["environmental.eto"]} />
+          </div>
+        </div>
+      </BentoCard>
+
       {/* Priority cards first */}
       <MetricCard
         title="Humedad del Suelo"
@@ -504,6 +630,9 @@ function MobileDashboard({ historicalData, currentReadings }: { historicalData: 
         subtitle="Dato prioritario"
         lastUpdate={currentReadings.lastUpdate}
       >
+        <div className="mb-2">
+          <SemaphorePill level={prioritySemaphore["irrigation.flow_per_minute"]} />
+        </div>
         <p className="text-sm text-[#F4F1EB]/70 mt-2">
           Acumulado: {currentReadings.accumulatedWater} L
         </p>
@@ -516,7 +645,11 @@ function MobileDashboard({ historicalData, currentReadings }: { historicalData: 
         variant="dark"
         subtitle="Evapotranspiración"
         lastUpdate={currentReadings.lastUpdate}
-      />
+      >
+        <div className="mb-2">
+          <SemaphorePill level={prioritySemaphore["environmental.eto"]} />
+        </div>
+      </MetricCard>
 
       {/* Chart */}
       <BentoCard variant="light">

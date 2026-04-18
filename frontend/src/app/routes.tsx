@@ -26,6 +26,7 @@ import { IrrigationAreaManagement } from "./pages/admin/IrrigationAreaManagement
 import { NodeDetail } from "./pages/admin/NodeDetail";
 import { NodeManagement } from "./pages/admin/NodeManagement";
 import { PropertyManagement } from "./pages/admin/PropertyManagement";
+import { ThresholdManagement } from "./pages/admin/ThresholdManagement";
 
 export const router = createBrowserRouter([
   {
@@ -117,6 +118,10 @@ export const router = createBrowserRouter([
               {
                 path: "alertas",
                 Component: AlertsCenterPage,
+              },
+              {
+                path: "umbrales",
+                Component: ThresholdManagement,
               },
               {
                 path: "auditoria",
