@@ -109,7 +109,7 @@ El desarrollo se estructura en tres capas de evolución. Este SRS detalla el MVP
 * Consultar histórico con filtros por rango libre de fechas, presets rápidos (semana/mes/año) y ciclo de cultivo.
 * Exportar datos filtrados en formatos CSV, Excel (.xlsx) y PDF.
 
-**MVP Extendido (Fase 2 Lite)** \- Implementado parcialmente sobre el MVP:
+**MVP Extendido (Fase 2 Lite)** \- Implementado y cerrado sobre el MVP:
 
 ● Alertas por umbral e inactividad en backend.
 ● Scheduler para escaneo de nodos inactivos (>=20 min sin lectura).

@@ -490,7 +490,7 @@ Estas reglas **no están en el SQL** (la base de datos no las valida por sí mis
 
 ## 10. Estado Fase 2 Lite y Lo Que Sigue
 
-### 10.1 Ya implementado (MVP Extendido / Fase 2 Lite)
+### 10.1 Implementado y finalizado (MVP Extendido / Fase 2 Lite)
 
 | Tabla | Estado | Propósito |
 |------|--------|-----------|

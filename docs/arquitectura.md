@@ -313,7 +313,7 @@ Se confió la entrada pública del tráfico a **Traefik**, integrado naturalment
 
 Esta sección separa lo que ya está activo en el sistema de lo que continúa como roadmap.
 
-### 7.1 Estado Actual: MVP Extendido (Fase 2 Lite) — Implementado
+### 7.1 Estado Actual: MVP Extendido (Fase 2 Lite) — Finalizado
 
 Componentes activos a la fecha:
 
