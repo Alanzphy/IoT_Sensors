@@ -23,7 +23,7 @@
 
 ## 1. Vista General
 
-### La base de datos tiene 12 tablas organizadas en 5 grupos:
+### La base de datos tiene 13 tablas organizadas en 5 grupos:
 
 | Grupo | Tablas | Propósito |
 |-------|--------|-----------|
@@ -31,7 +31,7 @@
 | **Estructura del Campo** | `predios`, `tipos_cultivo`, `areas_riego`, `ciclos_cultivo` | Cómo está organizado el terreno del agricultor: fincas, parcelas, cultivos y temporadas |
 | **Hardware IoT** | `nodos` | Los sensores físicos (o simulados) instalados en campo |
 | **Lecturas de Sensores** | `lecturas` | Los datos que llegan cada 10 minutos desde los nodos — es el corazón del sistema |
-| **Alertas y Auditoría (Fase 2 Lite)** | `umbrales`, `alertas`, `audit_log` | Motor de alertas por umbral/inactividad y trazabilidad operativa |
+| **Alertas y Auditoría (Fase 2 Lite)** | `umbrales`, `alertas`, `preferencias_notificacion`, `audit_log` | Motor de alertas por umbral/inactividad, preferencias de despacho y trazabilidad operativa |
 
 ### Diagrama de Relaciones (ERD)
 
@@ -41,12 +41,14 @@ erDiagram
     usuarios ||--o{ tokens_refresco : "1:N"
     usuarios ||--o{ audit_log : "1:N"
     clientes ||--o{ predios : "1:N"
+       clientes ||--o{ preferencias_notificacion : "1:N"
     predios ||--o{ areas_riego : "1:N"
     tipos_cultivo ||--o{ areas_riego : "1:N"
     areas_riego ||--o{ ciclos_cultivo : "1:N"
     areas_riego ||--|| nodos : "1:1"
     areas_riego ||--o{ umbrales : "1:N"
     areas_riego ||--o{ alertas : "1:N"
+       areas_riego ||--o{ preferencias_notificacion : "1:N"
     nodos ||--o{ lecturas : "1:N"
     nodos ||--o{ alertas : "1:N"
     umbrales ||--o{ alertas : "1:N"
@@ -494,20 +496,20 @@ Estas reglas **no están en el SQL** (la base de datos no las valida por sí mis
 |------|--------|-----------|
 | `umbrales` | Activa | Rangos por parámetro y área para evaluación automática |
 | `alertas` | Activa | Historial de alertas por umbral e inactividad |
+| `preferencias_notificacion` | Activa | Reglas por cliente/área/tipo/severidad/canal para despacho externo |
 | `audit_log` | Activa | Trazabilidad de acciones relevantes |
 
 ### 10.2 Futuro (Fase 2 Completa)
 
 | Tabla futura | Propósito | Se relaciona con... |
 |-------------|-----------|---------------------|
-| `preferencias_notificacion` | Configuración por usuario de qué alertas recibir y por qué canal (email, WhatsApp). | `usuarios`, `areas_riego` |
 | `tokens_recuperacion` | Tokens temporales de un solo uso para el flujo "Olvidé mi contraseña". | `usuarios` |
 
 Además, se evaluará agregar un campo `ndvi` a `lecturas` cuando se defina una fuente estable de datos de vegetación.
 
 ---
 
-## Referencia Rápida — 12 Tablas Activas
+## Referencia Rápida — 13 Tablas Activas
 
 | # | Tabla | Grupo | Propósito en una línea | ID tipo |
 |---|-------|-------|----------------------|---------|
@@ -522,4 +524,5 @@ Además, se evaluará agregar un campo `ndvi` a `lecturas` cuando se defina una 
 | 9 | `lecturas` | Lecturas | Registro centralizado con las 12 métricas dinámicas | BIGINT |
 | 10 | `umbrales` | Alertas | Rangos por parámetro para disparo automático | INT |
 | 11 | `alertas` | Alertas | Eventos de umbral/inactividad y estado de lectura | BIGINT |
-| 12 | `audit_log` | Auditoría | Registro de acciones de sistema y usuarios | BIGINT |
+| 12 | `preferencias_notificacion` | Alertas | Preferencias por cliente/área/severidad/canal para notificaciones | INT |
+| 13 | `audit_log` | Auditoría | Registro de acciones de sistema y usuarios | BIGINT |

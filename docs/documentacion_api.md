@@ -1144,7 +1144,10 @@ Ejecuta un lote de envío de notificaciones de alertas pendientes, usando integr
 **Notas operativas:**
 
 - Si `NOTIFICATIONS_ENABLED=false`, el endpoint responde `200` con contadores en `0` (no-op seguro).
-- El endpoint marca `notified_email` y/o `notified_whatsapp` por alerta cuando el envío del canal es exitoso.
+- En la implementación actual, el canal objetivo se decide por severidad:
+  - `info` y `warning` -> email (`notified_email`).
+  - `critical` -> WhatsApp (`notified_whatsapp`).
+- El endpoint marca el campo del canal objetivo cuando el envío es exitoso.
 - Se recomienda invocarlo de forma periódica mediante scheduler interno en Docker Compose (`notification_scheduler`).
 
 ---
@@ -1224,7 +1227,127 @@ Realiza eliminación lógica (`active=false` + marca interna de eliminación) y 
 
 ---
 
-### 5.12. Audit Logs (Bitácora)
+### 5.12. Notification Preferences (Preferencias de Notificación)
+
+Configuración por cliente para controlar recepción de alertas por área, tipo, severidad y canal.
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| `GET` | `/api/v1/clients/me/notification-settings` | Ver switch global de notificaciones del cliente | JWT (Cliente) |
+| `PATCH` | `/api/v1/clients/me/notification-settings` | Actualizar switch global de notificaciones del cliente | JWT (Cliente) |
+| `GET` | `/api/v1/notification-preferences` | Listado paginado de preferencias | JWT (Admin/Cliente) |
+| `PUT` | `/api/v1/notification-preferences/bulk` | Upsert masivo de preferencias | JWT (Cliente) |
+
+#### Configuración global del cliente — `GET /api/v1/clients/me/notification-settings`
+
+**Response 200:**
+```json
+{
+  "notifications_enabled": true
+}
+```
+
+#### Actualizar configuración global — `PATCH /api/v1/clients/me/notification-settings`
+
+**Request:**
+```json
+{
+  "notifications_enabled": false
+}
+```
+
+**Response 200:**
+```json
+{
+  "notifications_enabled": false
+}
+```
+
+#### Listar preferencias — `GET /api/v1/notification-preferences`
+
+**Permisos:**
+- Admin: puede listar global o filtrar por `client_id`.
+- Cliente: solo preferencias de sus áreas.
+
+**Query params:**
+
+| Param | Tipo | Requerido | Notas |
+|-------|------|-----------|-------|
+| `page` | integer | No | Default: 1 |
+| `per_page` | integer | No | Default: 50, máx: 500 |
+| `client_id` | integer | No | Solo útil para Admin |
+| `irrigation_area_id` | integer | No | Filtrar por área |
+| `alert_type` | string | No | `threshold`, `inactivity` |
+| `severity` | string | No | `info`, `warning`, `critical` |
+| `channel` | string | No | `email`, `whatsapp` |
+
+**Response 200:**
+```json
+{
+  "page": 1,
+  "per_page": 50,
+  "total": 1,
+  "data": [
+    {
+      "id": 1,
+      "client_id": 2,
+      "irrigation_area_id": 7,
+      "alert_type": "threshold",
+      "severity": "warning",
+      "channel": "email",
+      "enabled": false,
+      "created_at": "2026-04-18T16:00:00Z",
+      "updated_at": "2026-04-18T16:00:00Z"
+    }
+  ]
+}
+```
+
+#### Upsert masivo — `PUT /api/v1/notification-preferences/bulk`
+
+**Request:**
+```json
+{
+  "items": [
+    {
+      "irrigation_area_id": 7,
+      "alert_type": "threshold",
+      "severity": "warning",
+      "channel": "email",
+      "enabled": false
+    }
+  ]
+}
+```
+
+**Response 200:**
+```json
+{
+  "created": 1,
+  "updated": 0,
+  "data": [
+    {
+      "id": 1,
+      "client_id": 2,
+      "irrigation_area_id": 7,
+      "alert_type": "threshold",
+      "severity": "warning",
+      "channel": "email",
+      "enabled": false,
+      "created_at": "2026-04-18T16:00:00Z",
+      "updated_at": "2026-04-18T16:00:00Z"
+    }
+  ]
+}
+```
+
+**Notas operativas:**
+- Si el cliente tiene `notifications_enabled=false`, el dispatcher omite envíos externos para ese cliente.
+- Si no existe preferencia explícita para una combinación área/tipo/severidad/canal, se aplica el fallback de severidad del dispatcher.
+
+---
+
+### 5.13. Audit Logs (Bitácora)
 
 Consulta administrativa del historial de acciones realizadas en la plataforma.
 

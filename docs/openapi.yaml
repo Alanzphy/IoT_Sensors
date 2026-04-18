@@ -241,6 +241,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/clients/me/notification-settings:
+    get:
+      tags:
+      - Clients
+      summary: Get My Notification Settings
+      operationId: get_my_notification_settings_api_v1_clients_me_notification_settings_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientNotificationSettingsResponse'
+      security:
+      - OAuth2PasswordBearer: []
+    patch:
+      tags:
+      - Clients
+      summary: Update My Notification Settings
+      operationId: update_my_notification_settings_api_v1_clients_me_notification_settings_patch
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientNotificationSettingsUpdate'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientNotificationSettingsResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - OAuth2PasswordBearer: []
   /api/v1/clients:
     get:
       tags:
@@ -1191,6 +1232,112 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/notification-preferences:
+    get:
+      tags:
+      - Notification Preferences
+      summary: List Notification Preferences
+      operationId: list_notification_preferences_api_v1_notification_preferences_get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 500
+          minimum: 1
+          default: 50
+          title: Per Page
+      - name: client_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Client Id
+      - name: irrigation_area_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Irrigation Area Id
+      - name: alert_type
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Alert Type
+      - name: severity
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Severity
+      - name: channel
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Channel
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse_NotificationPreferenceResponse_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/notification-preferences/bulk:
+    put:
+      tags:
+      - Notification Preferences
+      summary: Bulk Upsert Notification Preferences
+      operationId: bulk_upsert_notification_preferences_api_v1_notification_preferences_bulk_put
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationPreferenceBulkUpsertRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreferenceBulkUpsertResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - OAuth2PasswordBearer: []
   /api/v1/readings:
     post:
       tags:
@@ -1808,6 +1955,60 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/alerts/dispatch-notifications:
+    post:
+      tags:
+      - Alerts
+      summary: Dispatch Alert Notifications
+      operationId: dispatch_alert_notifications_api_v1_alerts_dispatch_notifications_post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 1000
+          minimum: 1
+          default: 200
+          title: Limit
+      - name: only_unread
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Only Unread
+      - name: severity
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Severity
+      - name: alert_type
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Alert Type
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationDispatchResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/audit-logs:
     get:
       tags:
@@ -2107,6 +2308,24 @@ components:
       - full_name
       - company_name
       title: ClientCreate
+    ClientNotificationSettingsResponse:
+      properties:
+        notifications_enabled:
+          type: boolean
+          title: Notifications Enabled
+      type: object
+      required:
+      - notifications_enabled
+      title: ClientNotificationSettingsResponse
+    ClientNotificationSettingsUpdate:
+      properties:
+        notifications_enabled:
+          type: boolean
+          title: Notifications Enabled
+      type: object
+      required:
+      - notifications_enabled
+      title: ClientNotificationSettingsUpdate
     ClientResponse:
       properties:
         id:
@@ -2128,6 +2347,9 @@ components:
           - type: string
           - type: 'null'
           title: Address
+        notifications_enabled:
+          type: boolean
+          title: Notifications Enabled
         user:
           anyOf:
           - $ref: '#/components/schemas/UserResponse'
@@ -2145,11 +2367,22 @@ components:
       - id
       - user_id
       - company_name
+      - notifications_enabled
       - created_at
       - updated_at
       title: ClientResponse
     ClientUpdate:
       properties:
+        email:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Email
+        full_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Full Name
         company_name:
           anyOf:
           - type: string
@@ -2641,6 +2874,154 @@ components:
           title: Is Active
       type: object
       title: NodeUpdate
+    NotificationDispatchResponse:
+      properties:
+        notifications_enabled:
+          type: boolean
+          title: Notifications Enabled
+        email_enabled:
+          type: boolean
+          title: Email Enabled
+        whatsapp_enabled:
+          type: boolean
+          title: Whatsapp Enabled
+        pending_alerts:
+          type: integer
+          title: Pending Alerts
+        processed_alerts:
+          type: integer
+          title: Processed Alerts
+        skipped_alerts:
+          type: integer
+          title: Skipped Alerts
+        emailed_alerts:
+          type: integer
+          title: Emailed Alerts
+        whatsapp_alerts:
+          type: integer
+          title: Whatsapp Alerts
+        email_failures:
+          type: integer
+          title: Email Failures
+        whatsapp_failures:
+          type: integer
+          title: Whatsapp Failures
+        executed_at:
+          type: string
+          format: date-time
+          title: Executed At
+      type: object
+      required:
+      - notifications_enabled
+      - email_enabled
+      - whatsapp_enabled
+      - pending_alerts
+      - processed_alerts
+      - skipped_alerts
+      - emailed_alerts
+      - whatsapp_alerts
+      - email_failures
+      - whatsapp_failures
+      - executed_at
+      title: NotificationDispatchResponse
+    NotificationPreferenceBulkUpsertRequest:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/NotificationPreferenceUpsertItem'
+          type: array
+          title: Items
+      type: object
+      required:
+      - items
+      title: NotificationPreferenceBulkUpsertRequest
+    NotificationPreferenceBulkUpsertResponse:
+      properties:
+        created:
+          type: integer
+          title: Created
+        updated:
+          type: integer
+          title: Updated
+        data:
+          items:
+            $ref: '#/components/schemas/NotificationPreferenceResponse'
+          type: array
+          title: Data
+      type: object
+      required:
+      - created
+      - updated
+      - data
+      title: NotificationPreferenceBulkUpsertResponse
+    NotificationPreferenceResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        client_id:
+          type: integer
+          title: Client Id
+        irrigation_area_id:
+          type: integer
+          title: Irrigation Area Id
+        alert_type:
+          type: string
+          title: Alert Type
+        severity:
+          type: string
+          title: Severity
+        channel:
+          type: string
+          title: Channel
+        enabled:
+          type: boolean
+          title: Enabled
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - id
+      - client_id
+      - irrigation_area_id
+      - alert_type
+      - severity
+      - channel
+      - enabled
+      - created_at
+      - updated_at
+      title: NotificationPreferenceResponse
+    NotificationPreferenceUpsertItem:
+      properties:
+        irrigation_area_id:
+          type: integer
+          title: Irrigation Area Id
+        alert_type:
+          type: string
+          title: Alert Type
+        severity:
+          type: string
+          title: Severity
+        channel:
+          type: string
+          title: Channel
+        enabled:
+          type: boolean
+          title: Enabled
+      type: object
+      required:
+      - irrigation_area_id
+      - alert_type
+      - severity
+      - channel
+      - enabled
+      title: NotificationPreferenceUpsertItem
     PaginatedResponse_AlertResponse_:
       properties:
         page:
@@ -2802,6 +3183,29 @@ components:
       - total
       - data
       title: PaginatedResponse[NodeResponse]
+    PaginatedResponse_NotificationPreferenceResponse_:
+      properties:
+        page:
+          type: integer
+          title: Page
+        per_page:
+          type: integer
+          title: Per Page
+        total:
+          type: integer
+          title: Total
+        data:
+          items:
+            $ref: '#/components/schemas/NotificationPreferenceResponse'
+          type: array
+          title: Data
+      type: object
+      required:
+      - page
+      - per_page
+      - total
+      - data
+      title: PaginatedResponse[NotificationPreferenceResponse]
     PaginatedResponse_PropertyResponse_:
       properties:
         page:

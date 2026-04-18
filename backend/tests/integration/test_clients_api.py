@@ -111,3 +111,43 @@ class TestDeleteClient:
         list_resp = client.get("/api/v1/clients", headers=admin_headers)
         ids = [c["id"] for c in list_resp.json()["data"]]
         assert created["id"] not in ids
+
+
+class TestClientNotificationSettings:
+    def test_client_can_get_and_update_own_settings(
+        self,
+        client,
+        client_headers,
+    ):
+        get_resp = client.get(
+            "/api/v1/clients/me/notification-settings",
+            headers=client_headers,
+        )
+        assert get_resp.status_code == 200
+        assert get_resp.json()["notifications_enabled"] is True
+
+        patch_resp = client.patch(
+            "/api/v1/clients/me/notification-settings",
+            headers=client_headers,
+            json={"notifications_enabled": False},
+        )
+        assert patch_resp.status_code == 200
+        assert patch_resp.json()["notifications_enabled"] is False
+
+        get_after = client.get(
+            "/api/v1/clients/me/notification-settings",
+            headers=client_headers,
+        )
+        assert get_after.status_code == 200
+        assert get_after.json()["notifications_enabled"] is False
+
+    def test_admin_cannot_access_client_me_settings(
+        self,
+        client,
+        admin_headers,
+    ):
+        resp = client.get(
+            "/api/v1/clients/me/notification-settings",
+            headers=admin_headers,
+        )
+        assert resp.status_code == 403

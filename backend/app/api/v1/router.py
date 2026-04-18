@@ -9,6 +9,7 @@ from app.api.v1.endpoints import (
     crop_types,
     irrigation_areas,
     nodes,
+    notification_preferences,
     properties,
     readings,
     thresholds,
@@ -33,6 +34,11 @@ api_v1_router.include_router(
     crop_cycles.router, prefix="/crop-cycles", tags=["Crop Cycles"]
 )
 api_v1_router.include_router(nodes.router, prefix="/nodes", tags=["Nodes"])
+api_v1_router.include_router(
+    notification_preferences.router,
+    prefix="/notification-preferences",
+    tags=["Notification Preferences"],
+)
 api_v1_router.include_router(readings.router, prefix="/readings", tags=["Readings"])
 api_v1_router.include_router(
     thresholds.router,

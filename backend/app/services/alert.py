@@ -13,6 +13,7 @@ from app.models.alert import Alert
 from app.models.client import Client
 from app.models.irrigation_area import IrrigationArea
 from app.models.node import Node
+from app.models.notification_preference import NotificationPreference
 from app.models.property import Property
 from app.models.reading import Reading
 from app.models.user import User
@@ -66,7 +67,7 @@ def _resolve_alert_contact_data(
     db: Session,
     *,
     alert: Alert,
-) -> tuple[str | None, str | None, str, str, str] | None:
+) -> tuple[str | None, str | None, str, str, str, int, bool] | None:
     row = db.execute(
         select(
             User.correo,
@@ -74,6 +75,8 @@ def _resolve_alert_contact_data(
             Property.nombre,
             IrrigationArea.nombre,
             Node.nombre,
+            Client.id,
+            Client.notificaciones_habilitadas,
         )
         .select_from(IrrigationArea)
         .join(
@@ -107,10 +110,55 @@ def _resolve_alert_contact_data(
     if row is None:
         return None
 
-    email, phone, property_name, area_name, node_name = row
+    (
+        email,
+        phone,
+        property_name,
+        area_name,
+        node_name,
+        client_id,
+        notifications_enabled,
+    ) = row
     normalized_phone = _normalize_phone_number(phone)
     resolved_node_name = node_name or f"Node {alert.nodo_id}"
-    return email, normalized_phone, property_name, area_name, resolved_node_name
+    return (
+        email,
+        normalized_phone,
+        property_name,
+        area_name,
+        resolved_node_name,
+        client_id,
+        notifications_enabled,
+    )
+
+
+def _is_notification_channel_allowed(
+    db: Session,
+    *,
+    cache: dict[tuple[int, int, str, str, str], bool],
+    client_id: int,
+    irrigation_area_id: int,
+    alert_type: str,
+    severity: str,
+    channel: str,
+) -> bool:
+    cache_key = (client_id, irrigation_area_id, alert_type, severity, channel)
+    if cache_key in cache:
+        return cache[cache_key]
+
+    configured = db.execute(
+        select(NotificationPreference.habilitado).where(
+            NotificationPreference.cliente_id == client_id,
+            NotificationPreference.area_riego_id == irrigation_area_id,
+            NotificationPreference.tipo_alerta == alert_type,
+            NotificationPreference.severidad == severity,
+            NotificationPreference.canal == channel,
+        )
+    ).scalar_one_or_none()
+
+    allowed = True if configured is None else bool(configured)
+    cache[cache_key] = allowed
+    return allowed
 
 
 def _send_email_notification(
@@ -269,6 +317,7 @@ def dispatch_pending_notifications(
     email_failures = 0
     whatsapp_failures = 0
     has_updates = False
+    preference_cache: dict[tuple[int, int, str, str, str], bool] = {}
 
     for alert in alerts:
         processed_alerts += 1
@@ -277,9 +326,20 @@ def dispatch_pending_notifications(
             skipped_alerts += 1
             continue
 
-        recipient_email, recipient_phone, property_name, area_name, node_name = (
-            contact_data
-        )
+        (
+            recipient_email,
+            recipient_phone,
+            property_name,
+            area_name,
+            node_name,
+            client_id,
+            notifications_enabled_for_client,
+        ) = contact_data
+
+        if not notifications_enabled_for_client:
+            skipped_alerts += 1
+            continue
+
         message = _build_notification_message(
             alert=alert,
             area_name=area_name,
@@ -289,6 +349,19 @@ def dispatch_pending_notifications(
 
         attempted_any = False
         target_channel = _target_channel_for_severity(alert.severidad)
+        channel_allowed = _is_notification_channel_allowed(
+            db,
+            cache=preference_cache,
+            client_id=client_id,
+            irrigation_area_id=alert.area_riego_id,
+            alert_type=alert.tipo,
+            severity=alert.severidad,
+            channel=target_channel,
+        )
+
+        if not channel_allowed:
+            skipped_alerts += 1
+            continue
 
         if target_channel == "email" and email_enabled and not alert.notificada_email:
             if recipient_email:

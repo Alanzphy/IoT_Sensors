@@ -28,6 +28,7 @@ from app.models import (  # noqa: F401 – importar todos para que Base los regi
     CropType,
     IrrigationArea,
     Node,
+    NotificationPreference,
     Property,
     Reading,
     RefreshToken,
@@ -46,6 +47,7 @@ BigInteger.__visit_name__ = "big_integer"  # type: ignore[attr-defined]
 # so that autoincrement works correctly.
 from sqlalchemy.ext.compiler import compiles
 
+
 @compiles(BigInteger, "sqlite")
 def compile_big_integer_sqlite(type_, compiler, **kwargs):
     return "INTEGER"
@@ -62,6 +64,7 @@ engine = create_engine(
     connect_args={"check_same_thread": False},
 )
 
+
 # Habilitar claves foráneas en SQLite (deshabilitadas por defecto)
 @event.listens_for(engine, "connect")
 def set_sqlite_pragma(dbapi_conn, connection_record):
@@ -77,6 +80,7 @@ TestingSessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=Fals
 # Crear/destruir tablas una sola vez por sesión de pytest
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(scope="session", autouse=True)
 def create_tables():
     Base.metadata.create_all(bind=engine)
@@ -87,6 +91,7 @@ def create_tables():
 # ---------------------------------------------------------------------------
 # Fixture de sesión DB: se rollbackea después de cada test
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture()
 def db():
@@ -106,9 +111,11 @@ def db():
 # Override de la dependencia get_db en la app FastAPI
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture()
 def client(db):
     """TestClient de FastAPI con la BD de test inyectada."""
+
     def _override_get_db():
         try:
             yield db
@@ -124,6 +131,7 @@ def client(db):
 # ---------------------------------------------------------------------------
 # Fixtures de datos base reutilizables
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture()
 def admin_user(db):
@@ -145,7 +153,11 @@ def admin_user(db):
 def admin_token(admin_user):
     """JWT access token para el admin."""
     return create_access_token(
-        {"sub": str(admin_user.id), "rol": admin_user.rol, "nombre": admin_user.nombre_completo}
+        {
+            "sub": str(admin_user.id),
+            "rol": admin_user.rol,
+            "nombre": admin_user.nombre_completo,
+        }
     )
 
 
@@ -260,6 +272,7 @@ def node_headers(sample_node):
 def sample_crop_cycle(db, sample_irrigation_area):
     """Crea un ciclo de cultivo activo (sin fecha_fin)."""
     from datetime import date
+
     cycle = CropCycle(
         area_riego_id=sample_irrigation_area.id,
         fecha_inicio=date(2026, 1, 1),

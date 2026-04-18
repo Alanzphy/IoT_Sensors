@@ -5,7 +5,13 @@ from app.schemas.auth import (
     TokenResponse,
 )
 from app.schemas.base import PaginatedResponse, PaginationParams
-from app.schemas.client import ClientCreate, ClientResponse, ClientUpdate
+from app.schemas.client import (
+    ClientCreate,
+    ClientNotificationSettingsResponse,
+    ClientNotificationSettingsUpdate,
+    ClientResponse,
+    ClientUpdate,
+)
 from app.schemas.crop_cycle import CropCycleCreate, CropCycleResponse, CropCycleUpdate
 from app.schemas.crop_type import (
     CropTypeBrief,
@@ -38,6 +44,12 @@ from app.schemas.threshold import (
 )
 from app.schemas.alert import AlertReadUpdate, AlertResponse
 from app.schemas.audit_log import AuditLogResponse, AuditLogUserSummary
+from app.schemas.notification_preference import (
+    NotificationPreferenceBulkUpsertRequest,
+    NotificationPreferenceBulkUpsertResponse,
+    NotificationPreferenceResponse,
+    NotificationPreferenceUpsertItem,
+)
 from app.schemas.user import UserCreate, UserResponse, UserUpdate
 
 __all__ = [
@@ -53,6 +65,8 @@ __all__ = [
     "ClientCreate",
     "ClientUpdate",
     "ClientResponse",
+    "ClientNotificationSettingsUpdate",
+    "ClientNotificationSettingsResponse",
     "PropertyCreate",
     "PropertyUpdate",
     "PropertyResponse",
@@ -85,4 +99,8 @@ __all__ = [
     "AlertResponse",
     "AuditLogUserSummary",
     "AuditLogResponse",
+    "NotificationPreferenceResponse",
+    "NotificationPreferenceUpsertItem",
+    "NotificationPreferenceBulkUpsertRequest",
+    "NotificationPreferenceBulkUpsertResponse",
 ]

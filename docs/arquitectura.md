@@ -317,13 +317,14 @@ Esta sección separa lo que ya está activo en el sistema de lo que continúa co
 
 Componentes activos a la fecha:
 
-- Tablas activas en base de datos: `umbrales`, `alertas`, `audit_log`.
-- Endpoints activos: `/api/v1/thresholds`, `/api/v1/alerts`, `/api/v1/alerts/scan-inactivity`, `/api/v1/audit-logs`.
+- Tablas activas en base de datos: `umbrales`, `alertas`, `audit_log`, `preferencias_notificacion`.
+- Endpoints activos: `/api/v1/thresholds`, `/api/v1/alerts`, `/api/v1/alerts/scan-inactivity`, `/api/v1/alerts/dispatch-notifications`, `/api/v1/notification-preferences`, `/api/v1/clients/me/notification-settings`, `/api/v1/audit-logs`.
 - Endpoint activo para despacho: `/api/v1/alerts/dispatch-notifications` (Admin).
+- Política de despacho activa por severidad: `info`/`warning` por email y `critical` por WhatsApp.
 - Evaluación de umbrales durante la ingesta de `POST /api/v1/readings`.
 - Escaneo periódico de inactividad con `inactivity_scheduler` en Docker Compose.
 - Despacho periódico opcional de notificaciones con `notification_scheduler` en Docker Compose.
-- Visualización en frontend: campana de notificaciones, centro de alertas, vista administrativa de auditoría y gestión de umbrales.
+- Visualización en frontend: campana de notificaciones, centro de alertas, vista administrativa de auditoría, gestión de umbrales y configuración de preferencias de notificación en cliente.
 - Semáforos de prioridad en dashboard cliente para humedad de suelo, flujo y ETO.
 
 ```mermaid
@@ -405,6 +406,7 @@ Funcionalidades que permanecen en roadmap y no forman parte de la implementació
 - [x] Escaneo de inactividad (`/api/v1/alerts/scan-inactivity`) y scheduler en compose.
 - [x] Despacho de notificaciones de alertas (`/api/v1/alerts/dispatch-notifications`) por backend directo.
 - [x] Integración externa configurable: SMTP (email) y WhatsApp Cloud API.
+- [x] Preferencias de notificación por cliente/área/severidad/canal (`/api/v1/notification-preferences`) y switch global (`/api/v1/clients/me/notification-settings`).
 - [x] UI de alertas (popover + centro de alertas).
 - [x] Endpoint y vista de auditoría administrativa (`/api/v1/audit-logs`, `/admin/auditoria`).
 - [x] UI admin de umbrales (`/admin/umbrales`).

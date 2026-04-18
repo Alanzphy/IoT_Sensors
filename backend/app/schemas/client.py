@@ -30,6 +30,15 @@ class ClientResponse(BaseModel):
     company_name: str = Field(validation_alias="nombre_empresa")
     phone: str | None = Field(default=None, validation_alias="telefono")
     address: str | None = Field(default=None, validation_alias="direccion")
+    notifications_enabled: bool = Field(validation_alias="notificaciones_habilitadas")
     user: UserResponse | None = None
     created_at: datetime = Field(validation_alias="creado_en")
     updated_at: datetime = Field(validation_alias="actualizado_en")
+
+
+class ClientNotificationSettingsUpdate(BaseModel):
+    notifications_enabled: bool
+
+
+class ClientNotificationSettingsResponse(BaseModel):
+    notifications_enabled: bool

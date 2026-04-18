@@ -8,7 +8,6 @@ import {
     Radio,
     SlidersHorizontal,
     Sprout,
-    User,
     Users
 } from "lucide-react";
 import { Link, useLocation } from "react-router";
@@ -25,7 +24,7 @@ export function MobileTabBar({ role }: MobileTabBarProps) {
     { path: "/cliente/areas", icon: MapPin, label: "Predios" },
     { path: "/cliente/historico", icon: Clock, label: "Histórico" },
     { path: "/cliente/exportar", icon: Download, label: "Exportar" },
-    { path: "/cliente/perfil", icon: User, label: "Perfil" },
+    { path: "/cliente/notificaciones", icon: Bell, label: "Notifs" },
   ];
 
   const adminTabs = [

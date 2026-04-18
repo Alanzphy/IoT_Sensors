@@ -45,7 +45,7 @@ src/app/
 Actualmente el frontend está en fase de **transición de datos estáticos hacia consumo real del backend FastAPI**, con parte de Fase 2 Lite activa.
 
 - **Fase 1 (Completada)**: Autenticación. `LoginPage` conecta a `/api/v1/auth/login`. El JWT se decodifica con `jwt-decode`, se guarda en `localStorage` y se gestiona mediante `AuthContext`. El `api.ts` de Axios inyecta automáticamente el header `Authorization: Bearer <token>` y maneja las redirecciones por `401 Unauthorized`.
-- **Fase 2 Lite (Implementada)**: Centro de alertas y popover conectados a `/api/v1/alerts`, bitácora administrativa en `/api/v1/audit-logs`, y gestión Admin de umbrales.
+- **Fase 2 Lite (Implementada)**: Centro de alertas y popover conectados a `/api/v1/alerts`, bitácora administrativa en `/api/v1/audit-logs`, gestión Admin de umbrales y preferencias de notificación del cliente.
 - **Fase 3 (En proceso)**: Reemplazo gradual de `mockData` en dashboard/histórico por datos reales (`/api/v1/readings`, `/api/v1/readings/latest`, `/api/v1/readings/availability`).
 - **Fase 4 (Parcial)**: Semáforos de estado para datos prioritarios en dashboard cliente usando alertas de umbral activas.
 
@@ -75,6 +75,15 @@ Actualmente el frontend está en fase de **transición de datos estáticos hacia
 	- `irrigation.flow_per_minute`
 	- `environmental.eto`
 - El estado se deriva de alertas de tipo `threshold` no leídas del área seleccionada.
+
+### 3.5 Preferencias de Notificación en Cliente (Activo)
+
+- `pages/client/NotificationPreferencesPage.tsx`: configuración por área/tipo/severidad/canal y switch global.
+- `services/notificationPreferences.ts`: cliente HTTP para:
+	- `/api/v1/clients/me/notification-settings`
+	- `/api/v1/notification-preferences`
+	- `/api/v1/notification-preferences/bulk`
+- Ruta protegida: `/cliente/notificaciones`.
 
 ---
 

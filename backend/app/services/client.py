@@ -9,6 +9,23 @@ from app.models.user import User
 from app.schemas.client import ClientCreate, ClientUpdate
 
 
+def get_client_by_user_id(db: Session, user_id: int) -> Client:
+    client = db.execute(
+        select(Client)
+        .options(joinedload(Client.user))
+        .where(
+            Client.usuario_id == user_id,
+            Client.eliminado_en.is_(None),
+        )
+    ).scalar_one_or_none()
+    if client is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Client record not found for current user",
+        )
+    return client
+
+
 def get_client(db: Session, client_id: int) -> Client:
     client = db.execute(
         select(Client)
@@ -131,6 +148,19 @@ def soft_delete_client(db: Session, client_id: int) -> Client:
         prop.eliminado_en = func.now()
 
     client.eliminado_en = func.now()
+    db.commit()
+    db.refresh(client)
+    return client
+
+
+def update_client_notification_settings(
+    db: Session,
+    *,
+    client_id: int,
+    notifications_enabled: bool,
+) -> Client:
+    client = get_client(db, client_id)
+    client.notificaciones_habilitadas = notifications_enabled
     db.commit()
     db.refresh(client)
     return client

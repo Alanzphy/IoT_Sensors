@@ -1,14 +1,51 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.core.deps import require_admin
+from app.core.deps import get_current_client, require_admin
 from app.db.session import get_db
+from app.models.client import Client
 from app.models.user import User
 from app.schemas.base import PaginatedResponse
-from app.schemas.client import ClientCreate, ClientResponse, ClientUpdate
+from app.schemas.client import (
+    ClientCreate,
+    ClientNotificationSettingsResponse,
+    ClientNotificationSettingsUpdate,
+    ClientResponse,
+    ClientUpdate,
+)
 from app.services import client as client_service
 
 router = APIRouter()
+
+
+@router.get(
+    "/me/notification-settings", response_model=ClientNotificationSettingsResponse
+)
+def get_my_notification_settings(
+    current_client: Client = Depends(get_current_client),
+):
+    return ClientNotificationSettingsResponse(
+        notifications_enabled=current_client.notificaciones_habilitadas
+    )
+
+
+@router.patch(
+    "/me/notification-settings",
+    response_model=ClientNotificationSettingsResponse,
+)
+def update_my_notification_settings(
+    payload: ClientNotificationSettingsUpdate,
+    current_client: Client = Depends(get_current_client),
+    db: Session = Depends(get_db),
+):
+    updated = client_service.update_client_notification_settings(
+        db,
+        client_id=current_client.id,
+        notifications_enabled=payload.notifications_enabled,
+    )
+    return ClientNotificationSettingsResponse(
+        notifications_enabled=updated.notificaciones_habilitadas
+    )
 
 
 @router.get("", response_model=PaginatedResponse[ClientResponse])

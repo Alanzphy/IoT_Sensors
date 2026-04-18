@@ -115,16 +115,18 @@ El desarrollo se estructura en tres capas de evolución. Este SRS detalla el MVP
 ● Scheduler para escaneo de nodos inactivos (>=20 min sin lectura).
 ● Centro de alertas y notificaciones en interfaz web.
 ● Configuración de umbrales por Administrador.
+● Notificaciones externas de alertas mediante backend directo (SMTP y WhatsApp Cloud API).
+● Preferencias de notificación por cliente (área, tipo de alerta, severidad y canal), más switch global de activación.
+● Semáforos de umbral para parámetros prioritarios en dashboard cliente.
+● Vista administrativa de auditoría.
 
 **Fase 2 Completa** \- Funcionalidades planificadas (no activas aún):
 
-● Notificaciones externas por correo electrónico y/o WhatsApp.
 ● Integración con IA (Azure OpenAI) y automatización con n8n.
 ● Visualización geoespacial de predios y nodos en mapa interactivo.
-● Indicadores de color por umbrales (verde/amarillo/rojo) en dashboard principal.
 ● NDVI (Índice de Vegetación) como parámetro adicional del sensor.
 ● Recuperación de contraseña por correo electrónico.
-● Vista administrativa completa de auditoría.
+● Preferencias avanzadas de notificación (ej. horarios de silencio o ventanas de envío).
 
 Este sistema es exclusivamente de monitoreo: no enviará comandos de control hacia equipos de campo. La comunicación con el módulo de control es estrictamente unidireccional (el servidor solo recibe datos).
 
@@ -286,7 +288,9 @@ El sistema ofrecerá una interfaz web (SPA en React) accesible desde navegador:
 
 **MVP Extendido (activo):** El sistema incluye centro de alertas y marcado de alertas leídas por rol.
 
-**Fase 2 Completa:** Se integrará visualización geoespacial tipo mapa interactivo (API de Google Maps u otra) y semáforos de umbral en dashboard principal.
+**MVP Extendido (activo):** El dashboard cliente incorpora semáforos de umbral para datos prioritarios (humedad de suelo, flujo de agua y E.T.O.) usando alertas de umbral activas.
+
+**Fase 2 Completa:** Se integrará visualización geoespacial tipo mapa interactivo (API de Google Maps u otra).
 
 ### 3.1.2 Interfaces de Hardware {#3.1.2-interfaces-de-hardware}
 
@@ -320,7 +324,7 @@ Respuestas en JSON. Paginación obligatoria en endpoints de listado (?page=1\&pe
 
 **REQ-funcional-01 (Roles):** El sistema debe soportar al menos dos roles:
 
-* **Administrador General:** Acceso total a la plataforma. Gestiona clientes, predios, áreas de riego, catálogo de cultivos, ciclos de cultivo y nodos IoT. Puede supervisar el dashboard e histórico de cualquier cliente/predio/área. *(Fase 2 Completa: podrá ver logs de auditoría).*
+* **Administrador General:** Acceso total a la plataforma. Gestiona clientes, predios, áreas de riego, catálogo de cultivos, ciclos de cultivo y nodos IoT. Puede supervisar el dashboard e histórico de cualquier cliente/predio/área, además de consultar la bitácora de auditoría.
 * **Usuario (Cliente):** Acceso limitado a sus propios predios y áreas de riego. En MVP Extendido (Fase 2 Lite) puede visualizar dashboard, histórico, exportación y alertas de sus áreas. *(Fase 2 Completa: podrá configurar umbrales de alertas por área).*
 
 **REQ-funcional-02 (Gestión de Clientes):** El Administrador podrá dar de alta nuevos clientes con los siguientes datos: nombre de empresa, correo electrónico, contraseña (para crear su usuario asociado), teléfono y dirección. Se crea simultáneamente un registro en la tabla de usuarios (con rol ‘cliente’) y uno en la tabla de clientes (relación 1:1).
@@ -398,9 +402,9 @@ Campo timestamp obligatorio (ISO 8601 UTC). Campos no disponibles se envían com
 
 **REQ-funcional-17 (Alerta Activa por Inactividad):** Cuando un nodo acumula >=20 minutos sin envío, el backend genera alerta de inactividad mediante escaneo programado.
 
-**Fase 2 Completa (futuro):**
+**REQ-funcional-16 (Envío de Notificaciones externas) - MVP Extendido activo:** El sistema permite despachar notificaciones de alertas mediante integración directa del backend (SMTP para email y WhatsApp Cloud API), activable por configuración y ejecutable vía endpoint administrativo y scheduler interno.
 
-**REQ-funcional-16 (Envío de Notificaciones externas):** Las alertas críticas podrán enviarse por correo y/o WhatsApp según preferencias.
+**REQ-funcional-16B (Preferencias de Notificación por Cliente) - MVP Extendido activo:** El cliente puede configurar preferencias por canal, área, tipo de alerta y severidad para personalizar el despacho de notificaciones externas, además de activar/desactivar globalmente sus notificaciones.
 
 ### 3.2.5 Reportes e Históricos {#3.2.5-reportes-e-históricos}
 

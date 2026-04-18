@@ -12,6 +12,7 @@ import { AreaSelector } from "./pages/client/AreaSelector";
 import { ClientDashboard } from "./pages/client/ClientDashboard";
 import { ExportData } from "./pages/client/ExportData";
 import { HistoricalData } from "./pages/client/HistoricalData";
+import { NotificationPreferencesPage } from "./pages/client/NotificationPreferencesPage";
 import { ProfilePage } from "./pages/client/ProfilePage";
 import { PropertyDetail } from "./pages/client/PropertyDetail";
 import { AlertsCenterPage } from "./pages/shared/AlertsCenterPage";
@@ -63,6 +64,10 @@ export const router = createBrowserRouter([
               {
                 path: "alertas",
                 Component: AlertsCenterPage,
+              },
+              {
+                path: "notificaciones",
+                Component: NotificationPreferencesPage,
               },
               {
                 path: "perfil",
