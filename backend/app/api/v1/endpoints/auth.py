@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -26,6 +26,17 @@ from app.schemas.auth import (
 from app.services import password_reset as password_reset_service
 
 router = APIRouter()
+
+
+def _resolve_client_ip(request: Request) -> str:
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        first = forwarded_for.split(",", maxsplit=1)[0].strip()
+        if first:
+            return first
+    if request.client and request.client.host:
+        return request.client.host
+    return "unknown"
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -127,9 +138,17 @@ def logout(body: RefreshRequest, db: Session = Depends(get_db)):
     response_model=ForgotPasswordResponse,
     status_code=status.HTTP_200_OK,
 )
-def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
+def forgot_password(
+    body: ForgotPasswordRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
     """Generate a one-time reset token and email a recovery link."""
-    password_reset_service.request_password_reset(db=db, email=body.email)
+    password_reset_service.request_password_reset(
+        db=db,
+        email=body.email,
+        request_ip=_resolve_client_ip(request),
+    )
     return {
         "detail": (
             "Si el correo existe y esta activo, se envio un enlace de recuperacion."
@@ -142,14 +161,24 @@ def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
     response_model=ResetPasswordResponse,
     status_code=status.HTTP_200_OK,
 )
-def reset_password(body: ResetPasswordRequest, db: Session = Depends(get_db)):
+def reset_password(
+    body: ResetPasswordRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
     """Reset password using a valid one-time recovery token."""
-    ok = password_reset_service.reset_password(
+    result = password_reset_service.reset_password(
         db=db,
         raw_token=body.token,
         new_password=body.new_password,
+        request_ip=_resolve_client_ip(request),
     )
-    if not ok:
+    if result == password_reset_service.ResetPasswordResult.RATE_LIMITED:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Demasiados intentos de restablecimiento. Intenta de nuevo mas tarde",
+        )
+    if result != password_reset_service.ResetPasswordResult.SUCCESS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Token invalido, expirado o ya utilizado",
