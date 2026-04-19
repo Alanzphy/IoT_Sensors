@@ -29,8 +29,8 @@ graph TD
     end
 
     subgraph VPS["🐸 VPS Linux — Servidor Grogu<br/>Docker Compose"]
-        subgraph NGINX_BLOCK["Nginx — Reverse Proxy<br/>:80 / :443"]
-            Nginx["⚡ Nginx"]
+        subgraph NGINX_BLOCK["Nginx — Traefik<br/>:80 / :443"]
+            Nginx["⚡ Reverse Proxy"]
         end
 
         subgraph FRONTEND_BLOCK["Contenedor Frontend"]
@@ -39,6 +39,7 @@ graph TD
 
         subgraph BACKEND_BLOCK["Contenedor Backend"]
             Backend["🐍 FastAPI + Uvicorn<br/>:5050"]
+            Scheduler["⏰ Schedulers<br/>(Inactividad / Notificaciones)"]
         end
 
         subgraph DB_BLOCK["Contenedor Base de Datos"]
@@ -59,6 +60,11 @@ graph TD
 
     %% --- Backend → BD ---
     Backend -->|"SQLAlchemy ORM<br/>:3306"| MySQL
+    Scheduler -->|"SQLAlchemy<br/>:3306"| MySQL
+
+    %% --- Backend → Servicios Externos ---
+    Backend -.->|"Notificaciones"| Externos["📧 Email (SMTP)<br/>📱 WhatsApp API"]
+    Scheduler -.->|"Disparador periódico"| Backend
 
     %% --- Estilos ---
     style INTERNET fill:#e3f2fd,stroke:#1565c0,color:#000
@@ -191,7 +197,37 @@ sequenceDiagram
     N-->>U: 200 OK
 ```
 
-### 3.2 Nodos IoT — API Key
+
+### 3.2 Recuperación de Contraseña
+
+```mermaid
+sequenceDiagram
+    participant U as 🖥️ Browser
+    participant N as ⚡ Nginx
+    participant B as 🐍 Backend
+    participant DB as 🗄️ MySQL
+    participant E as 📧 Email
+
+    U->>N: POST /api/v1/auth/forgot-password<br/>{email}
+    N->>B: Proxy pass
+    B->>DB: Verificar email existe
+    B->>DB: INSERT token_recuperacion (hash, expira_en)
+    B->>E: Enviar email con link y token en claro
+    B-->>N: 200 OK (Mensaje genérico)
+    N-->>U: 200 OK
+
+    Note right of U: Usuario abre el link<br/>desde el correo
+    U->>N: POST /api/v1/auth/reset-password<br/>{token, new_password}
+    N->>B: Proxy pass
+    B->>DB: Verificar token_hash, vigencia y no usado
+    B->>B: Hashear nueva contraseña
+    B->>DB: UPDATE usuario (nuevo hash)
+    B->>DB: UPDATE token_recuperacion (usado_en)
+    B-->>N: 200 OK
+    N-->>U: 200 OK
+```
+
+### 3.3 Nodos IoT — API Key
 
 ```mermaid
 sequenceDiagram
@@ -231,7 +267,6 @@ sequenceDiagram
 ## 4. Jerarquía de Entidades
 
 Cómo se organizan los datos del sistema de arriba hacia abajo. Esta jerarquía **define los permisos**: un Cliente solo ve lo que cuelga debajo de él.
-
 ```mermaid
 graph TD
     U["👤 Usuario<br/>(Admin o Cliente)"]
@@ -241,7 +276,21 @@ graph TD
     TC["📋 Tipo de Cultivo<br/>(catálogo administrable)<br/>ej: Nogal"]
     CC["📅 Ciclo de Cultivo<br/>ej: 2026-02-01 → ..."]
     ND["📡 Nodo IoT<br/>(relación 1:1 con Área)<br/>GPS: lat/lon"]
-    ND -->|"1:N"| L["📊 Lecturas<br/>1 tabla plana con<br/>12 campos dinámicos"]
+    UM["⚖️ Umbral<br/>ej: Humedad < 20%"]
+    AL["🚨 Alerta<br/>ej: Alerta Humedad Baja"]
+    PN["🔔 Preferencia Notificación<br/>ej: Enviar SMS a Juan"]
+
+    U -->|"1:1 (si rol=cliente)"| C
+    C -->|"1:N"| P
+    P -->|"1:N"| AR
+    TC -->|"1:N"| AR
+    AR -->|"1:N"| CC
+    AR -->|"1:1"| ND
+    AR -->|"1:N"| UM
+    AR -->|"1:N"| PN
+    UM -->|"1:N"| AL
+    ND -->|"1:N"| AL
+    ND -->|"1:N"| L["📊 Lecturas<br/>144/día"]
 
     style U fill:#e3f2fd,stroke:#1565c0,color:#000
     style C fill:#bbdefb,stroke:#1565c0,color:#000
@@ -251,6 +300,9 @@ graph TD
     style CC fill:#ffe0b2,stroke:#e65100,color:#000
     style ND fill:#e1bee7,stroke:#6a1b9a,color:#000
     style L fill:#f8bbd0,stroke:#880e4f,color:#000
+    style UM fill:#ffccbc,stroke:#e64a19,color:#000
+    style AL fill:#ffcdd2,stroke:#d32f2f,color:#000
+    style PN fill:#d1c4e9,stroke:#7b1fa2,color:#000
 ```
 
 **Reglas clave:**

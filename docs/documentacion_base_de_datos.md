@@ -10,24 +10,25 @@
 
 1. [Vista General](#1-vista-general)
 2. [Conceptos Clave del Diseño](#2-conceptos-clave-del-diseño)
-3. [Tablas de Gestión de Usuarios](#3-tablas-de-gestión-de-usuarios) (3 tablas)
+3. [Tablas de Gestión de Usuarios](#3-tablas-de-gestión-de-usuarios) (4 tablas)
 4. [Tablas de Estructura del Campo](#4-tablas-de-estructura-del-campo) (4 tablas)
 5. [Tabla de Hardware IoT](#5-tabla-de-hardware-iot) (1 tabla)
 6. [Tabla de Lecturas](#6-tabla-de-lecturas-unificada) (1 tabla)
 7. [Flujo de Datos: De Sensor a Pantalla](#7-flujo-de-datos-de-sensor-a-pantalla)
-8. [Índices: Qué Aceleran y Por Qué Existen](#8-índices-qué-aceleran-y-por-qué-existen)
-9. [Reglas de Negocio Implementadas en el Backend](#9-reglas-de-negocio-implementadas-en-el-backend)
-10. [Estado Fase 2 Lite y Lo Que Sigue](#10-estado-fase-2-lite-y-lo-que-sigue)
+8. [Tablas de Alertas y Auditoría](#8-tablas-de-alertas-y-auditoría-fase-2-lite)
+9. [Índices: Qué Aceleran y Por Qué Existen](#9-índices-qué-aceleran-y-por-qué-existen)
+10. [Reglas de Negocio Implementadas en el Backend](#10-reglas-de-negocio-implementadas-en-el-backend)
+11. [Estado Fase 2 Lite y Lo Que Sigue](#11-estado-fase-2-lite-y-lo-que-sigue)
 
 ---
 
 ## 1. Vista General
 
-### La base de datos tiene 13 tablas organizadas en 5 grupos:
+### La base de datos tiene 14 tablas organizadas en 5 grupos:
 
 | Grupo | Tablas | Propósito |
 |-------|--------|-----------|
-| **Gestión de Usuarios** | `usuarios`, `tokens_refresco`, `clientes` | Quién entra al sistema, cómo se autentica, y sus datos de negocio |
+| **Gestión de Usuarios** | `usuarios`, `tokens_refresco`, `tokens_recuperacion`, `clientes` | Quién entra al sistema, cómo se autentica, recuperación de contraseñas y sus datos de negocio |
 | **Estructura del Campo** | `predios`, `tipos_cultivo`, `areas_riego`, `ciclos_cultivo` | Cómo está organizado el terreno del agricultor: fincas, parcelas, cultivos y temporadas |
 | **Hardware IoT** | `nodos` | Los sensores físicos (o simulados) instalados en campo |
 | **Lecturas de Sensores** | `lecturas` | Los datos que llegan cada 10 minutos desde los nodos — es el corazón del sistema |
@@ -37,18 +38,175 @@
 
 ```mermaid
 erDiagram
-    usuarios ||--o| clientes : "1:1 si rol=cliente"
+    tipos_cultivo {
+        INT id PK
+        VARCHAR nombre
+        VARCHAR descripcion
+        DATETIME creado_en
+        DATETIME actualizado_en
+        DATETIME eliminado_en
+    }
+    usuarios {
+        INT id PK
+        VARCHAR correo
+        VARCHAR contrasena_hash
+        VARCHAR nombre_completo
+        VARCHAR rol
+        BOOLEAN activo
+        DATETIME creado_en
+        DATETIME actualizado_en
+        DATETIME eliminado_en
+    }
+    predios {
+        INT id PK
+        INT cliente_id FK
+        VARCHAR nombre
+        VARCHAR ubicacion
+        DATETIME creado_en
+        DATETIME actualizado_en
+        DATETIME eliminado_en
+    }
+    clientes {
+        INT id PK
+        INT usuario_id FK
+        VARCHAR nombre_empresa
+        VARCHAR telefono
+        VARCHAR direccion
+        BOOLEAN notificaciones_habilitadas
+        DATETIME creado_en
+        DATETIME actualizado_en
+        DATETIME eliminado_en
+    }
+    areas_riego {
+        INT id PK
+        INT predio_id FK
+        INT tipo_cultivo_id FK
+        VARCHAR nombre
+        DECIMAL tamano_area
+        DATETIME creado_en
+        DATETIME actualizado_en
+        DATETIME eliminado_en
+    }
+    lecturas {
+        BIGINT id PK
+        INT nodo_id FK
+        DATETIME marca_tiempo
+        DATETIME creado_en
+        DECIMAL suelo_conductividad
+        DECIMAL suelo_temperatura
+        DECIMAL suelo_humedad
+        DECIMAL suelo_potencial_hidrico
+        BOOLEAN riego_activo
+        DECIMAL riego_litros_acumulados
+        DECIMAL riego_flujo_por_minuto
+        DECIMAL ambiental_temperatura
+        DECIMAL ambiental_humedad_relativa
+        DECIMAL ambiental_velocidad_viento
+        DECIMAL ambiental_radiacion_solar
+        DECIMAL ambiental_eto
+    }
+    preferencias_notificacion {
+        INT id PK
+        INT cliente_id FK
+        INT area_riego_id FK
+        VARCHAR tipo_alerta
+        VARCHAR severidad
+        VARCHAR canal
+        BOOLEAN habilitado
+        DATETIME creado_en
+        DATETIME actualizado_en
+    }
+    tokens_refresco {
+        INT id PK
+        INT usuario_id FK
+        VARCHAR token
+        DATETIME expira_en
+        DATETIME creado_en
+        DATETIME revocado_en
+    }
+    umbrales {
+        INT id PK
+        INT area_riego_id FK
+        VARCHAR parametro
+        DECIMAL rango_min
+        DECIMAL rango_max
+        VARCHAR severidad
+        BOOLEAN activo
+        DATETIME creado_en
+        DATETIME actualizado_en
+        DATETIME eliminado_en
+    }
+    tokens_recuperacion {
+        INT id PK
+        INT usuario_id FK
+        VARCHAR token_hash
+        DATETIME expira_en
+        DATETIME creado_en
+        DATETIME usado_en
+    }
+    nodos {
+        INT id PK
+        INT area_riego_id FK
+        VARCHAR api_key
+        VARCHAR numero_serie
+        VARCHAR nombre
+        DECIMAL latitud
+        DECIMAL longitud
+        BOOLEAN activo
+        DATETIME creado_en
+        DATETIME actualizado_en
+        DATETIME eliminado_en
+    }
+    ciclos_cultivo {
+        INT id PK
+        INT area_riego_id FK
+        DATE fecha_inicio
+        DATE fecha_fin
+        DATETIME creado_en
+        DATETIME actualizado_en
+        DATETIME eliminado_en
+    }
+    audit_log {
+        BIGINT id PK
+        INT usuario_id FK
+        VARCHAR accion
+        VARCHAR entidad
+        VARCHAR entidad_id
+        JSON detalle
+        DATETIME creado_en
+    }
+    alertas {
+        BIGINT id PK
+        INT nodo_id FK
+        INT area_riego_id FK
+        INT umbral_id FK
+        VARCHAR tipo
+        VARCHAR parametro
+        DECIMAL valor_detectado
+        VARCHAR severidad
+        TEXT mensaje
+        DATETIME marca_tiempo
+        BOOLEAN leida
+        DATETIME leida_en
+        BOOLEAN notificada_email
+        BOOLEAN notificada_whatsapp
+        DATETIME creado_en
+        DATETIME actualizado_en
+    }
+
+    usuarios ||--o| clientes : "1:1"
     usuarios ||--o{ tokens_refresco : "1:N"
+    usuarios ||--o{ tokens_recuperacion : "1:N"
     usuarios ||--o{ audit_log : "1:N"
     clientes ||--o{ predios : "1:N"
-       clientes ||--o{ preferencias_notificacion : "1:N"
+    clientes ||--o{ preferencias_notificacion : "1:N"
     predios ||--o{ areas_riego : "1:N"
     tipos_cultivo ||--o{ areas_riego : "1:N"
     areas_riego ||--o{ ciclos_cultivo : "1:N"
     areas_riego ||--|| nodos : "1:1"
     areas_riego ||--o{ umbrales : "1:N"
     areas_riego ||--o{ alertas : "1:N"
-       areas_riego ||--o{ preferencias_notificacion : "1:N"
+    areas_riego ||--o{ preferencias_notificacion : "1:N"
     nodos ||--o{ lecturas : "1:N"
     nodos ||--o{ alertas : "1:N"
     umbrales ||--o{ alertas : "1:N"
@@ -153,7 +311,7 @@ Las tablas y columnas están en **español** (`lecturas`, `marca_tiempo`, `humed
 
 ## 3. Tablas de Gestión de Usuarios
 
-Estas 3 tablas manejan quién puede entrar al sistema y cómo se identifica.
+Estas 4 tablas manejan quién puede entrar al sistema y cómo se identifica.
 
 ### 3.1. `usuarios` — Quién entra al sistema
 
@@ -176,6 +334,18 @@ Porque no todo usuario es un cliente. El administrador es un usuario pero NO tie
 - `eliminado_en = fecha` → Eliminado lógicamente (soft delete). Desaparece de los listados normales. Es más permanente.
 
 ### 3.2. `tokens_refresco` — Cómo funciona la sesión
+
+### 3.3. `tokens_recuperacion` — Recuperación de contraseñas
+
+**Propósito:** Almacena los tokens que se generan cuando un usuario dice "olvidé mi contraseña".
+
+**Columnas clave:**
+
+| Columna | Qué guarda | Notas |
+|---------|-----------|-------|
+| `token_hash` | El hash del token | Al igual que las contraseñas, no guardamos el token de recuperación en texto plano. |
+| `expira_en` | Fecha de caducidad | Los tokens tienen vida útil muy corta (ej. 1 hora). |
+| `usado_en` | Fecha de uso | Cuando el usuario cambia la contraseña con éxito, el token se marca como usado y ya no sirve más. |
 
 **Propósito:** Almacena los refresh tokens activos de cada usuario. Son parte del mecanismo de autenticación JWT.
 
@@ -427,6 +597,12 @@ Esta tabla es **el corazón del sistema** — aquí viven los millones de datos 
 │                  │  3. Ejecuta SELECT sobre la tabla lecturas
 └──────┬──────────┘
        │ JSON con los 12 campos + marca_tiempo
+
+**Propósito:** Registro inmutable de acciones delicadas en el sistema (ej. creación de nodos, cambios de roles), útil para soporte y seguridad.
+**Columnas clave:**
+- `accion`: Verbo de lo que ocurrió (ej. `update`, `delete`).
+- `entidad` / `entidad_id`: ¿Qué se afectó? (ej. `nodos` id `5`).
+- `detalle`: JSON con información adicional (ej. los campos que cambiaron).
        ▼
 ┌─────────────────┐
 │   FRONTEND       │  Renderiza dashboard con gráficas y tarjetas
@@ -445,7 +621,26 @@ Esto se calcula comparando el `marca_tiempo` de la lectura más reciente contra 
 
 ---
 
-## 8. Índices: Qué Aceleran y Por Qué Existen
+
+## 9. Índices: Qué Aceleran y Por Qué Existen
+---
+
+## 8. Tablas de Alertas y Auditoría (Fase 2 Lite)
+
+Estas tablas gestionan las notificaciones automáticas cuando algo va mal o se requiere seguimiento.
+
+### 8.1. `umbrales` — Rangos tolerables
+**Propósito:** Define los límites "sanos" para las variables medidas en las áreas de riego.
+
+### 8.2. `alertas` — Registro de problemas
+**Propósito:** Almacena cualquier desviación registrada, ya sea por lectura (umbral) o inactividad del nodo.
+
+### 8.3. `preferencias_notificacion` — Quién, cuándo y cómo
+**Propósito:** Configura los canales externos de notificación para las alertas.
+
+### 8.4. `audit_log` — Trazabilidad de operaciones
+**Propósito:** Registro inmutable de acciones en el sistema.
+
 
 | Tabla | Índice | Qué query acelera |
 |-------|--------|--------------------|
@@ -470,7 +665,7 @@ Esto se calcula comparando el `marca_tiempo` de la lectura más reciente contra 
 
 ---
 
-## 9. Reglas de Negocio Implementadas en el Backend
+## 10. Reglas de Negocio Implementadas en el Backend
 
 Estas reglas **no están en el SQL** (la base de datos no las valida por sí misma). Las verifica el código del backend antes de hacer INSERT o UPDATE. Es importante conocerlas porque afectan cómo se procesan las peticiones de la API.
 
@@ -488,9 +683,9 @@ Estas reglas **no están en el SQL** (la base de datos no las valida por sí mis
 
 ---
 
-## 10. Estado Fase 2 Lite y Lo Que Sigue
+## 11. Estado Fase 2 Lite y Lo Que Sigue
 
-### 10.1 Implementado y finalizado (MVP Extendido / Fase 2 Lite)
+### 11.1 Implementado y finalizado (MVP Extendido / Fase 2 Lite)
 
 | Tabla | Estado | Propósito |
 |------|--------|-----------|
@@ -500,7 +695,7 @@ Estas reglas **no están en el SQL** (la base de datos no las valida por sí mis
 | `preferencias_notificacion` | Activa | Reglas por cliente/área/tipo/severidad/canal para despacho externo |
 | `audit_log` | Activa | Trazabilidad de acciones relevantes |
 
-### 10.2 Futuro (Fase 2 Completa)
+### 11.2 Futuro (Fase 2 Completa)
 
 Además, se evaluará agregar un campo `ndvi` a `lecturas` cuando se defina una fuente estable de datos de vegetación.
 
