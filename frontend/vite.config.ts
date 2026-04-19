@@ -17,6 +17,40 @@ export default defineConfig({
     },
   },
 
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) {
+            return undefined
+          }
+
+          if (id.includes('maplibre-gl')) {
+            return 'vendor-map'
+          }
+
+          if (id.includes('recharts') || id.includes('d3-')) {
+            return 'vendor-charts'
+          }
+
+          if (id.includes('@mui/')) {
+            return 'vendor-mui'
+          }
+
+          if (id.includes('@radix-ui/')) {
+            return 'vendor-radix'
+          }
+
+          if (id.includes('react-router')) {
+            return 'vendor-router'
+          }
+
+          return 'vendor-misc'
+        },
+      },
+    },
+  },
+
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
 })

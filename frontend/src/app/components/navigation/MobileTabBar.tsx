@@ -11,6 +11,7 @@ import {
     Users
 } from "lucide-react";
 import { Link, useLocation } from "react-router";
+import { preloadMapRoutes } from "../../services/routePreload";
 
 interface MobileTabBarProps {
   role: "client" | "admin";
@@ -18,6 +19,12 @@ interface MobileTabBarProps {
 
 export function MobileTabBar({ role }: MobileTabBarProps) {
   const location = useLocation();
+
+  const maybePreloadMaps = (path: string) => {
+    if (path.includes("/mapa")) {
+      void preloadMapRoutes();
+    }
+  };
 
   const clientTabs = [
     { path: "/cliente", icon: LayoutDashboard, label: "Inicio" },
@@ -53,6 +60,9 @@ export function MobileTabBar({ role }: MobileTabBarProps) {
             <Link
               key={tab.path}
               to={tab.path}
+              onMouseEnter={() => maybePreloadMaps(tab.path)}
+              onFocus={() => maybePreloadMaps(tab.path)}
+              onTouchStart={() => maybePreloadMaps(tab.path)}
               className="flex flex-col items-center gap-1 px-3 py-2 rounded-2xl transition-colors min-w-[64px]"
             >
               <Icon

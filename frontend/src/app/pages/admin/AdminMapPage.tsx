@@ -115,6 +115,18 @@ export function AdminMapPage() {
     [nodesWithoutCoordinates, visibleStatuses]
   );
 
+  const statusCounts = useMemo(() => {
+    return nodes.reduce(
+      (acc, node) => {
+        if (node.freshness_status === "fresh") acc.fresh += 1;
+        if (node.freshness_status === "stale") acc.stale += 1;
+        if (node.freshness_status === "no_data") acc.no_data += 1;
+        return acc;
+      },
+      { fresh: 0, stale: 0, no_data: 0 }
+    );
+  }, [nodes]);
+
   const loadClients = useCallback(async () => {
     const response = await api.get("/clients?per_page=200");
     setClients(response.data.data || []);
@@ -551,6 +563,27 @@ export function AdminMapPage() {
                 />
                 Sin lectura
               </label>
+            </div>
+          </div>
+
+          <div className="mb-3 rounded-xl border border-[#2C2621]/10 bg-[#F9F8F4] px-3 py-2.5 text-xs text-[#6E6359]">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <span className="inline-flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#6D7E5E]" />
+                Fresco: {statusCounts.fresh}
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#D97706]" />
+                Tardío: {statusCounts.stale}
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#6E6359]" />
+                Sin lectura: {statusCounts.no_data}
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#9CA3AF]" />
+                Sin GPS: {filteredNodesWithoutCoordinates.length}
+              </span>
             </div>
           </div>
 

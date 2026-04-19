@@ -16,6 +16,7 @@ import {
 import { useState } from "react";
 import { Link, useLocation } from "react-router";
 import { useAuth } from "../../context/AuthContext";
+import { preloadMapRoutes } from "../../services/routePreload";
 
 interface DesktopSidebarProps {
   role: "client" | "admin";
@@ -25,6 +26,22 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
   const [expanded, setExpanded] = useState(true);
   const { user, logout } = useAuth();
   const location = useLocation();
+
+  const handleSidebarToggle = () => {
+    setExpanded((previous) => {
+      const next = !previous;
+      if (next) {
+        void preloadMapRoutes();
+      }
+      return next;
+    });
+  };
+
+  const maybePreloadMaps = (path: string) => {
+    if (path.includes("/mapa")) {
+      void preloadMapRoutes();
+    }
+  };
 
   const clientNavItems = [
     { path: "/cliente", icon: LayoutDashboard, label: "Dashboard" },
@@ -67,7 +84,7 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
           </h2>
         )}
         <button
-          onClick={() => setExpanded(!expanded)}
+          onClick={handleSidebarToggle}
           className="p-2 rounded-full hover:bg-[#E2D4B7]/50 transition-colors"
         >
           {expanded ? (
@@ -93,6 +110,8 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
             <Link
               key={item.path}
               to={item.path}
+              onMouseEnter={() => maybePreloadMaps(item.path)}
+              onFocus={() => maybePreloadMaps(item.path)}
               className={`flex items-center gap-3 px-4 py-3 rounded-full transition-all ${
                 isActive
                   ? "bg-[#6D7E5E] text-[#F4F1EB]"
