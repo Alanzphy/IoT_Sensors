@@ -52,13 +52,18 @@ Certificamos que el "Viaje del Dato" desde el campo agrícola (simulado) hasta l
 3. El **Gestor Central** recupera la telemetría histórica del área asegurando que el rol coincida (protegiendo la privacidad de datos de otros ranchos).
 4. El **Dashboard (React)** gráfica las fluctuaciones históricas y actualiza en tiempo real el "Indicador de Frescura" y la lectura más reciente en pantalla.
 
-> 📚 **Anexo de Arquitecutra y Flujos:** Para consultar el detalle exhaustivo de cómo operan en la realidad los datos en ambas partes de este sistema, preparamos dos mapas de flujos narrativos:
-> - 🖥️ [Documentación de Flujos del Web (Frontend)](./flujos_frontend.md) (Pantallas, Mapas, Roles)
-> - ⚙️ [Documentación de Flujos de Servidor (Backend)](./flujos_backend.md) (Ingesta IoT, Seguridad JWT, Exportaciones)
-
 * **Evidencia sugerida (El entregable de mayor impacto):**
 > `[INSERTAR ENLACE A VIDEO: Grabar la pantalla dividida. De un lado el script de Python Terminal enviando datos cada 10s al Backend (mostrando "HTTP 201 Created"). Del otro lado, el navegador con el dashboard del cliente. Se debe observar cómo al caer el registro en el servidor, los widgets web de Humedad y Evapotranspiración se re-ajustan instantáneamente.]`
-# Flujos de Informacion del Frontend (React App)
+
+---
+
+> 📚 **Anexos de Arquitectura y Flujos:** A continuación en las siguientes páginas de este documento se detalla exhaustivamente mediante diagramas y narrativas cómo operan los datos en ambas partes de este sistema:
+> - 🖥️ Parte 1: **Anexo Flujos Frontend** (Pantallas, Mapas, Roles).
+> - ⚙️ Parte 2: **Anexo Flujos Backend** (Ingesta IoT, Seguridad JWT, Exportaciones).
+
+<br><br>
+
+# ANEXO 1: Flujos de Información del Frontend (React App)
 
 Este documento describe los flujos funcionales actuales de navegacion y consumo de datos en la aplicacion frontend para los roles **Administrador** y **Cliente**.
 
@@ -161,7 +166,10 @@ El admin tiene visibilidad global y CRUD de estructura operativa.
 2. JWT se envia en `Authorization: Bearer <token>` para usuarios.
 3. Consultas geoespaciales usan `GET /api/v1/nodes/geo` con filtros de ownership y jerarquia.
 4. La API responde con payload tipado y paginacion en listados.
-# Flujos de Información del Backend (FastAPI)
+
+<br><br>
+
+# ANEXO 2: Flujos de Información del Backend (FastAPI)
 
 Este documento describe los procesos transaccionales, de seguridad y de persistencia de datos que ocurren en el servidor ("Cerebro" del sistema) para soportar la Fase MVP del sistema de monitoreo IoT.
 
@@ -188,7 +196,7 @@ sequenceDiagram
     Web->>API: GET /readings (con Cabecera JWT bearer)
     API->>API: Parsea JWT (Extrae Rol y Cliente ID)
     API->>DB: Prepara SELECT con filtros de Ownership
-    DB-->>API: Retorna Data filtrada 
+    DB-->>API: Retorna Data filtrada
     API->>API: Empaqueta formato y Paginación
     API-->>Web: OK 200 (Datos listos para rendering)
 ```
