@@ -24,7 +24,7 @@ La suite utiliza una **pirámide de dos niveles**:
 
 ```
           ┌──────────────────────────────────┐
-          │   INTEGRACIÓN (10 módulos)        │  ← HTTP end-to-end con TestClient
+          │   INTEGRACIÓN (13 módulos)        │  ← HTTP end-to-end con TestClient
           │   Flujos reales: request→BD       │
           ├──────────────────────────────────┤
           │   UNITARIO (9 módulos)            │  ← Lógica de negocio aislada
@@ -38,7 +38,7 @@ La suite utiliza una **pirámide de dos niveles**:
 |-----------|---------------|
 | **Sin dependencias externas** | SQLite en memoria, no requiere MySQL ni Docker corriendo |
 | **Aislamiento entre tests** | Cada test usa rollback al finalizar; estado limpio garantizado |
-| **Tests rápidos** | 228 tests en ~65 segundos |
+| **Tests rápidos** | 282 tests en ~73 segundos |
 | **Fixtures reutilizables** | `conftest.py` centraliza la jerarquía completa de datos de prueba |
 
 ### ¿Por qué SQLite en vez de MySQL?
@@ -160,6 +160,9 @@ backend/
         ├── test_irrigation_areas_api.py  # CRUD /irrigation-areas
         ├── test_crop_cycles_api.py    # CRUD /crop-cycles
         ├── test_nodes_api.py          # CRUD /nodes
+        ├── test_audit_logs_api.py     # GET, POST /audit-logs
+        ├── test_notification_preferences_api.py  # CRUD /notification-preferences
+        ├── test_thresholds_alerts_api.py # Alertas y umbrales
         └── test_permissions.py        # Aislamiento de roles y autenticación
 ```
 
@@ -582,7 +585,7 @@ Tests transversales de seguridad y aislamiento de roles.
 
 ## Resultados de Cobertura
 
-Resultado de la última ejecución: **228 tests — 228 PASSED — 65 segundos**
+Resultado de la última ejecución: **282 tests — 282 PASSED — 73 segundos**
 
 ```
 uv run pytest tests/ --cov=app --cov-report=term-missing
@@ -590,34 +593,18 @@ uv run pytest tests/ --cov=app --cov-report=term-missing
 
 | Módulo | Stmts | Miss | **Cover** |
 |--------|-------|------|-----------|
-| `app/api/v1/endpoints/auth.py` | 43 | 0 | **100%** |
-| `app/api/v1/endpoints/clients.py` | 29 | 0 | **100%** |
-| `app/api/v1/endpoints/crop_types.py` | 29 | 0 | **100%** |
-| `app/api/v1/endpoints/users.py` | 29 | 0 | **100%** |
-| `app/api/v1/endpoints/readings.py` | 58 | 2 | **97%** |
-| `app/api/v1/endpoints/nodes.py` | 53 | 14 | **74%** |
-| `app/api/v1/endpoints/crop_cycles.py` | 60 | 17 | **72%** |
-| `app/api/v1/endpoints/irrigation_areas.py` | 67 | 24 | **64%** |
-| `app/api/v1/endpoints/properties.py` | 53 | 10 | **81%** |
+| `app/api/v1/endpoints/*` (rutas) | — | — | **~85%** |
 | `app/core/security.py` | 23 | 0 | **100%** |
 | `app/core/config.py` | 21 | 0 | **100%** |
 | `app/core/deps.py` | 37 | 9 | **76%** |
 | `app/models/*.py` (todos) | — | 0 | **100%** |
-| `app/schemas/*.py` (todos) | — | 0 | **100%** |
-| `app/services/client.py` | 55 | 0 | **100%** |
-| `app/services/crop_cycle.py` | 49 | 0 | **100%** |
-| `app/services/property.py` | 45 | 0 | **100%** |
-| `app/services/crop_type.py` | 48 | 1 | **98%** |
-| `app/services/irrigation_area.py` | 55 | 1 | **98%** |
-| `app/services/node.py` | 58 | 1 | **98%** |
-| `app/services/reading.py` | 89 | 4 | **96%** |
-| `app/services/user.py` | 55 | 3 | **95%** |
+| `app/schemas/*.py` (todos) | — | 3 | **~99%** |
+| `app/services/*.py` (lógica) | — | — | **~88%** |
 | `app/db/seed.py` | 63 | 63 | **0%** ¹ |
-| **TOTAL** | **1460** | **153** | **90%** |
+| **TOTAL (Sin seed)** | **2927** | **527** | **82%** |
 
 > ¹ `seed.py` es un script de inicialización de datos que se ejecuta manualmente
 > (`uv run python -m app.db.seed`), no forma parte de la lógica de negocio testeada.
-> Si se excluyera, la cobertura sería **~97%**.
 
 ### Excluir seed del reporte
 
@@ -670,7 +657,7 @@ Los fixtures siguen la jerarquía del dominio. Si un test necesita un nodo, auto
 
 ```python
 def test_mi_test(self, db, sample_node):
-    # sample_node ya implica: sample_irrigation_area, sample_property, 
+    # sample_node ya implica: sample_irrigation_area, sample_property,
     # sample_crop_type, client_user — todo disponible en `db`
 ```
 
