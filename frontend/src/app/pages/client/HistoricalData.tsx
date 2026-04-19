@@ -4,6 +4,7 @@ import { Download, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { BentoCard } from "../../components/BentoCard";
+import { PageTransition } from "../../components/PageTransition";
 import { PillButton } from "../../components/PillButton";
 import { ReadingDateRangeSelector } from "../../components/ReadingDateRangeSelector";
 import { useSelection } from "../../context/SelectionContext";
@@ -179,9 +180,10 @@ export function HistoricalData() {
   };
 
   return (
+    <PageTransition>
     <div className="min-h-screen p-4 md:p-6 lg:p-8 overflow-x-hidden">
       <div className="mb-6">
-        <h1 className="text-2xl md:text-3xl text-[#2C2621] mb-2">Datos Históricos</h1>
+        <h1 className="text-2xl md:text-3xl font-serif text-[#2C2621] mb-2">Datos Históricos</h1>
         <p className="text-[#6E6359]">Consulta el histórico de lecturas de {selectedArea ? selectedArea.name : "tus sensores"}</p>
       </div>
 
@@ -439,7 +441,12 @@ export function HistoricalData() {
       {/* Data Table */}
       <BentoCard variant="light">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-          <h3 className="text-lg text-[#2C2621]">Tabla de Datos {totalPages > 0 && `(Pág ${page} de ${totalPages})`}</h3>
+          <h3 className="text-lg text-[#2C2621]">
+            Tabla de Datos{" "}
+            <span className="text-sm text-[#6E6359] font-normal">
+              {totalItems > 0 && `${totalItems} registros — pág. ${page} de ${totalPages}`}
+            </span>
+          </h3>
           <div className="flex gap-2">
             <PillButton variant="secondary" className="text-sm flex items-center gap-2" onClick={() => handleExport('csv')}>
               <Download className="w-4 h-4" /> CSV
@@ -457,12 +464,12 @@ export function HistoricalData() {
           <table className="w-full min-w-[800px]">
             <thead>
               <tr className="border-b border-[#2C2621]/10">
-                <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Fecha/Hora</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Humedad Suelo (%)</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Temp. Suelo (°C)</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Flujo (L/min)</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Temp. Aire (°C)</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">H. Relativa (%)</th>
+                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Fecha/Hora</th>
+                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Humedad Suelo (%)</th>
+                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Temp. Suelo (°C)</th>
+                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Flujo (L/min)</th>
+                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Temp. Aire (°C)</th>
+                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">H. Relativa (%)</th>
               </tr>
             </thead>
             <tbody className="relative">
@@ -528,5 +535,6 @@ export function HistoricalData() {
         )}
       </BentoCard>
     </div>
+    </PageTransition>
   );
 }

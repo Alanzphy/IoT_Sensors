@@ -14,6 +14,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router";
 
 import { BentoCard } from "../../components/BentoCard";
+import { PageTransition } from "../../components/PageTransition";
 import { usePageVisibility } from "../../hooks/usePageVisibility";
 import { AlertItem, listAlerts, markAlertRead } from "../../services/alerts";
 
@@ -133,7 +134,7 @@ export function AlertsCenterPage() {
       );
     } catch (error) {
       console.error("Failed to mark alert as read", error);
-      setErrorMessage("No fue posible marcar la alerta como leida");
+      setErrorMessage("No fue posible marcar la alerta como leída");
     } finally {
       setUpdatingIds((previous) => {
         const next = new Set(previous);
@@ -152,14 +153,15 @@ export function AlertsCenterPage() {
   };
 
   return (
+    <PageTransition>
     <div className="min-h-screen p-4 md:p-6 lg:p-8">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl md:text-3xl text-[#2C2621]">Centro de Alertas</h1>
+          <h1 className="text-2xl md:text-3xl font-serif text-[#2C2621]">Centro de Alertas</h1>
           <p className="text-[#6E6359]">
             {isAdmin
-              ? "Vista global de alertas de nodos, areas y umbrales"
-              : "Alertas de tus areas de riego"}
+              ? "Vista global de alertas de nodos, áreas y umbrales"
+              : "Alertas de tus áreas de riego"}
           </p>
         </div>
 
@@ -361,5 +363,6 @@ export function AlertsCenterPage() {
         )}
       </BentoCard>
     </div>
+    </PageTransition>
   );
 }

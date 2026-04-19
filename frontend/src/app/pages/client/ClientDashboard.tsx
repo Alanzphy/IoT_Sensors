@@ -35,9 +35,9 @@ const defaultSemaphore: Record<PriorityKey, SemaphoreLevel> = {
 const DASHBOARD_REFRESH_MS = 30000;
 
 function getSemaphoreLabel(level: SemaphoreLevel): string {
-  if (level === "critical") return "Critico";
+  if (level === "critical") return "Crítico";
   if (level === "warning") return "Riesgo";
-  return "Optimo";
+  return "Óptimo";
 }
 
 function getSemaphoreClass(level: SemaphoreLevel): string {
@@ -331,6 +331,7 @@ function DesktopDashboard({
                 strokeDasharray={`${2 * Math.PI * 56}`}
                 strokeDashoffset={`${2 * Math.PI * 56 * (1 - (typeof currentReadings.soilHumidity === 'number' ? currentReadings.soilHumidity : 0) / 100)}`}
                 strokeLinecap="round"
+                style={{ transition: "stroke-dashoffset 0.8s ease" }}
               />
             </svg>
           </div>
@@ -406,7 +407,19 @@ function DesktopDashboard({
         <BentoCard variant="sand">
           <div className="flex items-start justify-between mb-4">
             <h3 className="text-lg text-[#2C2621]">Estado del Riego</h3>
-            <div className={`w-3 h-3 rounded-full ${currentReadings.irrigationActive ? 'bg-[#6D7E5E] animate-pulse' : 'bg-[#6E6359]'}`} />
+            <div className="relative flex items-center justify-center w-4 h-4">
+              {currentReadings.irrigationActive && (
+                <span
+                  className="absolute inline-flex w-full h-full rounded-full bg-[#6D7E5E] opacity-50"
+                  style={{ animation: "rippleExpand 2s ease-out infinite" }}
+                />
+              )}
+              <span
+                className={`relative block w-2.5 h-2.5 rounded-full transition-colors duration-500 ${
+                  currentReadings.irrigationActive ? 'bg-[#6D7E5E]' : 'bg-[#6E6359]'
+                }`}
+              />
+            </div>
           </div>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -481,12 +494,15 @@ function DesktopDashboard({
                   dataKey="time"
                   stroke="#6E6359"
                   style={{ fontSize: "12px" }}
+                  minTickGap={32}
                   interval="preserveStartEnd"
+                  tick={{ fill: "#6E6359" }}
                 />
                 <YAxis
                   stroke="#6E6359"
                   style={{ fontSize: "12px" }}
-                  domain={[30, 60]}
+                  domain={["auto", "auto"]}
+                  tick={{ fill: "#6E6359" }}
                 />
                 <Tooltip
                   contentStyle={{
@@ -514,8 +530,8 @@ function DesktopDashboard({
       <div className="col-span-4">
         <BentoCard variant="light" className="h-full">
           <h3 className="text-lg text-[#2C2621] mb-4">Ambiental</h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-[24px] bg-[#F4F1EB]">
+          <div className="divide-y divide-[#2C2621]/5 rounded-[24px] overflow-hidden">
+            <div className="flex items-center justify-between p-3 bg-[#F4F1EB]">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-[16px] bg-[#E2D4B7]">
                   <Sun className="w-5 h-5 text-[#6D7E5E]" />
@@ -529,7 +545,7 @@ function DesktopDashboard({
               </div>
             </div>
 
-            <div className="flex items-center justify-between p-3 rounded-[24px] bg-[#F4F1EB]">
+            <div className="flex items-center justify-between p-3 bg-[#F4F1EB]">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-[16px] bg-[#E2D4B7]">
                   <Droplets className="w-5 h-5 text-[#6D7E5E]" />
@@ -543,7 +559,7 @@ function DesktopDashboard({
               </div>
             </div>
 
-            <div className="flex items-center justify-between p-3 rounded-[24px] bg-[#F4F1EB]">
+            <div className="flex items-center justify-between p-3 bg-[#F4F1EB]">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-[16px] bg-[#E2D4B7]">
                   <Wind className="w-5 h-5 text-[#6D7E5E]" />
@@ -557,7 +573,7 @@ function DesktopDashboard({
               </div>
             </div>
 
-            <div className="flex items-center justify-between p-3 rounded-[24px] bg-[#F4F1EB]">
+            <div className="flex items-center justify-between p-3 bg-[#F4F1EB]">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-[16px] bg-[#E2D4B7]">
                   <Zap className="w-5 h-5 text-[#6D7E5E]" />
@@ -589,7 +605,7 @@ function MobileDashboard({
   return (
     <div className="space-y-4">
       <BentoCard variant="light">
-        <h3 className="text-base text-[#2C2621] mb-3">Semaforos de Umbral</h3>
+        <h3 className="text-base text-[#2C2621] mb-3">Semáforos de Umbral</h3>
         <div className="grid grid-cols-1 gap-2">
           <div className="flex items-center justify-between rounded-[16px] bg-[#F4F1EB] px-3 py-2">
             <span className="text-sm text-[#5F5549]">Humedad suelo</span>

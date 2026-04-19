@@ -140,7 +140,10 @@ export function AlertsPopover({
           >
             <Bell className="h-5 w-5" />
             {unreadCount > 0 && (
-              <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-[#7F1D1D] px-1.5 py-0.5 text-center text-[11px] font-semibold text-white">
+              <span
+                key={unreadCount}
+                className="absolute -right-1 -top-1 min-w-5 rounded-full bg-[#7F1D1D] px-1.5 py-0.5 text-center text-[11px] font-semibold text-white animate-badge-pop"
+              >
                 {unreadCount > 99 ? "99+" : unreadCount}
               </span>
             )}
@@ -172,7 +175,7 @@ export function AlertsPopover({
               </div>
             </div>
             <p className="mt-1 text-xs text-[#6E6359]">
-              {unreadCount} no leidas · {visibleUnreadCount} visibles no leidas
+              {unreadCount} no leídas · {visibleUnreadCount} visibles no leídas
             </p>
           </div>
 
@@ -228,7 +231,7 @@ export function AlertsPopover({
                             ) : (
                               <Check className="h-3 w-3" />
                             )}
-                            Leida
+                            Leída
                           </button>
                         )}
                       </div>

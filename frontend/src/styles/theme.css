@@ -154,6 +154,7 @@
 
   html {
     font-size: var(--font-size);
+    scroll-behavior: smooth;
   }
 
   h1, h2, h3 {
@@ -201,4 +202,96 @@
     font-weight: var(--font-weight-normal);
     line-height: 1.5;
   }
+
+  /* ── Text selection ── */
+  ::selection {
+    background-color: #6D7E5E33;
+    color: #2C2621;
+  }
+
+  /* ── Custom Scrollbar (Webkit) ── */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #C4B49A;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #A68A61;
+  }
+
+  /* ── Autofill override ── */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px #F4F1EB inset !important;
+    -webkit-text-fill-color: #2C2621 !important;
+    caret-color: #2C2621;
+  }
+}
+
+/* ── Animation Keyframes ── */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+@keyframes rippleExpand {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+@keyframes badgePop {
+  0% { transform: scale(0.5); opacity: 0; }
+  70% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(100%); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideOutRight {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(100%); }
+}
+
+/* ── Animation Utilities ── */
+.animate-fade-in-up {
+  animation: fadeInUp 0.35s ease-out both;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, #E2D4B7 25%, #EDE3CF 50%, #E2D4B7 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.6s infinite linear;
+}
+
+.animate-badge-pop {
+  animation: badgePop 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+.toast-enter {
+  animation: slideInRight 0.3s ease-out both;
+}
+
+.toast-exit {
+  animation: slideOutRight 0.3s ease-in both;
 }

@@ -1,8 +1,10 @@
 import { AlertCircle, Database, MapPin, Plus, Radio, Users } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router"; // or react-router-dom depending on your setup
+import { Link } from "react-router";
 import { BentoCard } from "../../components/BentoCard";
+import { PageTransition } from "../../components/PageTransition";
 import { PillButton } from "../../components/PillButton";
+import { SkeletonGrid } from "../../components/SkeletonCard";
 import { api } from "../../services/api";
 
 export function AdminDashboard() {
@@ -58,18 +60,19 @@ export function AdminDashboard() {
   }, []);
 
   return (
-    <div className="min-h-screen p-4 md:p-6 lg:p-8">
+    <PageTransition>
+      <div className="min-h-screen p-4 md:p-6 lg:p-8">
       <div className="mb-6">
-        <h1 className="text-2xl md:text-3xl text-[#2C2621] mb-2">Panel de Administración</h1>
+        <h1 className="text-2xl md:text-3xl font-serif text-[#2C2621] mb-2">Panel de Administración</h1>
         <p className="text-[#6E6359]">
           {new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
         </p>
       </div>
 
       {loading ? (
-         <div className="flex justify-center items-center py-12">
-            <p className="text-[#6E6359]">Cargando métricas...</p>
-         </div>
+        <div className="py-12">
+          <SkeletonGrid count={4} />
+        </div>
       ) : (
         <>
           {/* Summary cards */}
@@ -194,6 +197,7 @@ export function AdminDashboard() {
           </div>
         </>
       )}
-    </div>
+      </div>
+    </PageTransition>
   );
 }

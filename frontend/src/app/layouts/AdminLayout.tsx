@@ -1,4 +1,5 @@
-import { Outlet } from "react-router";
+import { useEffect, useRef } from "react";
+import { Outlet, useLocation } from "react-router";
 import { DesktopSidebar } from "../components/navigation/DesktopSidebar";
 import { MobileTabBar } from "../components/navigation/MobileTabBar";
 import { AlertsPopover } from "../components/notifications/AlertsPopover";
@@ -6,6 +7,13 @@ import { useIsMobile } from "../hooks/useIsMobile";
 
 export function AdminLayout() {
   const isMobile = useIsMobile();
+  const location = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
+
+  // Scroll to top on route change
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0, behavior: "instant" });
+  }, [location.pathname]);
 
   return (
     <div
@@ -16,6 +24,7 @@ export function AdminLayout() {
       {!isMobile && <DesktopSidebar role="admin" />}
 
       <main
+        ref={mainRef}
         className={`flex-1 min-w-0 overflow-x-hidden ${
           isMobile ? "pb-20" : "h-screen overflow-y-auto"
         }`}

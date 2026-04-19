@@ -2,6 +2,7 @@ import { Edit, Plus, SlidersHorizontal, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { BentoCard } from "../../components/BentoCard";
+import { PageTransition } from "../../components/PageTransition";
 import { PillButton } from "../../components/PillButton";
 import { useAuth } from "../../context/AuthContext";
 import { useOptionalSelection } from "../../context/SelectionContext";
@@ -36,15 +37,15 @@ const parameterOptions: Array<{ value: ThresholdParameter; label: string; unit: 
   { value: "soil.conductivity", label: "Suelo: Conductividad", unit: "dS/m" },
   { value: "soil.temperature", label: "Suelo: Temperatura", unit: "C" },
   { value: "soil.humidity", label: "Suelo: Humedad", unit: "%" },
-  { value: "soil.water_potential", label: "Suelo: Potencial hidrico", unit: "MPa" },
+  { value: "soil.water_potential", label: "Suelo: Potencial hídrico", unit: "MPa" },
   { value: "irrigation.active", label: "Riego: Activo", unit: "bool" },
   { value: "irrigation.accumulated_liters", label: "Riego: Litros acumulados", unit: "L" },
   { value: "irrigation.flow_per_minute", label: "Riego: Flujo por minuto", unit: "L/min" },
   { value: "environmental.temperature", label: "Ambiental: Temperatura", unit: "C" },
   { value: "environmental.relative_humidity", label: "Ambiental: Humedad relativa", unit: "%" },
   { value: "environmental.wind_speed", label: "Ambiental: Velocidad viento", unit: "km/h" },
-  { value: "environmental.solar_radiation", label: "Ambiental: Radiacion solar", unit: "W/m2" },
-  { value: "environmental.eto", label: "Ambiental: ETO", unit: "mm/dia" },
+  { value: "environmental.solar_radiation", label: "Ambiental: Radiación solar", unit: "W/m²" },
+  { value: "environmental.eto", label: "Ambiental: ETO", unit: "mm/día" },
 ];
 
 const defaultFormState: ThresholdFormState = {
@@ -251,12 +252,13 @@ export function ThresholdManagement() {
   }, []);
 
   return (
+    <PageTransition>
     <div className="min-h-screen p-4 md:p-6 lg:p-8">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl text-[#2C2621] mb-2">Umbrales de Alertas</h1>
+          <h1 className="text-2xl md:text-3xl font-serif text-[#2C2621] mb-2">Umbrales de Alertas</h1>
           <p className="text-[#6E6359]">
-            Configura rangos para activar alertas automaticas por parametro
+            Configura rangos para activar alertas automáticas por parámetro
           </p>
         </div>
         <PillButton variant="primary" onClick={openCreate}>
@@ -272,7 +274,7 @@ export function ThresholdManagement() {
       <BentoCard variant="light" className="mb-4">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <label className="text-sm text-[#5F5549] flex flex-col gap-1">
-            Area de riego
+            Área de riego
             <select
               value={filterAreaId}
               onChange={(event) => setFilterAreaId(event.target.value)}
@@ -288,7 +290,7 @@ export function ThresholdManagement() {
           </label>
 
           <label className="text-sm text-[#5F5549] flex flex-col gap-1">
-            Parametro
+            Parámetro
             <select
               value={filterParameter}
               onChange={(event) => setFilterParameter(event.target.value)}
@@ -548,5 +550,6 @@ export function ThresholdManagement() {
         </BentoCard>
       </div>
     </div>
+    </PageTransition>
   );
 }

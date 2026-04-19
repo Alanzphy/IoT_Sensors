@@ -96,7 +96,7 @@ El propósito de este documento es especificar de manera completa, consistente y
 
 El sistema proporcionará una plataforma de software destinada al monitoreo agrícola basado en datos IoT, permitiendo almacenar, procesar y visualizar información proveniente del módulo de control (simulador de hardware).
 
-El desarrollo se estructura en tres capas de evolución. Este SRS detalla el MVP, incorpora el estado activo de MVP Extendido (Fase 2 Lite), y mantiene como roadmap la Fase 2 Completa.
+El desarrollo se estructura en tres capas de evolución. Este SRS detalla el MVP, incorpora el estado activo de MVP Extendido (Fase 2 Lite), y refleja el estado en ejecución de la Fase 2 Completa (con Sprint 1 geoespacial base ya implementado).
 
 **Fase 1** \- MVP (alcance actual). El sistema permitirá:
 
@@ -121,10 +121,11 @@ El desarrollo se estructura en tres capas de evolución. Este SRS detalla el MVP
 ● Vista administrativa de auditoría.
 ● Recuperación de contraseña por correo electrónico con token temporal de un solo uso.
 
-**Fase 2 Completa** \- Funcionalidades planificadas (no activas aún):
+**Fase 2 Completa** \- Estado en ejecución (Sprint 1 implementado + roadmap pendiente):
 
 ● Integración con IA (Azure OpenAI) y automatización con n8n.
-● Visualización geoespacial de predios y nodos en mapa interactivo.
+● Visualización geoespacial base implementada (mapas cliente/admin con filtros jerárquicos y frescura de nodos).
+● Mejoras geoespaciales avanzadas pendientes (capas externas, vistas temáticas y analítica espacial extendida).
 ● NDVI (Índice de Vegetación) como parámetro adicional del sensor.
 ● Preferencias avanzadas de notificación (ej. horarios de silencio o ventanas de envío).
 
@@ -290,7 +291,9 @@ El sistema ofrecerá una interfaz web (SPA en React) accesible desde navegador:
 
 **MVP Extendido (activo):** El dashboard cliente incorpora semáforos para datos prioritarios (humedad de suelo, flujo de agua y E.T.O.) calculados en tiempo real con la última lectura y los umbrales activos del área.
 
-**Fase 2 Completa:** Se integrará visualización geoespacial tipo mapa interactivo (API de Google Maps u otra).
+**Fase 2 Completa (estado actual):** Ya existe visualización geoespacial base en frontend (cliente/admin) para nodos y predios dentro del ownership correspondiente.
+
+**Fase 2 Completa (pendiente):** Se incorporarán mejoras geoespaciales avanzadas (capas y visualizaciones temáticas adicionales).
 
 ### 3.1.2 Interfaces de Hardware {#3.1.2-interfaces-de-hardware}
 
@@ -306,7 +309,9 @@ El sistema ofrecerá una interfaz web (SPA en React) accesible desde navegador:
 
 **Despliegue:** **Docker Compose** en VPS Linux a través de **Dokploy**. Tres contenedores: MySQL, Backend (FastAPI \+ Uvicorn) y Frontend. El tráfico público entra por **Traefik** (puertos 80/443) que redirige SSL automáticamente.
 
-**Fase 2 Completa (futuro):** Integración con API de mapas (Google Maps u otra) para renderizar ubicación de predios.
+**Fase 2 Completa (estado actual):** La visualización geoespacial base se encuentra activa en frontend para cliente y administrador.
+
+**Fase 2 Completa (futuro):** Integración opcional con proveedores/cartografía adicional para funciones geoespaciales avanzadas.
 
 ### 3.1.4 Interfaces de Comunicación {#3.1.4-interfaces-de-comunicación}
 

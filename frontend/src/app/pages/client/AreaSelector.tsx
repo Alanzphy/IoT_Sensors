@@ -1,8 +1,11 @@
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Warehouse } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { BentoCard } from "../../components/BentoCard";
+import { EmptyState } from "../../components/EmptyState";
 import { FreshnessIndicator } from "../../components/FreshnessIndicator";
+import { PageTransition } from "../../components/PageTransition";
+import { SkeletonCard } from "../../components/SkeletonCard";
 import { cropIcons } from "../../components/icons/CropIcons";
 import { IrrigationArea, useSelection } from "../../context/SelectionContext";
 import { api } from "../../services/api";
@@ -10,9 +13,11 @@ import { api } from "../../services/api";
 function AreaCard({
   area,
   onClick,
+  animationDelay = 0,
 }: {
   area: IrrigationArea;
   onClick: () => void;
+  animationDelay?: number;
 }) {
   const [humidity, setHumidity] = useState<number | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
@@ -35,14 +40,11 @@ function AreaCard({
       }
     }
     fetchLatestReading();
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, [area.id]);
 
-  // Normalize crop type name for icon lookup
   const cropName = area.crop_type?.name?.toLowerCase() || "";
-  let CropIcon: any = cropIcons.nogal; // Default fallback
+  let CropIcon: any = cropIcons.nogal;
   if (cropName.includes("alfalfa")) CropIcon = cropIcons.alfalfa;
   else if (cropName.includes("manzana")) CropIcon = cropIcons.manzana;
   else if (cropName.includes("maíz") || cropName.includes("maiz")) CropIcon = cropIcons.maiz;
@@ -50,8 +52,19 @@ function AreaCard({
   else if (cropName.includes("algodón") || cropName.includes("algodon")) CropIcon = cropIcons.algodon;
 
   return (
-    <div onClick={onClick}>
-      <BentoCard variant="light" className="hover:shadow-lg transition-shadow cursor-pointer h-full flex flex-col justify-between">
+    <div
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      aria-label={`Ver área ${area.name}`}
+      onKeyDown={(e) => e.key === "Enter" && onClick()}
+      className="cursor-pointer animate-fade-in-up focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6D7E5E] rounded-[32px]"
+      style={{ animationDelay: `${animationDelay}ms` }}
+    >
+      <BentoCard
+        variant="light"
+        className="h-full flex flex-col justify-between hover:-translate-y-1 transition-transform duration-200"
+      >
         <div>
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -59,24 +72,31 @@ function AreaCard({
                 <CropIcon className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-lg text-[#2C2621] font-medium">{area.name}</h3>
-                <p className="text-sm text-[#6E6359]">{area.area_size || 0} hectáreas</p>
+                <h3 className="text-base text-[#2C2621] font-medium">{area.name}</h3>
+                <p className="text-sm text-[#6E6359]">{area.area_size || 0} ha</p>
               </div>
             </div>
-            <ChevronRight className="w-5 h-5 text-[#6E6359]" />
+            <ChevronRight className="w-5 h-5 text-[#6E6359] flex-shrink-0" />
           </div>
 
-          {/* Current humidity */}
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E6359]">Humedad actual</span>
-              <span className="font-bold text-[#2C2621]">
+          {/* Crop type badge */}
+          {area.crop_type?.name && (
+            <span className="inline-block px-3 py-1 rounded-full bg-[#6D7E5E]/10 text-[#6D7E5E] text-xs font-medium mb-4">
+              {area.crop_type.name}
+            </span>
+          )}
+
+          {/* Humidity bar */}
+          <div className="mb-3">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs text-[#6E6359]">Humedad actual</span>
+              <span className="text-sm font-bold text-[#2C2621]">
                 {humidity !== null ? `${humidity.toFixed(1)}%` : "N/D"}
               </span>
             </div>
             <div className="h-2 bg-[#E6E1D8] rounded-full overflow-hidden">
               <div
-                className="h-full bg-[#6D7E5E] rounded-full transition-all"
+                className="h-full bg-[#6D7E5E] rounded-full transition-all duration-700"
                 style={{ width: humidity !== null ? `${Math.min(100, Math.max(0, humidity))}%` : "0%" }}
               />
             </div>
@@ -95,8 +115,14 @@ export function AreaSelector() {
 
   if (loading) {
     return (
-      <div className="min-h-screen p-4 md:p-6 lg:p-8 flex items-center justify-center">
-        <p className="text-[#6E6359]">Cargando...</p>
+      <div className="min-h-screen p-4 md:p-6 lg:p-8">
+        <div className="mb-6">
+          <div className="h-8 w-64 rounded-full animate-shimmer mb-2" />
+          <div className="h-4 w-48 rounded-full animate-shimmer" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => <SkeletonCard key={i} lines={3} />)}
+        </div>
       </div>
     );
   }
@@ -104,54 +130,60 @@ export function AreaSelector() {
   if (error) {
     return (
       <div className="min-h-screen p-4 md:p-6 lg:p-8 flex items-center justify-center">
-        <p className="text-red-500">{error}</p>
+        <p className="text-[#DC2626] text-sm">{error}</p>
       </div>
     );
   }
 
+  const hasAreas = properties.some(p => areas.some(a => a.property_id === p.id));
+
   return (
-    <div className="min-h-screen p-4 md:p-6 lg:p-8">
-      <div className="mb-6">
-        <h1 className="text-2xl md:text-3xl text-[#2C2621] mb-2">Predios y Áreas de Riego</h1>
-        <p className="text-[#6E6359]">Selecciona un área para ver sus datos en tiempo real</p>
-      </div>
-
-      {properties.map((property) => {
-        const propertyAreas = areas.filter((a) => a.property_id === property.id);
-
-        if (propertyAreas.length === 0) return null;
-
-        return (
-          <div key={property.id} className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl text-[#2C2621]">{property.name}</h2>
-              {property.location && (
-                <span className="text-sm text-[#6E6359]">{property.location}</span>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {propertyAreas.map((area) => (
-                <AreaCard
-                  key={area.id}
-                  area={area}
-                  onClick={() => {
-                    setSelectedProperty(property);
-                    setSelectedArea(area);
-                    navigate("/cliente");
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        );
-      })}
-
-      {properties.length === 0 && (
-        <div className="text-center py-10 text-[#6E6359]">
-          No se encontraron predios disponibles.
+    <PageTransition>
+      <div className="min-h-screen p-4 md:p-6 lg:p-8">
+        <div className="mb-6">
+          <h1 className="text-2xl md:text-3xl font-serif text-[#2C2621] mb-2">Predios y Áreas de Riego</h1>
+          <p className="text-[#6E6359]">Selecciona un área para ver sus datos en tiempo real</p>
         </div>
-      )}
-    </div>
+
+        {!hasAreas && (
+          <EmptyState
+            icon={Warehouse}
+            title="Sin predios disponibles"
+            description="No se encontraron predios asignados a tu cuenta. Contacta al administrador."
+          />
+        )}
+
+        {properties.map((property) => {
+          const propertyAreas = areas.filter((a) => a.property_id === property.id);
+          if (propertyAreas.length === 0) return null;
+
+          return (
+            <div key={property.id} className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-serif text-[#2C2621]">{property.name}</h2>
+                {property.location && (
+                  <span className="text-sm text-[#6E6359]">{property.location}</span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {propertyAreas.map((area, idx) => (
+                  <AreaCard
+                    key={area.id}
+                    area={area}
+                    animationDelay={idx * 80}
+                    onClick={() => {
+                      setSelectedProperty(property);
+                      setSelectedArea(area);
+                      navigate("/cliente");
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </PageTransition>
   );
 }

@@ -2,6 +2,8 @@ import { Loader2, RefreshCw, Save } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { BentoCard } from "../../components/BentoCard";
+import { PageTransition } from "../../components/PageTransition";
+import { SkeletonCard } from "../../components/SkeletonCard";
 import { useSelection } from "../../context/SelectionContext";
 import {
     NotificationAlertType,
@@ -199,9 +201,10 @@ export function NotificationPreferencesPage() {
 
   if (selectionLoading || loading) {
     return (
-      <div className="min-h-screen p-6 flex items-center justify-center text-[#6E6359]">
-        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-        Cargando configuración...
+      <div className="min-h-screen p-4 md:p-6 lg:p-8 space-y-4">
+        <div className="h-8 w-64 rounded-full animate-shimmer mb-2" />
+        <SkeletonCard lines={4} />
+        <SkeletonCard lines={6} />
       </div>
     );
   }
@@ -215,6 +218,7 @@ export function NotificationPreferencesPage() {
   }
 
   return (
+    <PageTransition>
     <div className="min-h-screen p-4 md:p-6 lg:p-8">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -380,5 +384,6 @@ export function NotificationPreferencesPage() {
         </p>
       )}
     </div>
+    </PageTransition>
   );
 }
