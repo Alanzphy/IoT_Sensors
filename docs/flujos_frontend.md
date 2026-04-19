@@ -2,6 +2,23 @@
 
 Este documento describe los flujos funcionales actuales de navegacion y consumo de datos en la aplicacion frontend para los roles **Administrador** y **Cliente**.
 
+### Diagrama del Flujo Visual y Navegación
+```mermaid
+graph TD
+    A[Usuario Accede a Web] --> B{¿Autenticado?}
+    B -- No --> C[Pantalla de Login]
+    C --> D[Petición POST /auth/login]
+    D -- Éxito --> E[Guarda Tokens y Redirige]
+    B -- Sí --> F{¿Qué Rol tiene?}
+    E --> F
+    F -- Cliente --> G[Rutas de Cliente /cliente/*]
+    F -- Admin --> H[Rutas de Admin /admin/*]
+    G --> I[Dashboard y Vistas de Propiedad]
+    H --> J[Panel Global y Gestión Activos]
+    I --> K[Llamadas seguras API REST con JWT]
+    J --> K
+```
+
 ---
 
 ## 1. Flujo Base (Comun)

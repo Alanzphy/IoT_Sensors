@@ -2,6 +2,34 @@
 
 Este documento describe los procesos transaccionales, de seguridad y de persistencia de datos que ocurren en el servidor ("Cerebro" del sistema) para soportar la Fase MVP del sistema de monitoreo IoT.
 
+### Diagrama del Flujo de Datos Transaccional (IoT -> Servidor -> Cliente)
+```mermaid
+sequenceDiagram
+    autonumber
+    actor IoT as Simulador (Nodo IoT)
+    participant API as Gestor Central (FastAPI)
+    participant DB as Motor Relacional (MySQL)
+    actor Web as Cliente Web (React)
+
+    %% Ingesta IoT
+    note over IoT, DB: Flujo Segregado 1 (Sensor Ingesta)
+    IoT->>API: POST /readings (Categorías Suelo/Riego/Ambiente + X-API-Key)
+    API->>API: Valida API Key
+    API->>API: Filtra tipos (Pydantic Validator)
+    API->>DB: Inyecta Lectura con Timestamp (UTC)
+    DB-->>API: Transacción Exitosa
+    API-->>IoT: CREATED 201
+
+    %% Consumo Web
+    note over Web, DB: Flujo de Consulta Aislada (Cliente)
+    Web->>API: GET /readings (con Cabecera JWT bearer)
+    API->>API: Parsea JWT (Extrae Rol y Cliente ID)
+    API->>DB: Prepara SELECT con filtros de Ownership
+    DB-->>API: Retorna Data filtrada
+    API->>API: Empaqueta formato y Paginación
+    API-->>Web: OK 200 (Datos listos para rendering)
+```
+
 ---
 
 ## 1. Flujo de Ingesta IoT (El Camino del Sensor)
