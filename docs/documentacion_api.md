@@ -93,6 +93,10 @@ FastAPI genera el spec OpenAPI a partir del código Python. Cuando defines un en
 
 > **Nota:** El archivo `openapi.yaml` incluido en este repo es el spec de **diseño** — define cómo DEBE quedar la API. Cuando el backend esté implementado, FastAPI generará su propia versión automáticamente desde el código. Ambos deben coincidir.
 
+**Estado de sincronización (2026-04-18):**
+- `openapi.yaml` y `docs/openapi.yaml` están alineados con el spec generado desde `app.main`.
+- Conteo actual del spec: **39 paths** y **65 operaciones**.
+
 ---
 
 ## 3. Autenticación

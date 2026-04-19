@@ -420,5 +420,7 @@ Funcionalidades que permanecen en roadmap y no forman parte de la implementació
 - [x] Semáforos visuales de umbral en dashboard cliente (parámetros prioritarios).
 
 #### Pendiente (Fase 2 Completa)
-- [ ] Integración IA/n8n.
-- [~] Módulo de mapas (Sprint 1 completado; quedan mejoras geoespaciales avanzadas fuera del alcance actual).
+- [ ] Sprint 2: NDVI (ingesta, histórico y exportación).
+- [ ] Sprint 3: Notificaciones avanzadas (horarios y ventanas de silencio).
+- [ ] Sprint 4: Analítica asíncrona (n8n + Azure OpenAI).
+- [ ] Sprint 5: Asistente conversacional (Azure OpenAI).
