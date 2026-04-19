@@ -1,7 +1,7 @@
 import { differenceInCalendarDays, endOfDay, format, parseISO, startOfDay, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { Download, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { BentoCard } from "../../components/BentoCard";
 import { ChartSkeleton } from "../../components/ChartSkeleton";
