@@ -68,7 +68,7 @@ export function AlertsCenterPage() {
   const fetchAlerts = useCallback(async () => {
     if (loadingRef.current) return;
     loadingRef.current = true;
-    setLoading(true);
+    if (items.length === 0) setLoading(true);
     setErrorMessage(null);
 
     try {
@@ -97,6 +97,10 @@ export function AlertsCenterPage() {
       setLoading(false);
     }
   }, [page, severity, alertType, readFilter, startDate, endDate]);
+
+  useEffect(() => {
+    setItems([]);
+  }, [severity, alertType, readFilter, startDate, endDate]);
 
   useEffect(() => {
     if (!isPageVisible) return;

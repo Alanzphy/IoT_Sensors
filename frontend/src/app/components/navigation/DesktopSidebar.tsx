@@ -1,19 +1,19 @@
 import {
-    Bell,
-    ChevronLeft,
-    ChevronRight,
-    ClipboardList,
-    Clock,
-    Download,
-    LayoutDashboard,
-    LogOut,
-    MapPin,
-    Radio,
-    SlidersHorizontal,
-    Sprout,
-    Users,
-    Warehouse,
-    BellRing,
+  Bell,
+  BellRing,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardList,
+  Clock,
+  Download,
+  LayoutDashboard,
+  LogOut,
+  MapPin,
+  Radio,
+  SlidersHorizontal,
+  Sprout,
+  Users,
+  Warehouse,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
@@ -78,14 +78,14 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
 
   return (
     <div
-      className={`${expanded ? "w-60" : "w-20"} h-screen sticky top-0 self-start shrink-0 overflow-hidden bg-[#F9F8F4] border-r border-[#2C2621]/10 transition-all duration-300 flex flex-col`}
+      className={`${expanded ? "w-64" : "w-16"} h-screen sticky top-0 self-start shrink-0 overflow-hidden bg-[#F9F8F4] border-r border-[#2C2621]/10 transition-all duration-300 flex flex-col`}
     >
       {/* Logo */}
-      <div className="p-6 flex items-center justify-between min-h-[80px]">
+      <div className="px-4 py-6 flex items-center justify-between min-h-[80px] gap-2">
         <div
-          className={`overflow-hidden transition-all duration-300 ${expanded ? "w-full opacity-100" : "w-0 opacity-0"}`}
+          className={`overflow-hidden transition-all duration-300 ${expanded ? "flex-1 opacity-100" : "w-0 opacity-0 hidden"}`}
         >
-          <h2 className="font-serif text-xl text-[#2C2621] whitespace-nowrap">
+          <h2 className="font-serif text-lg leading-tight text-[#2C2621] whitespace-nowrap">
             Sensores Agrícolas
           </h2>
         </div>
@@ -103,7 +103,7 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 space-y-1 pb-4">
+      <nav className="flex-1 overflow-y-auto space-y-2 pb-4 pt-2">
         {navItems.map((item) => {
           const Icon = item.icon;
           const currentPath = location.pathname.replace(/\/+$/, "") || "/";
@@ -121,9 +121,9 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
               onFocus={() => maybePreloadMaps(item.path)}
               aria-current={isActive ? "page" : undefined}
               title={!expanded ? item.label : undefined}
-              className={`flex items-center gap-3 px-4 py-2.5 rounded-full transition-all
+              className={`flex items-center gap-3 px-3 py-3 rounded-full transition-all
                 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6D7E5E] focus-visible:ring-offset-1
-                ${expanded ? "" : "justify-center"}
+                ${expanded ? "mx-2" : "justify-center mx-auto"}
                 ${isActive
                   ? "bg-[#6D7E5E] text-[#F4F1EB]"
                   : "text-[#6E6359] hover:bg-[#E2D4B7]/30"
@@ -132,7 +132,7 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
               <Icon className="w-5 h-5 flex-shrink-0" />
               <span
                 className={`font-medium overflow-hidden transition-all duration-300 whitespace-nowrap ${
-                  expanded ? "max-w-full opacity-100" : "max-w-0 opacity-0"
+                  expanded ? "max-w-[200px] opacity-100" : "max-w-0 opacity-0"
                 }`}
               >
                 {item.label}
@@ -143,15 +143,15 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
       </nav>
 
       {/* User section */}
-      <div className="p-4 border-t border-[#2C2621]/10">
-        <div className={`flex items-center gap-3 ${expanded ? "" : "justify-center"}`}>
-          <div className="w-9 h-9 rounded-full bg-[#6D7E5E] flex items-center justify-center text-[#F4F1EB] font-medium text-sm flex-shrink-0">
+      <div className="py-4 border-t border-[#2C2621]/10">
+        <div className={`flex items-center ${expanded ? "justify-between px-4" : "justify-center flex-col gap-4"}`}>
+          <div className="w-10 h-10 rounded-full bg-[#6D7E5E] flex items-center justify-center text-[#F4F1EB] font-medium text-base flex-shrink-0">
             {user?.nombre ? user.nombre.charAt(0).toUpperCase() : (role === "client" ? "C" : "A")}
           </div>
 
           <div
-            className={`flex-1 min-w-0 overflow-hidden transition-all duration-300 ${
-              expanded ? "max-w-full opacity-100" : "max-w-0 opacity-0"
+            className={`transition-all duration-300 overflow-hidden ${
+              expanded ? "flex-1 min-w-0 px-3 opacity-100" : "w-0 h-0 opacity-0 hidden"
             }`}
           >
             <p className="font-medium text-[#2C2621] text-sm truncate">{user?.nombre || "Usuario"}</p>
@@ -165,7 +165,7 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
             aria-label="Cerrar sesión"
             title="Cerrar sesión"
           >
-            <LogOut className="w-4 h-4 text-[#6E6359]" />
+            <LogOut className="w-5 h-5 text-[#6E6359]" />
           </button>
         </div>
       </div>

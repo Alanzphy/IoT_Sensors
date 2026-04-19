@@ -1,13 +1,13 @@
-import { Bell, ChevronDown, Droplets, Sun, Wind, Zap } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ChevronDown, Droplets, Sun, Wind, Zap } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import {
-    Area,
-    AreaChart,
-    CartesianGrid,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis,
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from "recharts";
 import { BentoCard } from "../../components/BentoCard";
 import { FreshnessIndicator } from "../../components/FreshnessIndicator";
@@ -90,6 +90,7 @@ export function ClientDashboard() {
   });
 
   const [historicalData, setHistoricalData] = useState<any[]>([]);
+  const hasFetchedInitialRef = useRef(false);
   const [prioritySemaphore, setPrioritySemaphore] = useState<Record<PriorityKey, SemaphoreLevel>>(defaultSemaphore);
   const [loading, setLoading] = useState(false);
 
@@ -100,16 +101,27 @@ export function ClientDashboard() {
   }, [selectedProperty, filteredAreas, selectedArea, setSelectedArea]);
 
   useEffect(() => {
-    if (!selectedArea || !isPageVisible) return;
+    // Si cambia el área seleccionada, borramos datos anteriores para que retorne a loading skeleton real
+    setHistoricalData([]);
+    hasFetchedInitialRef.current = false;
+  }, [selectedArea?.id]);
+
+  useEffect(() => {
+    // Solo detenemos si no hay área, NO paramos de montar el effect si no estamos en focus.
+    if (!selectedArea) return;
 
     let isMounted = true;
     let inFlight = false;
     const areaId = selectedArea.id;
 
     const fetchData = async () => {
-      if (inFlight) return;
+      // Si ya hay request activo, o la página NO está visible, no solicitamos.
+      if (inFlight || !isPageVisible) return;
       inFlight = true;
-      setLoading(true);
+      // Solo mostrar skeleton si es la primera carga para esta área
+      if (!hasFetchedInitialRef.current) {
+        setLoading(true);
+      }
 
       try {
         const [latestRes, histRes, priorityRes] = await Promise.all([
@@ -181,22 +193,25 @@ export function ClientDashboard() {
             }
           }
 
-          setPrioritySemaphore(nextSemaphore);
+          if (isMounted) {
+            hasFetchedInitialRef.current = true;
+            setPrioritySemaphore(nextSemaphore);
+          }
         }
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
       } finally {
         inFlight = false;
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
+    // Llamada inicial (depende de isPageVisible para disparar si se acaba de volver la pestaña visible)
     fetchData();
 
     const intervalId = window.setInterval(() => {
-      if (isMounted) {
-        fetchData();
-      }
+      // Revisa visibility dentro del refetch en intervalo.
+      if (isMounted) fetchData();
     }, DASHBOARD_REFRESH_MS);
 
     return () => {
@@ -224,9 +239,6 @@ export function ClientDashboard() {
               })}
             </p>
           </div>
-          <button className="p-3 rounded-full bg-[#F9F8F4] hover:bg-[#E2D4B7]/30 transition-colors">
-            <Bell className="w-5 h-5 text-[#6E6359]" />
-          </button>
         </div>
 
         {/* Breadcrumb selectors */}

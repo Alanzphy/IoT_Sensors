@@ -24,6 +24,7 @@ export function HistoricalData() {
 
   const [readings, setReadings] = useState<ReadingResponse[]>([]);
   const [loading, setLoading] = useState(false);
+  const hasFetchedRef = useRef(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -76,12 +77,22 @@ export function HistoricalData() {
     setPage(1);
   };
 
+  // Reset history on area change to trigger skeleton correctly
+  useEffect(() => {
+    setReadings([]);
+    hasFetchedRef.current = false;
+    setPage(1);
+  }, [selectedArea?.id]);
+
   // Fetch API
   useEffect(() => {
     if (!selectedArea) return;
 
+    let isMounted = true;
+
     const fetchHistorical = async () => {
-      setLoading(true);
+      // Only show full skeleton load visually if it's the very first load or area changed
+      if (!hasFetchedRef.current || readings.length === 0) setLoading(true);
       try {
         const params = new URLSearchParams({
           irrigation_area_id: selectedArea.id.toString(),
@@ -94,17 +105,24 @@ export function HistoricalData() {
         // if cycle is selected, we could use it here. but backend filters by dates.
 
         const res = await api.get<{data: ReadingResponse[], total: number, page: number, per_page: number}>(`/readings?${params}`);
-        setReadings(res.data.data);
-        setTotalPages(Math.ceil(res.data.total / res.data.per_page));
-        setTotalItems(res.data.total);
+        if (isMounted) {
+          hasFetchedRef.current = true;
+          setReadings(res.data.data);
+          setTotalPages(Math.ceil(res.data.total / res.data.per_page));
+          setTotalItems(res.data.total);
+        }
       } catch (err) {
         console.error("Failed to fetch historical readings", err);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     fetchHistorical();
+
+    return () => {
+      isMounted = false;
+    }
   }, [selectedArea, startDate, endDate, page]);
 
   // Format array for Chart (reverse since it comes desc).

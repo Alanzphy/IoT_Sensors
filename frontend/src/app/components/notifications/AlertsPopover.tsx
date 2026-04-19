@@ -62,7 +62,7 @@ export function AlertsPopover({
   const loadAlerts = useCallback(async () => {
     if (loadingRef.current) return;
     loadingRef.current = true;
-    setLoading(true);
+    if (alerts.length === 0) setLoading(true);
     setErrorMessage(null);
 
     try {
