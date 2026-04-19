@@ -14,6 +14,7 @@ Este documento describe la arquitectura, stack tecnológico, estado actual y reg
 - **Iconografía**: `lucide-react`.
 - **Gráficos**: `recharts` (para visualización de series de tiempo).
 - **Mapas (Sprint 1 Fase 2)**: `maplibre-gl` + estilo base OpenFreeMap (`https://tiles.openfreemap.org/styles/liberty`).
+- **Optimización de Build**: partición manual de chunks en `vite.config.ts` para separar módulos pesados (mapas, charts, router, radix).
 
 ---
 
@@ -108,11 +109,13 @@ Actualmente el frontend está en fase de **transición de datos estáticos hacia
 
 ### 3.8 Módulo Geoespacial Base (Fase 2 Sprint 1)
 
-- `pages/client/ClientMapPage.tsx`: vista de mapa para cliente con filtros por predio/área, marcadores por nodo y panel de detalle.
-- `pages/admin/AdminMapPage.tsx`: vista de mapa global para admin con filtros por cliente/predio/área, modo marcadores o clusters y capas por estado de frescura.
+- `pages/client/ClientMapPage.tsx`: vista de mapa para cliente con filtros por predio/área, marcadores por nodo, panel de detalle y leyenda persistente por estado.
+- `pages/admin/AdminMapPage.tsx`: vista de mapa global para admin con filtros por cliente/predio/área, modo marcadores o clusters, capas por estado de frescura y leyenda persistente.
 - `services/nodes.ts`: cliente HTTP para `GET /api/v1/nodes/geo`.
+- `services/routePreload.ts`: utilitario para precargar pantallas de mapa y reducir tiempo de primera navegación.
 - `routes.tsx`: rutas protegidas `/cliente/mapa` y `/admin/mapa`.
-- `components/navigation/DesktopSidebar.tsx` y `components/navigation/MobileTabBar.tsx`: acceso de navegación al mapa.
+- `routes.tsx`: carga diferida (lazy) de pantallas geoespaciales con `Suspense`.
+- `components/navigation/DesktopSidebar.tsx` y `components/navigation/MobileTabBar.tsx`: acceso de navegación al mapa + prefetch condicional en interacción.
 - Fallback UX: cuando un nodo no tiene coordenadas, se muestra en listado lateral de "Nodos sin GPS".
 
 ---

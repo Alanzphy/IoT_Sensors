@@ -391,7 +391,11 @@ sequenceDiagram
 
 Estado actual de Fase 2 Completa:
 
-- Sprint 1 geoespacial base iniciado (mapa cliente + endpoint `/api/v1/nodes/geo`).
+- Sprint 1 geoespacial base completado.
+- Endpoint `GET /api/v1/nodes/geo` activo con ownership por rol y filtros jerárquicos.
+- UI de mapas activa para Cliente (`/cliente/mapa`) y Admin (`/admin/mapa`).
+- Mapa admin con clustering y capas por estado de frescura.
+- Carga diferida y prefetch condicional de rutas geoespaciales en frontend.
 
 Funcionalidades que permanecen en roadmap y no forman parte de la implementación activa final:
 
@@ -417,4 +421,4 @@ Funcionalidades que permanecen en roadmap y no forman parte de la implementació
 
 #### Pendiente (Fase 2 Completa)
 - [ ] Integración IA/n8n.
-- [~] Módulo de mapas (base activa en Sprint 1, faltan capas/funciones avanzadas).
+- [~] Módulo de mapas (Sprint 1 completado; quedan mejoras geoespaciales avanzadas fuera del alcance actual).
