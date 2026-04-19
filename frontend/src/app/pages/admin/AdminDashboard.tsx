@@ -57,6 +57,13 @@ export function AdminDashboard() {
     };
 
     fetchDashboardData();
+
+    // Intervalo para testing en tiempo real
+    const intervalId = setInterval(() => {
+      fetchDashboardData();
+    }, 3000);
+
+    return () => clearInterval(intervalId);
   }, []);
 
   return (

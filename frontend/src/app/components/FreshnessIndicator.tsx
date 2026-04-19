@@ -16,9 +16,9 @@ function getTimeText(minutesAgo: number): string {
 export function FreshnessIndicator({ lastUpdate, variant = "light" }: FreshnessIndicatorProps) {
   const [, forceUpdate] = useState(0);
 
-  // Re-render every 60 seconds so the elapsed time stays accurate
+  // Re-render quickly for testing
   useEffect(() => {
-    const interval = setInterval(() => forceUpdate((n) => n + 1), 60_000);
+    const interval = setInterval(() => forceUpdate((n) => n + 1), 3000);
     return () => clearInterval(interval);
   }, []);
 

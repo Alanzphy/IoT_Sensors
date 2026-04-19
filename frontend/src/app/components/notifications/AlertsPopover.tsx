@@ -37,7 +37,8 @@ function formatRelativeDate(iso: string): string {
 
 export function AlertsPopover({
   className = "fixed top-4 right-4 md:right-6 z-40",
-  refreshIntervalMs = 30000,
+  // refreshIntervalMs = 30000,
+  refreshIntervalMs = 3000,
 }: AlertsPopoverProps) {
   const location = useLocation();
   const isPageVisible = usePageVisibility();

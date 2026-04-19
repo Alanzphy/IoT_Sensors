@@ -92,6 +92,10 @@ export function ClientMapPage() {
 
   useEffect(() => {
     fetchNodes();
+
+    // Actualización rápida para testing cada 3 segundos
+    const interval = setInterval(fetchNodes, 3000);
+    return () => clearInterval(interval);
   }, [fetchNodes]);
 
   useEffect(() => {

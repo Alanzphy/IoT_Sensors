@@ -33,7 +33,8 @@ const defaultSemaphore: Record<PriorityKey, SemaphoreLevel> = {
   "environmental.eto": "optimal",
 };
 
-const DASHBOARD_REFRESH_MS = 30000;
+// Intervalo de auto-refresco del dashboard: 3000ms (3s) para propósitos de prueba de tiempo real (originalmente 30000ms - 30s)
+const DASHBOARD_REFRESH_MS = 3000;
 
 function getSemaphoreLabel(level: SemaphoreLevel): string {
   if (level === "critical") return "Crítico";

@@ -1,14 +1,14 @@
 import { formatDistanceToNowStrict } from "date-fns";
 import { es } from "date-fns/locale";
 import {
-    AlertTriangle,
-    Bell,
-    Check,
-    ChevronLeft,
-    ChevronRight,
-    Loader2,
-    RadioTower,
-    RefreshCw,
+  AlertTriangle,
+  Bell,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  RadioTower,
+  RefreshCw,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router";
@@ -110,7 +110,7 @@ export function AlertsCenterPage() {
   useEffect(() => {
     if (!isPageVisible) return;
 
-    const intervalId = window.setInterval(fetchAlerts, 30000);
+    const intervalId = window.setInterval(fetchAlerts, 3000); // Test real-time (3s)
     return () => {
       window.clearInterval(intervalId);
     };
