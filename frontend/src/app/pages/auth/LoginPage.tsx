@@ -92,6 +92,7 @@ export function LoginPage() {
                     transition-shadow"
                   required
                   disabled={isLoading}
+                  aria-invalid={!!error}
                 />
               </div>
 
@@ -118,8 +119,7 @@ export function LoginPage() {
                     onClick={() => setShowPassword((v) => !v)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-[#6E6359] hover:text-[#2C2621] transition-colors
                       focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6D7E5E] rounded-full p-0.5"
-                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                  >
+                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}                    aria-pressed={showPassword}                  >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>

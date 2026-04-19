@@ -12,6 +12,7 @@ import {
 import { BentoCard } from "../../components/BentoCard";
 import { FreshnessIndicator } from "../../components/FreshnessIndicator";
 import { MetricCard } from "../../components/MetricCard";
+import { MetricSkeletonGrid } from "../../components/MetricSkeleton";
 import { useAuth } from "../../context/AuthContext";
 import { useSelection } from "../../context/SelectionContext";
 import { useIsMobile } from "../../hooks/useIsMobile";
@@ -90,6 +91,7 @@ export function ClientDashboard() {
 
   const [historicalData, setHistoricalData] = useState<any[]>([]);
   const [prioritySemaphore, setPrioritySemaphore] = useState<Record<PriorityKey, SemaphoreLevel>>(defaultSemaphore);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (selectedProperty && filteredAreas.length > 0 && !selectedArea) {
@@ -107,6 +109,7 @@ export function ClientDashboard() {
     const fetchData = async () => {
       if (inFlight) return;
       inFlight = true;
+      setLoading(true);
 
       try {
         const [latestRes, histRes, priorityRes] = await Promise.all([
@@ -184,6 +187,7 @@ export function ClientDashboard() {
         console.error("Error fetching dashboard data:", err);
       } finally {
         inFlight = false;
+        setLoading(false);
       }
     };
 
@@ -267,7 +271,9 @@ export function ClientDashboard() {
       </div>
 
       {/* Bento Grid Layout */}
-      {isMobile ? (
+      {!selectedArea ? null : loading ? (
+        <MetricSkeletonGrid count={isMobile ? 3 : 6} />
+      ) : isMobile ? (
         <MobileDashboard
           historicalData={historicalData}
           currentReadings={currentReadings}
@@ -403,7 +409,7 @@ function DesktopDashboard({
       </div>
 
       {/* Irrigation Status (Row 2) */}
-      <div className="col-span-4">
+      <div className="col-span-4 animate-stagger-1">
         <BentoCard variant="sand">
           <div className="flex items-start justify-between mb-4">
             <h3 className="text-lg text-[#2C2621]">Estado del Riego</h3>
@@ -469,13 +475,13 @@ function DesktopDashboard({
       </div>
 
       {/* Chart (Row 3) */}
-      <div className="col-span-8 row-span-2">
+      <div className="col-span-8 row-span-2 animate-stagger-3">
         <BentoCard variant="light" className="h-full">
           <h3 className="text-lg text-[#2C2621] mb-6">
             Humedad del Suelo - Últimas 24 horas
           </h3>
           <div className="h-[300px] min-h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" className="animate-chart-entrance">
               <AreaChart data={historicalData}>
                 <defs>
                   <linearGradient

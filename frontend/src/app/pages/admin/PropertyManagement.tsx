@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { BentoCard } from "../../components/BentoCard";
 import { PillButton } from "../../components/PillButton";
+import { useToast } from "../../components/Toast";
 import { api } from "../../services/api";
 
 type Property = {
@@ -14,6 +15,7 @@ type Property = {
 
 export function PropertyManagement() {
   const { clientId } = useParams<{ clientId: string }>();
+  const { showToast } = useToast();
   const [properties, setProperties] = useState<Property[]>([]);
   const [clientName, setClientName] = useState("Cargando...");
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -56,8 +58,9 @@ export function PropertyManagement() {
       setShowCreateForm(false);
       setFormData({ name: "", location: "" });
       fetchData();
+      showToast("Predio creado", "success");
     } catch (err: any) {
-      alert("Error al crear el predio: " + (err.response?.data?.detail || err.message));
+      showToast("Error al crear el predio: " + (err.response?.data?.detail || err.message), "error");
     }
   };
 
@@ -85,9 +88,9 @@ export function PropertyManagement() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-[#2C2621]/10">
-                <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Nombre</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Ubicación</th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-[#6E6359]">Acciones</th>
+                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Nombre</th>
+                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Ubicación</th>
+                <th scope="col" className="text-right py-3 px-4 text-sm font-medium text-[#6E6359]">Acciones</th>
               </tr>
             </thead>
             <tbody>

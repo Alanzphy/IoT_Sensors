@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { createBrowserRouter } from "react-router";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminLayout } from "./layouts/AdminLayout";
 import { ClientLayout } from "./layouts/ClientLayout";
@@ -45,10 +46,18 @@ function PageFallback() {
   );
 }
 
+function RootLayoutWithErrorBoundary() {
+  return (
+    <ErrorBoundary>
+      <RootLayout />
+    </ErrorBoundary>
+  );
+}
+
 export const router = createBrowserRouter([
   {
     path: "/",
-    Component: RootLayout,
+    Component: RootLayoutWithErrorBoundary,
     children: [
       {
         index: true,

@@ -13,11 +13,11 @@
   --text-muted: #6E6359; /* gray-brown, subtitles and labels */
   --text-inverted: #F4F1EB; /* cream, text on dark cards */
   --progress-track: #E6E1D8; /* progress bar track color */
-  
+
   /* Typography */
   --font-serif: 'Playfair Display', serif;
   --font-sans: 'Inter', sans-serif;
-  
+
   /* Standard theme variables for compatibility */
   --font-size: 16px;
   --background: #F4F1EB;
@@ -295,3 +295,8 @@
 .toast-exit {
   animation: slideOutRight 0.3s ease-in both;
 }
+
+.animate-stagger-1 { animation: fadeInUp 0.35s ease-out 0.1s both; }
+.animate-stagger-2 { animation: fadeInUp 0.35s ease-out 0.2s both; }
+.animate-stagger-3 { animation: fadeInUp 0.35s ease-out 0.3s both; }
+.animate-chart-entrance { animation: fadeInUp 0.5s ease-out 0.1s both; }

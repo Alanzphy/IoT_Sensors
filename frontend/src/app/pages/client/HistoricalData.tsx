@@ -4,6 +4,7 @@ import { Download, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { BentoCard } from "../../components/BentoCard";
+import { ChartSkeleton } from "../../components/ChartSkeleton";
 import { PageTransition } from "../../components/PageTransition";
 import { PillButton } from "../../components/PillButton";
 import { ReadingDateRangeSelector } from "../../components/ReadingDateRangeSelector";
@@ -227,7 +228,9 @@ export function HistoricalData() {
       <BentoCard variant="light" className="mb-6">
         <h3 className="text-lg text-[#2C2621] mb-6">Gráfica de Métricas</h3>
 
-        {readings.length > 0 ? (
+        {loading && readings.length === 0 ? (
+          <ChartSkeleton title={false} height="sm" />
+        ) : readings.length > 0 ? (
           <div className="space-y-8">
             <div className="relative h-[320px] min-h-[320px]">
               {loading && (
@@ -281,7 +284,7 @@ export function HistoricalData() {
                   </button>
                 </div>
               </div>
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" className="animate-chart-entrance">
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E6E1D8" />
                   <XAxis
@@ -375,7 +378,7 @@ export function HistoricalData() {
                   </button>
                 </div>
               </div>
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" className="animate-chart-entrance">
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E6E1D8" />
                   <XAxis

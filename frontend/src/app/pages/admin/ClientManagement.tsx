@@ -3,7 +3,11 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { BentoCard } from "../../components/BentoCard";
 import { PillButton } from "../../components/PillButton";
+import { useToast } from "../../components/Toast";
 import { api } from "../../services/api";
+
+import { Users } from "lucide-react";
+import { EmptyState } from "../../components/EmptyState";
 
 interface Client {
   id: number;
@@ -18,6 +22,7 @@ interface Client {
 }
 
 export function ClientManagement() {
+  const { showToast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
@@ -75,8 +80,9 @@ export function ClientManagement() {
         address: "",
       });
       fetchClients();
+      showToast("Cliente creado de forma exitosa", "success");
     } catch (err: any) {
-      alert(err.response?.data?.detail || "Error creating client");
+      showToast(err.response?.data?.detail || "Error creating client", "error");
     }
   };
 
@@ -103,8 +109,9 @@ export function ClientManagement() {
       setShowEditForm(false);
       setEditingClientId(null);
       fetchClients();
+      showToast("Cliente actualizado", "success");
     } catch (err: any) {
-      alert(err.response?.data?.detail || "Error updating client");
+      showToast(err.response?.data?.detail || "Error updating client", "error");
     }
   };
 
@@ -151,19 +158,21 @@ export function ClientManagement() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-[#2C2621]/10">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Empresa</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Contacto</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Email</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Teléfono</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Estado</th>
-                  <th className="text-right py-3 px-4 text-sm font-medium text-[#6E6359]">Acciones</th>
+                  <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Empresa</th>
+                  <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Contacto</th>
+                  <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Email</th>
+                  <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Teléfono</th>
+                  <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Estado</th>
+                  <th scope="col" className="text-right py-3 px-4 text-sm font-medium text-[#6E6359]">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr><td colSpan={6} className="py-4 text-center">Cargando...</td></tr>
-                ) : filteredClients.map((client) => (
-                  <tr key={client.id} className="border-b border-[#2C2621]/5 last:border-0 hover:bg-[#2C2621]/5 transition-colors">
+                ) : filteredClients.map((client, index) => {
+                  const staggerClass = index === 0 ? 'animate-stagger-1' : index === 1 ? 'animate-stagger-2' : 'animate-stagger-3';
+                  return (
+                  <tr key={client.id} className={`border-b border-[#2C2621]/5 last:border-0 hover:bg-[#2C2621]/5 transition-colors ${staggerClass}`}>
                     <td className="py-3 px-4 text-[#2C2621]">{client.company_name}</td>
                     <td className="py-3 px-4 text-[#2C2621]">{client.user?.full_name || "-"}</td>
                     <td className="py-3 px-4 text-[#6E6359]">{client.user?.email || "-"}</td>
@@ -186,9 +195,21 @@ export function ClientManagement() {
                        </Link>
                     </td>
                   </tr>
-                ))}
+                )})}
                 {!loading && filteredClients.length === 0 && (
-                  <tr><td colSpan={6} className="py-4 text-center text-[#6E6359]">No hay clientes registrados.</td></tr>
+                  <tr>
+                    <td colSpan={6} className="py-4 px-4">
+                      <EmptyState
+                        icon={Users}
+                        title="Sin clientes registrados"
+                        description="Comienza creando un nuevo cliente para acceder a predios y sensores."
+                        action={{
+                          label: "Crear primer cliente",
+                          onClick: () => setShowCreateForm(true),
+                        }}
+                      />
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
@@ -198,8 +219,10 @@ export function ClientManagement() {
 
       <div className="grid grid-cols-1 gap-4 md:hidden">
         {loading && <div className="text-center py-4">Cargando...</div>}
-        {!loading && filteredClients.map((client) => (
-          <BentoCard key={client.id} variant="light" className="p-4">
+        {!loading && filteredClients.length > 0 && filteredClients.map((client, index) => {
+          const staggerClass = index === 0 ? 'animate-stagger-1' : index === 1 ? 'animate-stagger-2' : 'animate-stagger-3';
+          return (
+          <BentoCard key={client.id} variant="light" className={`p-4 ${staggerClass}`}>
             <div className="flex justify-between items-start mb-3">
               <div>
                 <h3 className="text-[#2C2621] font-medium">{client.company_name}</h3>
@@ -226,7 +249,18 @@ export function ClientManagement() {
               </Link>
             </div>
           </BentoCard>
-        ))}
+        )})}
+        {!loading && filteredClients.length === 0 && (
+          <EmptyState
+            icon={Users}
+            title="Sin clientes registrados"
+            description="Comienza creando un nuevo cliente para acceder a predios y sensores."
+            action={{
+              label: "Crear primer cliente",
+              onClick: () => setShowCreateForm(true),
+            }}
+          />
+        )}
       </div>
 
       {showEditForm && (

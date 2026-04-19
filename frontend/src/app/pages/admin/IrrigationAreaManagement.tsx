@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { BentoCard } from "../../components/BentoCard";
 import { PillButton } from "../../components/PillButton";
+import { useToast } from "../../components/Toast";
 import { api } from "../../services/api";
 
 type IrrigationArea = {
@@ -25,6 +26,7 @@ type CropType = {
 export function IrrigationAreaManagement() {
   const { predioId } = useParams<{ predioId: string }>();
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   const [areas, setAreas] = useState<IrrigationArea[]>([]);
   const [cropTypes, setCropTypes] = useState<CropType[]>([]);
@@ -77,8 +79,8 @@ export function IrrigationAreaManagement() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.crop_type_id) {
-       alert("Por favor selecciona un tipo de cultivo");
-       return;
+      showToast("Por favor selecciona un tipo de cultivo", "error");
+      return;
     }
     try {
       await api.post("/irrigation-areas", {
@@ -90,8 +92,9 @@ export function IrrigationAreaManagement() {
       setShowCreateForm(false);
       setFormData({ name: "", crop_type_id: "", area_size: "" });
       fetchData();
+      showToast("Área creada", "success");
     } catch (err: any) {
-      alert("Error al crear área: " + (err.response?.data?.detail || err.message));
+      showToast("Error al crear área: " + (err.response?.data?.detail || err.message), "error");
     }
   };
 
@@ -127,10 +130,10 @@ export function IrrigationAreaManagement() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-[#2C2621]/10">
-                <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Nombre</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Cultivo</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Tamaño (Ha)</th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-[#6E6359]">Acciones</th>
+                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Nombre</th>
+                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Cultivo</th>
+                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Tamaño (Ha)</th>
+                <th scope="col" className="text-right py-3 px-4 text-sm font-medium text-[#6E6359]">Acciones</th>
               </tr>
             </thead>
             <tbody>
