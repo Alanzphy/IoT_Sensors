@@ -57,11 +57,6 @@ Certificamos que el "Viaje del Dato" desde el campo agrícola (simulado) hasta l
 
 ---
 
-> 📚 **Anexos de Arquitectura y Flujos:** A continuación en las siguientes páginas de este documento se detalla exhaustivamente mediante diagramas y narrativas cómo operan los datos en ambas partes de este sistema:
-> - 🖥️ Parte 1: **Anexo Flujos Frontend** (Pantallas, Mapas, Roles).
-> - ⚙️ Parte 2: **Anexo Flujos Backend** (Ingesta IoT, Seguridad JWT, Exportaciones).
-
-<br><br>
 
 # ANEXO 1: Flujos de Información del Frontend (React App)
 
