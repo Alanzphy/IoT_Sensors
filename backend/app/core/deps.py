@@ -9,7 +9,7 @@ from app.models.client import Client
 from app.models.node import Node
 from app.models.user import User
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/docs-login")
 
 
 def get_current_user(

@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -75,6 +76,32 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
         access_token=access_token,
         refresh_token=refresh_token,
     )
+
+
+@router.post("/docs-login", include_in_schema=False)
+def docs_login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
+):
+    """Endpoint exclusivo para Swagger UI que acepta form-data en lugar de JSON."""
+    user = db.execute(
+        select(User).where(
+            User.correo == form_data.username,
+            User.activo.is_(True),
+            User.eliminado_en.is_(None),
+        )
+    ).scalar_one_or_none()
+
+    if user is None or not verify_password(form_data.password, user.contrasena_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Credenciales inválidas",
+        )
+
+    token_data = {"sub": str(user.id), "rol": user.rol, "nombre": user.nombre_completo}
+    access_token = create_access_token(token_data)
+
+    return {"access_token": access_token, "token_type": "bearer"}
 
 
 @router.post("/refresh", response_model=RefreshResponse)
