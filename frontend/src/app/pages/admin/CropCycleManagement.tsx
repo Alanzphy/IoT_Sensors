@@ -108,7 +108,7 @@ export function CropCycleManagement() {
   if (loading && areas.length === 0) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <p className="text-[#6E6359]">Cargando datos...</p>
+        <p className="text-[var(--text-muted)]">Cargando datos...</p>
       </div>
     );
   }
@@ -117,8 +117,8 @@ export function CropCycleManagement() {
     <div className="min-h-screen p-4 md:p-6 lg:p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl md:text-3xl text-[#2C2621] mb-2">Gestión de Ciclos de Cultivo</h1>
-          <p className="text-[#6E6359]">Administra los ciclos de cultivo por área</p>
+          <h1 className="text-2xl md:text-3xl text-[var(--text-main)] mb-2">Gestión de Ciclos de Cultivo</h1>
+          <p className="text-[var(--text-muted)]">Administra los ciclos de cultivo por área</p>
         </div>
         <PillButton variant="primary" onClick={() => setShowCreateForm(true)}>
           <Plus className="w-4 h-4 mr-2" />
@@ -142,7 +142,7 @@ export function CropCycleManagement() {
 
           return (
             <BentoCard key={area.id} variant="light">
-              <h3 className="text-lg font-medium text-[#2C2621] mb-4">{area.nombre}</h3>
+              <h3 className="text-lg font-medium text-[var(--text-main)] mb-4">{area.nombre}</h3>
               
               <div className="space-y-3">
                 {areaCycles.map((cycle) => {
@@ -153,21 +153,21 @@ export function CropCycleManagement() {
                       key={cycle.id} 
                       className={`p-4 rounded-[24px] flex items-center justify-between ${
                         isActive 
-                          ? "bg-[#6D7E5E]/10 border-2 border-[#6D7E5E]" 
-                          : "bg-[#F4F1EB]"
+                          ? "bg-[var(--accent-primary)]/10 border-2 border-[var(--accent-primary)]" 
+                          : "bg-[var(--bg-base)]"
                       }`}
                     >
                       <div className="flex items-center gap-4">
-                        <div className={`p-2 rounded-full ${isActive ? 'bg-[#6D7E5E] text-white' : 'bg-[#E2D4B7] text-[#6E6359]'}`}>
+                        <div className={`p-2 rounded-full ${isActive ? 'bg-[var(--accent-primary)] text-white' : 'bg-[var(--card-sand)] text-[var(--text-muted)]'}`}>
                           <Calendar className="w-5 h-5" />
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-[#2C2621]">
+                            <span className="font-medium text-[var(--text-main)]">
                               {formatDate(cycle.start_date)} - {cycle.end_date ? formatDate(cycle.end_date) : 'Actual'}
                             </span>
                             {isActive && (
-                              <span className="px-2 py-0.5 text-xs rounded-full bg-[#6D7E5E] text-white">
+                              <span className="px-2 py-0.5 text-xs rounded-full bg-[var(--accent-primary)] text-white">
                                 Activo
                               </span>
                             )}
@@ -188,26 +188,26 @@ export function CropCycleManagement() {
           );
         })}
         {areas.length === 0 && !loading && (
-          <p className="text-[#6E6359]">No hay áreas de riego registradas.</p>
+          <p className="text-[var(--text-muted)]">No hay áreas de riego registradas.</p>
         )}
         {areas.length > 0 && areas.every(a => cycles.filter(c => c.irrigation_area_id === a.id).length === 0) && !loading && (
-          <p className="text-[#6E6359]">No hay ciclos de cultivo registrados en ninguna área.</p>
+          <p className="text-[var(--text-muted)]">No hay ciclos de cultivo registrados en ninguna área.</p>
         )}
       </div>
 
       {/* Create form */}
       {showCreateForm && (
-        <div className="fixed inset-0 bg-[#2C2621]/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-[var(--text-main)]/50 z-50 flex items-center justify-center p-4">
           <BentoCard variant="light" className="w-full max-w-md">
-            <h2 className="text-xl text-[#2C2621] mb-6">Nuevo Ciclo de Cultivo</h2>
+            <h2 className="text-xl text-[var(--text-main)] mb-6">Nuevo Ciclo de Cultivo</h2>
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="block text-sm text-[#6E6359] mb-2">Área de Riego</label>
+                <label className="block text-sm text-[var(--text-muted)] mb-2">Área de Riego</label>
                 <select 
                   required
                   value={formAreaId}
                   onChange={(e) => setFormAreaId(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
+                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
                 >
                   <option value="">Seleccionar área</option>
                   {areas.map((area) => (
@@ -217,23 +217,23 @@ export function CropCycleManagement() {
               </div>
               
               <div>
-                <label className="block text-sm text-[#6E6359] mb-2">Fecha de Inicio</label>
+                <label className="block text-sm text-[var(--text-muted)] mb-2">Fecha de Inicio</label>
                 <input
                   type="date"
                   required
                   value={formStartDate}
                   onChange={(e) => setFormStartDate(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
+                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-[#6E6359] mb-2">Fecha de Fin (opcional)</label>
+                <label className="block text-sm text-[var(--text-muted)] mb-2">Fecha de Fin (opcional)</label>
                 <input
                   type="date"
                   value={formEndDate}
                   onChange={(e) => setFormEndDate(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
+                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
                 />
               </div>
 

@@ -67,15 +67,15 @@ export function PropertyManagement() {
   return (
     <div className="min-h-screen p-4 md:p-6 lg:p-8">
       <div className="mb-6">
-        <div className="flex items-center gap-2 text-sm text-[#6E6359] mb-2">
-          <Link to="/admin/clientes" className="hover:text-[#6D7E5E]">Clientes</Link>
+        <div className="flex items-center gap-2 text-sm text-[var(--text-muted)] mb-2">
+          <Link to="/admin/clientes" className="hover:text-[var(--accent-primary)]">Clientes</Link>
           <span>/</span>
           <span>{clientName}</span>
           <span>/</span>
           <span>Predios</span>
         </div>
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl md:text-3xl text-[#2C2621]">Predios</h1>
+          <h1 className="text-2xl md:text-3xl text-[var(--text-main)]">Predios</h1>
           <PillButton variant="primary" onClick={() => setShowCreateForm(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Nuevo Predio
@@ -87,19 +87,19 @@ export function PropertyManagement() {
         <BentoCard variant="light">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-[#2C2621]/10">
-                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Nombre</th>
-                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Ubicación</th>
-                <th scope="col" className="text-right py-3 px-4 text-sm font-medium text-[#6E6359]">Acciones</th>
+              <tr className="border-b border-[var(--border-strong)]">
+                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Nombre</th>
+                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Ubicación</th>
+                <th scope="col" className="text-right py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr><td colSpan={3} className="py-4 text-center">Cargando...</td></tr>
               ) : properties.map((prop) => (
-                <tr key={prop.id} className="border-b border-[#2C2621]/5 last:border-0 hover:bg-[#2C2621]/5 transition-colors">
-                  <td className="py-3 px-4 text-[#2C2621]">{prop.name}</td>
-                  <td className="py-3 px-4 text-[#6E6359]">{prop.location || "-"}</td>
+                <tr key={prop.id} className="border-b border-[var(--border-subtle)] last:border-0 hover:bg-[var(--text-main)]/5 transition-colors">
+                  <td className="py-3 px-4 text-[var(--text-main)]">{prop.name}</td>
+                  <td className="py-3 px-4 text-[var(--text-muted)]">{prop.location || "-"}</td>
                   <td className="py-3 px-4 flex justify-end gap-2">
                     <Link to={`/admin/predios/${prop.id}/areas`}>
                       <PillButton variant="outline" className="px-3 py-1 text-xs">Áreas de Riego <ChevronRight className="w-3 h-3 ml-1" /></PillButton>
@@ -108,7 +108,7 @@ export function PropertyManagement() {
                 </tr>
               ))}
               {!loading && properties.length === 0 && (
-                <tr><td colSpan={3} className="py-4 text-center text-[#6E6359]">No hay predios registrados.</td></tr>
+                <tr><td colSpan={3} className="py-4 text-center text-[var(--text-muted)]">No hay predios registrados.</td></tr>
               )}
             </tbody>
           </table>
@@ -119,8 +119,8 @@ export function PropertyManagement() {
         {loading && <div className="text-center py-4">Cargando...</div>}
         {!loading && properties.map((prop) => (
           <BentoCard key={prop.id} variant="light" className="p-4">
-            <h3 className="text-[#2C2621] font-medium mb-1">{prop.name}</h3>
-            <p className="text-sm text-[#6E6359] mb-4">{prop.location || "Sin ubicación"}</p>
+            <h3 className="text-[var(--text-main)] font-medium mb-1">{prop.name}</h3>
+            <p className="text-sm text-[var(--text-muted)] mb-4">{prop.location || "Sin ubicación"}</p>
             <Link to={`/admin/predios/${prop.id}/areas`}>
                <PillButton variant="outline" className="w-full justify-center">Ver Áreas de Riego <ChevronRight className="w-4 h-4 ml-1" /></PillButton>
             </Link>
@@ -129,20 +129,20 @@ export function PropertyManagement() {
       </div>
 
       {showCreateForm && (
-        <div className="fixed inset-0 bg-[#2C2621]/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-[var(--text-main)]/50 z-50 flex items-center justify-center p-4">
           <BentoCard variant="light" className="w-full max-w-md">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl text-[#2C2621]">Nuevo Predio</h2>
-              <button onClick={() => setShowCreateForm(false)}><XCircle className="w-6 h-6 text-[#6E6359]" /></button>
+              <h2 className="text-xl text-[var(--text-main)]">Nuevo Predio</h2>
+              <button onClick={() => setShowCreateForm(false)}><XCircle className="w-6 h-6 text-[var(--text-muted)]" /></button>
             </div>
             <form className="space-y-4" onSubmit={handleCreate}>
               <div>
-                <label className="block text-sm text-[#6E6359] mb-1">Nombre del Predio</label>
-                <input required type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]" />
+                <label className="block text-sm text-[var(--text-muted)] mb-1">Nombre del Predio</label>
+                <input required type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]" />
               </div>
               <div>
-                <label className="block text-sm text-[#6E6359] mb-1">Ubicación (Opcional)</label>
-                <input type="text" value={formData.location} onChange={e => setFormData({ ...formData, location: e.target.value })} className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]" />
+                <label className="block text-sm text-[var(--text-muted)] mb-1">Ubicación (Opcional)</label>
+                <input type="text" value={formData.location} onChange={e => setFormData({ ...formData, location: e.target.value })} className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]" />
               </div>
               <div className="flex gap-3 pt-4">
                 <PillButton variant="outline" className="flex-1 justify-center" onClick={() => setShowCreateForm(false)} type="button">Cancelar</PillButton>

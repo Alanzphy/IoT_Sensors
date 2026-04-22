@@ -135,7 +135,7 @@ export function NodeManagement() {
         <BentoCard variant="light" className="overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-[#2C2621]/10">
+              <tr className="border-b border-[var(--border-strong)]">
                 {Array.from({ length: 7 }).map((_, i) => (
                   <th key={i} scope="col" className="py-3 px-4">
                     <div className="h-4 rounded-full animate-pulse bg-black/10 opacity-50" />
@@ -145,7 +145,7 @@ export function NodeManagement() {
             </thead>
             <tbody>
               {Array.from({ length: 3 }).map((_, i) => (
-                <tr key={i} className={i % 2 === 0 ? "bg-[#F4F1EB]/30" : ""}>
+                <tr key={i} className={i % 2 === 0 ? "bg-[var(--bg-base)]/30" : ""}>
                   {Array.from({ length: 7 }).map((_, j) => (
                     <td key={j} className="py-4 px-4">
                       <div className="h-4 rounded-full animate-pulse bg-black/10" />
@@ -164,8 +164,8 @@ export function NodeManagement() {
     <div className="min-h-screen p-4 md:p-6 lg:p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl md:text-3xl text-[#2C2621] mb-2">Gestión de Nodos</h1>
-          <p className="text-[#6E6359]">Administra los sensores IoT del sistema</p>
+          <h1 className="text-2xl md:text-3xl text-[var(--text-main)] mb-2">Gestión de Nodos</h1>
+          <p className="text-[var(--text-muted)]">Administra los sensores IoT del sistema</p>
         </div>
         <PillButton variant="primary" onClick={() => setShowCreateForm(true)}>
           <Plus className="w-4 h-4 mr-2" />
@@ -184,30 +184,30 @@ export function NodeManagement() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-[#2C2621]/10">
-                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Nombre</th>
-                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Serie</th>
-                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">API Key</th>
-                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Área Vinculada</th>
-                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">GPS</th>
-                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Estado</th>
-                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Acciones</th>
+              <tr className="border-b border-[var(--border-strong)]">
+                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Nombre</th>
+                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Serie</th>
+                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">API Key</th>
+                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Área Vinculada</th>
+                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">GPS</th>
+                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Estado</th>
+                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {nodes.map((node, i) => (
-                <tr key={node.id} className={i % 2 === 0 ? "bg-[#F4F1EB]/30" : ""}>
+                <tr key={node.id} className={i % 2 === 0 ? "bg-[var(--bg-base)]/30" : ""}>
                   <td className="py-4 px-4">
-                    <span className="font-medium text-[#2C2621]">
+                    <span className="font-medium text-[var(--text-main)]">
                       {node.name || `Nodo #${node.id}`}
                     </span>
                   </td>
-                  <td className="py-4 px-4 text-sm text-[#6E6359] font-mono">
+                  <td className="py-4 px-4 text-sm text-[var(--text-muted)] font-mono">
                     {node.serial_number || '-'}
                   </td>
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-[#6E6359] font-mono">
+                      <span className="text-sm text-[var(--text-muted)] font-mono">
                         {visibleApiKeys[node.id]
                           ? node.api_key
                           : '••••••••••••••••'
@@ -215,26 +215,26 @@ export function NodeManagement() {
                       </span>
                       <button
                         onClick={() => toggleApiKeyVisibility(node.id)}
-                        className="p-1 rounded hover:bg-[#E2D4B7]/50 transition-colors"
+                        className="p-1 rounded hover:bg-[var(--card-sand)]/50 transition-colors"
                       >
                         {visibleApiKeys[node.id] ? (
-                          <EyeOff className="w-4 h-4 text-[#6E6359]" />
+                          <EyeOff className="w-4 h-4 text-[var(--text-muted)]" />
                         ) : (
-                          <Eye className="w-4 h-4 text-[#6E6359]" />
+                          <Eye className="w-4 h-4 text-[var(--text-muted)]" />
                         )}
                       </button>
                       <button
                         onClick={() => copyToClipboard(node.api_key)}
-                        className="p-1 rounded hover:bg-[#E2D4B7]/50 transition-colors"
+                        className="p-1 rounded hover:bg-[var(--card-sand)]/50 transition-colors"
                       >
-                        <Copy className="w-4 h-4 text-[#6E6359]" />
+                        <Copy className="w-4 h-4 text-[var(--text-muted)]" />
                       </button>
                     </div>
                   </td>
-                  <td className="py-4 px-4 text-sm text-[#2C2621]">
+                  <td className="py-4 px-4 text-sm text-[var(--text-main)]">
                     {getAreaName(node.irrigation_area_id)}
                   </td>
-                  <td className="py-4 px-4 text-sm text-[#6E6359]">
+                  <td className="py-4 px-4 text-sm text-[var(--text-muted)]">
                     {node.latitude && node.longitude
                       ? `${node.latitude}, ${node.longitude}`
                       : 'No configurado'
@@ -243,7 +243,7 @@ export function NodeManagement() {
                   <td className="py-4 px-4">
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                       node.is_active
-                        ? 'bg-[#6D7E5E]/10 text-[#6D7E5E] border border-[#6D7E5E]/20'
+                        ? 'bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] border border-[var(--accent-primary)]/20'
                         : 'bg-[#DC2626]/10 text-[#DC2626] border border-[#DC2626]/20'
                     }`}>
                       {node.is_active ? 'Activo' : 'Inactivo'}
@@ -280,17 +280,17 @@ export function NodeManagement() {
 
       {/* Create form */}
       {showCreateForm && (
-        <div className="fixed inset-0 bg-[#2C2621]/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-[var(--text-main)]/50 z-50 flex items-center justify-center p-4">
           <BentoCard variant="light" className="w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl text-[#2C2621] mb-6">Nuevo Nodo IoT</h2>
+            <h2 className="text-xl text-[var(--text-main)] mb-6">Nuevo Nodo IoT</h2>
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="block text-sm text-[#6E6359] mb-2">Área de Riego (Obligatorio)</label>
+                <label className="block text-sm text-[var(--text-muted)] mb-2">Área de Riego (Obligatorio)</label>
                 <select
                   required
                   value={formAreaId}
                   onChange={(e) => setFormAreaId(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
+                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
                 >
                   <option value="">Seleccione un área</option>
                   {areas.map(a => (
@@ -300,48 +300,48 @@ export function NodeManagement() {
               </div>
 
               <div>
-                <label className="block text-sm text-[#6E6359] mb-2">Nombre del Nodo</label>
+                <label className="block text-sm text-[var(--text-muted)] mb-2">Nombre del Nodo</label>
                 <input
                   type="text"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder="Ej: Sensor Nogal-01"
-                  className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
+                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-[#6E6359] mb-2">Número de Serie</label>
+                <label className="block text-sm text-[var(--text-muted)] mb-2">Número de Serie</label>
                 <input
                   type="text"
                   value={formSerialNumber}
                   onChange={(e) => setFormSerialNumber(e.target.value)}
                   placeholder="SN-2026-001"
-                  className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
+                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm text-[#6E6359] mb-2">Latitud GPS</label>
+                  <label className="block text-sm text-[var(--text-muted)] mb-2">Latitud GPS</label>
                   <input
                     type="number"
                     step="any"
                     value={formLat}
                     onChange={(e) => setFormLat(e.target.value)}
                     placeholder="28.6329"
-                    className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
+                    className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-[#6E6359] mb-2">Longitud GPS</label>
+                  <label className="block text-sm text-[var(--text-muted)] mb-2">Longitud GPS</label>
                   <input
                     type="number"
                     step="any"
                     value={formLng}
                     onChange={(e) => setFormLng(e.target.value)}
                     placeholder="-106.0691"
-                    className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
+                    className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
                   />
                 </div>
               </div>

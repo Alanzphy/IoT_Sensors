@@ -47,6 +47,6 @@ describe("PillButton Component", () => {
   it("applies the primary variant by default", () => {
     render(<PillButton>Primary</PillButton>);
     const button = screen.getByRole("button", { name: /primary/i });
-    expect(button).toHaveClass("bg-[#6D7E5E]");
+    expect(button).toHaveClass("bg-[var(--accent-primary)]");
   });
 });

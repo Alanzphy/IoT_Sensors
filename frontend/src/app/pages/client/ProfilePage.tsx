@@ -6,9 +6,9 @@ import { PillButton } from "../../components/PillButton";
 import { useToast } from "../../components/Toast";
 
 const inputClass = `
-  w-full px-4 py-2.5 bg-[#F4F1EB] border border-[#2C2621]/10 rounded-[24px]
-  text-[#2C2621] transition-shadow
-  focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6D7E5E] focus-visible:ring-offset-1
+  w-full px-4 py-2.5 bg-[var(--bg-base)] border border-[var(--border-strong)] rounded-[24px]
+  text-[var(--text-main)] transition-shadow
+  focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] focus-visible:ring-offset-1
   disabled:opacity-60 disabled:cursor-default
 `;
 
@@ -43,8 +43,8 @@ export function ProfilePage() {
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-serif text-[#2C2621] mb-2">Mi Perfil</h1>
-              <p className="text-[#6E6359]">Administra tu información personal</p>
+              <h1 className="text-2xl md:text-3xl font-serif text-[var(--text-main)] mb-2">Mi Perfil</h1>
+              <p className="text-[var(--text-muted)]">Administra tu información personal</p>
             </div>
             <PillButton
               variant={isEditing ? "primary" : "secondary"}
@@ -59,8 +59,8 @@ export function ProfilePage() {
             <div className="flex flex-col md:flex-row gap-6">
               {/* Avatar */}
               <div className="flex flex-col items-center gap-4 flex-shrink-0">
-                <div className="w-28 h-28 rounded-full bg-gradient-to-br from-[#6D7E5E] to-[#4D6040] flex items-center justify-center">
-                  <User className="w-14 h-14 text-[#F4F1EB]" />
+                <div className="w-28 h-28 rounded-full bg-gradient-to-br from-[var(--accent-primary)] to-[var(--chart-1)] flex items-center justify-center">
+                  <User className="w-14 h-14 text-[var(--text-inverted)]" />
                 </div>
                 {isEditing && (
                   <PillButton variant="secondary" className="text-sm">
@@ -73,7 +73,7 @@ export function ProfilePage() {
               <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
                 {fields.map(({ id, label, key, type, icon: Icon }) => (
                   <div key={id} className={key === "name" || key === "company" ? "md:col-span-2" : ""}>
-                    <label htmlFor={id} className="flex items-center gap-2 text-sm text-[#6E6359] mb-2">
+                    <label htmlFor={id} className="flex items-center gap-2 text-sm text-[var(--text-muted)] mb-2">
                       {Icon && <Icon className="w-4 h-4" />}
                       {label}
                     </label>
@@ -93,13 +93,13 @@ export function ProfilePage() {
 
           {/* Subscription Info */}
           <BentoCard>
-            <h3 className="text-[#2C2621] mb-4">Plan de Suscripción</h3>
+            <h3 className="text-[var(--text-main)] mb-4">Plan de Suscripción</h3>
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
-                <span className="inline-block px-4 py-1.5 bg-[#6D7E5E] text-[#F4F1EB] text-sm rounded-full mb-2">
+                <span className="inline-block px-4 py-1.5 bg-[var(--accent-primary)] text-[var(--text-inverted)] text-sm rounded-full mb-2">
                   Plan Profesional
                 </span>
-                <p className="text-sm text-[#6E6359]">
+                <p className="text-sm text-[var(--text-muted)]">
                   Hasta 20 sensores activos • Acceso completo al histórico
                 </p>
               </div>
@@ -109,10 +109,10 @@ export function ProfilePage() {
 
           {/* Security */}
           <BentoCard>
-            <h3 className="text-[#2C2621] mb-4">Seguridad</h3>
+            <h3 className="text-[var(--text-main)] mb-4">Seguridad</h3>
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               <PillButton variant="secondary">Cambiar Contraseña</PillButton>
-              <p className="text-sm text-[#6E6359]">
+              <p className="text-sm text-[var(--text-muted)]">
                 Última actualización: 15 de febrero, 2026
               </p>
             </div>

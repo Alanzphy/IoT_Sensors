@@ -29,9 +29,9 @@ const ICONS: Record<ToastType, typeof CheckCircle> = {
 };
 
 const STYLES: Record<ToastType, string> = {
-  success: "bg-[#6D7E5E] text-[#F4F1EB]",
-  error:   "bg-[#3B312B] text-[#F4F1EB]",
-  info:    "bg-[#F9F8F4] text-[#2C2621] border border-[#2C2621]/10",
+  success: "bg-[var(--status-active)] text-white",
+  error:   "bg-[var(--status-danger)] text-white",
+  info:    "bg-[var(--bg-elevated)] text-[var(--text-main)] border border-[var(--border-strong)]",
 };
 
 function Toast({

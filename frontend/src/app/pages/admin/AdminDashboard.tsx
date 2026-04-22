@@ -70,8 +70,8 @@ export function AdminDashboard() {
     <PageTransition>
       <div className="min-h-screen p-4 md:p-6 lg:p-8">
       <div className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-serif text-[#2C2621] mb-2">Panel de Administración</h1>
-        <p className="text-[#6E6359]">
+        <h1 className="text-2xl md:text-3xl font-serif text-[var(--text-main)] mb-2">Panel de Administración</h1>
+        <p className="text-[var(--text-muted)]">
           {new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
         </p>
       </div>
@@ -86,44 +86,44 @@ export function AdminDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <BentoCard variant="sand">
               <div className="flex items-start justify-between mb-4">
-                <div className="p-3 rounded-[24px] bg-[#6D7E5E]">
-                  <Users className="w-6 h-6 text-[#F4F1EB]" />
+                <div className="p-3 rounded-[24px] bg-[var(--accent-primary)]">
+                  <Users className="w-6 h-6 text-[var(--text-inverted)]" />
                 </div>
               </div>
-              <p className="text-sm text-[#6E6359] mb-1">Total Clientes</p>
-              <p className="text-3xl font-bold text-[#2C2621]">{stats.clients}</p>
+              <p className="text-sm text-[var(--text-muted)] mb-1">Total Clientes</p>
+              <p className="text-3xl font-bold text-[var(--text-main)]">{stats.clients}</p>
             </BentoCard>
 
             <BentoCard variant="sand">
               <div className="flex items-start justify-between mb-4">
-                <div className="p-3 rounded-[24px] bg-[#6D7E5E]">
-                  <MapPin className="w-6 h-6 text-[#F4F1EB]" />
+                <div className="p-3 rounded-[24px] bg-[var(--accent-primary)]">
+                  <MapPin className="w-6 h-6 text-[var(--text-inverted)]" />
                 </div>
               </div>
-              <p className="text-sm text-[#6E6359] mb-1">Total Predios</p>
-              <p className="text-3xl font-bold text-[#2C2621]">{stats.properties}</p>
+              <p className="text-sm text-[var(--text-muted)] mb-1">Total Predios</p>
+              <p className="text-3xl font-bold text-[var(--text-main)]">{stats.properties}</p>
             </BentoCard>
 
             <BentoCard variant="sand">
               <div className="flex items-start justify-between mb-4">
-                <div className="p-3 rounded-[24px] bg-[#6D7E5E]">
-                  <Radio className="w-6 h-6 text-[#F4F1EB]" />
+                <div className="p-3 rounded-[24px] bg-[var(--accent-primary)]">
+                  <Radio className="w-6 h-6 text-[var(--text-inverted)]" />
                 </div>
               </div>
-              <p className="text-sm text-[#6E6359] mb-1">Nodos Activos</p>
-              <p className="text-3xl font-bold text-[#2C2621]">
+              <p className="text-sm text-[var(--text-muted)] mb-1">Nodos Activos</p>
+              <p className="text-3xl font-bold text-[var(--text-main)]">
                 {stats.nodesActive}/{stats.nodesTotal}
               </p>
             </BentoCard>
 
             <BentoCard variant="sand">
               <div className="flex items-start justify-between mb-4">
-                <div className="p-3 rounded-[24px] bg-[#6D7E5E]">
-                  <Database className="w-6 h-6 text-[#F4F1EB]" />
+                <div className="p-3 rounded-[24px] bg-[var(--accent-primary)]">
+                  <Database className="w-6 h-6 text-[var(--text-inverted)]" />
                 </div>
               </div>
-              <p className="text-sm text-[#6E6359] mb-1">Lecturas Hoy</p>
-              <p className="text-3xl font-bold text-[#2C2621]">
+              <p className="text-sm text-[var(--text-muted)] mb-1">Lecturas Hoy</p>
+              <p className="text-3xl font-bold text-[var(--text-main)]">
                 {stats.readingsToday.toLocaleString()}
               </p>
             </BentoCard>
@@ -134,7 +134,7 @@ export function AdminDashboard() {
             <div className="lg:col-span-2">
               <BentoCard variant="light">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg text-[#2C2621]">Nodos Inactivos / Sin Comunicación</h3>
+                  <h3 className="text-lg text-[var(--text-main)]">Nodos Inactivos / Sin Comunicación</h3>
                   <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#DC2626]/10">
                     <AlertCircle className="w-4 h-4 text-[#DC2626]" />
                     <span className="text-sm font-medium text-[#DC2626]">{offlineNodes.length}</span>
@@ -143,11 +143,11 @@ export function AdminDashboard() {
 
                 <div className="space-y-3">
                   {offlineNodes.map((node) => (
-                    <div key={node.id} className="p-4 rounded-[24px] bg-[#F4F1EB] border-l-4 border-[#DC2626]">
+                    <div key={node.id} className="p-4 rounded-[24px] bg-[var(--bg-base)] border-l-4 border-[#DC2626]">
                       <div className="flex items-start justify-between mb-2">
                         <div>
-                          <h4 className="font-medium text-[#2C2621]">{node.name || `Nodo #${node.id}`}</h4>
-                          <p className="text-sm text-[#6E6359]">Serial: {node.serial_number || '-'}</p>
+                          <h4 className="font-medium text-[var(--text-main)]">{node.name || `Nodo #${node.id}`}</h4>
+                          <p className="text-sm text-[var(--text-muted)]">Serial: {node.serial_number || '-'}</p>
                         </div>
                         <span className="px-3 py-1 rounded-full bg-[#DC2626]/10 text-[#DC2626] text-xs font-medium">
                           Sin conexión / Inactivo
@@ -156,7 +156,7 @@ export function AdminDashboard() {
                     </div>
                   ))}
                   {offlineNodes.length === 0 && (
-                    <p className="text-sm text-[#6E6359]">Todos los nodos registrados están activos y operando correctamente.</p>
+                    <p className="text-sm text-[var(--text-muted)]">Todos los nodos registrados están activos y operando correctamente.</p>
                   )}
                 </div>
               </BentoCard>
@@ -165,7 +165,7 @@ export function AdminDashboard() {
             {/* Quick Actions & Recent Activity */}
             <div className="space-y-6">
               <BentoCard variant="light">
-                <h3 className="text-lg text-[#2C2621] mb-6">Acciones Rápidas</h3>
+                <h3 className="text-lg text-[var(--text-main)] mb-6">Acciones Rápidas</h3>
                 <div className="space-y-3">
                   <Link to="/admin/clientes" className="block">
                     <PillButton variant="primary" className="w-full justify-center">
@@ -188,9 +188,9 @@ export function AdminDashboard() {
               </BentoCard>
 
               <BentoCard variant="sand">
-                <h3 className="text-lg text-[#2C2621] mb-4">Actividad Reciente</h3>
+                <h3 className="text-lg text-[var(--text-main)] mb-4">Actividad Reciente</h3>
                 <div className="space-y-3">
-                  <p className="text-sm text-[#6E6359]">
+                  <p className="text-sm text-[var(--text-muted)]">
                     Consulta la bitácora completa de eventos administrativos y operativos.
                   </p>
                   <Link to="/admin/auditoria" className="block">

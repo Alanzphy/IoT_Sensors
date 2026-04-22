@@ -30,9 +30,9 @@ const CLUSTER_COUNT_LAYER_ID = "admin-geo-nodes-cluster-count";
 const UNCLUSTERED_LAYER_ID = "admin-geo-nodes-unclustered";
 
 function markerColorByStatus(status: GeoNode["freshness_status"]): string {
-  if (status === "fresh") return "#6D7E5E";
+  if (status === "fresh") return "var(--accent-primary)";
   if (status === "stale") return "#D97706";
-  return "#6E6359";
+  return "var(--text-muted)";
 }
 
 function freshnessText(node: GeoNode): string {
@@ -292,7 +292,7 @@ export function AdminMapPage() {
         source: CLUSTER_SOURCE_ID,
         filter: ["has", "point_count"],
         paint: {
-          "circle-color": ["step", ["get", "point_count"], "#9CA3AF", 20, "#6D7E5E", 60, "#14532D"],
+          "circle-color": ["step", ["get", "point_count"], "#9CA3AF", 20, "var(--accent-primary)", 60, "#14532D"],
           "circle-radius": ["step", ["get", "point_count"], 18, 20, 24, 60, 30],
           "circle-stroke-width": 1,
           "circle-stroke-color": "#FFFFFF",
@@ -320,7 +320,7 @@ export function AdminMapPage() {
         source: CLUSTER_SOURCE_ID,
         filter: ["!", ["has", "point_count"]],
         paint: {
-          "circle-color": ["match", ["get", "freshness_status"], "fresh", "#6D7E5E", "stale", "#D97706", "#6E6359"],
+          "circle-color": ["match", ["get", "freshness_status"], "fresh", "var(--accent-primary)", "stale", "#D97706", "var(--text-muted)"],
           "circle-radius": 7,
           "circle-stroke-width": 2,
           "circle-stroke-color": "#FFFFFF",
@@ -389,7 +389,7 @@ export function AdminMapPage() {
 
         const popupHtml = `
           <div style="font-family: ui-sans-serif, system-ui; font-size: 12px; line-height: 1.4;">
-            <div style="font-weight: 700; color: #2C2621; margin-bottom: 4px;">${node.name || `Nodo #${node.id}`}</div>
+            <div style="font-weight: 700; color: var(--text-main); margin-bottom: 4px;">${node.name || `Nodo #${node.id}`}</div>
             <div><strong>Cliente:</strong> ${node.client_company_name}</div>
             <div><strong>Predio:</strong> ${node.property_name}</div>
             <div><strong>Área:</strong> ${node.irrigation_area_name}</div>
@@ -450,20 +450,20 @@ export function AdminMapPage() {
   return (
     <div className="min-h-screen p-4 md:p-6 lg:p-8">
       <div className="mb-5">
-        <h1 className="text-2xl md:text-3xl text-[#2C2621]">Mapa Global de Nodos</h1>
-        <p className="text-[#6E6359] mt-1">
+        <h1 className="text-2xl md:text-3xl text-[var(--text-main)]">Mapa Global de Nodos</h1>
+        <p className="text-[var(--text-muted)] mt-1">
           Vista administrativa con filtros por cliente, predio y área para monitoreo geoespacial.
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4">
-        <div className="rounded-[20px] bg-white border border-[#2C2621]/10 p-4 lg:col-span-3">
+        <div className="rounded-[20px] bg-[var(--bg-elevated)] border border-[var(--border-strong)] p-4 lg:col-span-3">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
-            <label className="flex flex-col gap-1 text-sm text-[#6E6359]">
+            <label className="flex flex-col gap-1 text-sm text-[var(--text-muted)]">
               Cliente
               <select
                 disabled={loadingFilters}
-                className="rounded-xl border border-[#2C2621]/20 px-3 py-2 text-[#2C2621] bg-[#F9F8F4] disabled:opacity-60"
+                className="rounded-xl border border-[var(--border-strong)] px-3 py-2 text-[var(--text-main)] bg-[var(--bg-surface)] disabled:opacity-60"
                 value={selectedClientId ?? ""}
                 onChange={(e) => setSelectedClientId(e.target.value ? Number(e.target.value) : null)}
               >
@@ -476,11 +476,11 @@ export function AdminMapPage() {
               </select>
             </label>
 
-            <label className="flex flex-col gap-1 text-sm text-[#6E6359]">
+            <label className="flex flex-col gap-1 text-sm text-[var(--text-muted)]">
               Predio
               <select
                 disabled={loadingFilters}
-                className="rounded-xl border border-[#2C2621]/20 px-3 py-2 text-[#2C2621] bg-[#F9F8F4] disabled:opacity-60"
+                className="rounded-xl border border-[var(--border-strong)] px-3 py-2 text-[var(--text-main)] bg-[var(--bg-surface)] disabled:opacity-60"
                 value={selectedPropertyId ?? ""}
                 onChange={(e) => setSelectedPropertyId(e.target.value ? Number(e.target.value) : null)}
               >
@@ -493,11 +493,11 @@ export function AdminMapPage() {
               </select>
             </label>
 
-            <label className="flex flex-col gap-1 text-sm text-[#6E6359]">
+            <label className="flex flex-col gap-1 text-sm text-[var(--text-muted)]">
               Área de riego
               <select
                 disabled={selectedPropertyId === null || loadingFilters}
-                className="rounded-xl border border-[#2C2621]/20 px-3 py-2 text-[#2C2621] bg-[#F9F8F4] disabled:opacity-60"
+                className="rounded-xl border border-[var(--border-strong)] px-3 py-2 text-[var(--text-main)] bg-[var(--bg-surface)] disabled:opacity-60"
                 value={selectedAreaId ?? ""}
                 onChange={(e) => setSelectedAreaId(e.target.value ? Number(e.target.value) : null)}
               >
@@ -514,7 +514,7 @@ export function AdminMapPage() {
               <button
                 type="button"
                 onClick={fetchNodes}
-                className="w-full md:w-auto inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 bg-[#6D7E5E] text-[#F4F1EB] hover:opacity-90 transition"
+                className="w-full md:w-auto inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 bg-[var(--accent-primary)] text-[var(--text-inverted)] hover:opacity-90 transition"
               >
                 <RefreshCw className="w-4 h-4" />
                 Actualizar capa
@@ -523,10 +523,10 @@ export function AdminMapPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-            <label className="flex flex-col gap-1 text-sm text-[#6E6359]">
+            <label className="flex flex-col gap-1 text-sm text-[var(--text-muted)]">
               Modo de visualización
               <select
-                className="rounded-xl border border-[#2C2621]/20 px-3 py-2 text-[#2C2621] bg-[#F9F8F4]"
+                className="rounded-xl border border-[var(--border-strong)] px-3 py-2 text-[var(--text-main)] bg-[var(--bg-surface)]"
                 value={viewMode}
                 onChange={(e) => setViewMode(e.target.value as ViewMode)}
               >
@@ -535,11 +535,11 @@ export function AdminMapPage() {
               </select>
             </label>
 
-            <div className="flex flex-wrap items-end gap-3 text-sm text-[#6E6359]">
+            <div className="flex flex-wrap items-end gap-3 text-sm text-[var(--text-muted)]">
               <label className="inline-flex items-center gap-2">
                 <input
                   type="checkbox"
-                  className="accent-[#6D7E5E]"
+                  className="accent-[var(--accent-primary)]"
                   checked={visibleFresh}
                   onChange={(e) => setVisibleFresh(e.target.checked)}
                 />
@@ -548,7 +548,7 @@ export function AdminMapPage() {
               <label className="inline-flex items-center gap-2">
                 <input
                   type="checkbox"
-                  className="accent-[#6D7E5E]"
+                  className="accent-[var(--accent-primary)]"
                   checked={visibleStale}
                   onChange={(e) => setVisibleStale(e.target.checked)}
                 />
@@ -557,7 +557,7 @@ export function AdminMapPage() {
               <label className="inline-flex items-center gap-2">
                 <input
                   type="checkbox"
-                  className="accent-[#6D7E5E]"
+                  className="accent-[var(--accent-primary)]"
                   checked={visibleNoData}
                   onChange={(e) => setVisibleNoData(e.target.checked)}
                 />
@@ -566,10 +566,10 @@ export function AdminMapPage() {
             </div>
           </div>
 
-          <div className="mb-3 rounded-xl border border-[#2C2621]/10 bg-[#F9F8F4] px-3 py-2.5 text-xs text-[#6E6359]">
+          <div className="mb-3 rounded-xl border border-[var(--border-strong)] bg-[var(--bg-surface)] px-3 py-2.5 text-xs text-[var(--text-muted)]">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
               <span className="inline-flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#6D7E5E]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[var(--accent-primary)]" />
                 Fresco: {statusCounts.fresh}
               </span>
               <span className="inline-flex items-center gap-2">
@@ -577,7 +577,7 @@ export function AdminMapPage() {
                 Tardío: {statusCounts.stale}
               </span>
               <span className="inline-flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#6E6359]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[var(--text-muted)]" />
                 Sin lectura: {statusCounts.no_data}
               </span>
               <span className="inline-flex items-center gap-2">
@@ -587,10 +587,10 @@ export function AdminMapPage() {
             </div>
           </div>
 
-          <div className="relative rounded-[18px] overflow-hidden border border-[#2C2621]/10">
-            <div ref={mapContainerRef} className="h-[52vh] md:h-[60vh] w-full bg-[#E6E1D8]" />
+          <div className="relative rounded-[18px] overflow-hidden border border-[var(--border-strong)]">
+            <div ref={mapContainerRef} className="h-[52vh] md:h-[60vh] w-full bg-[var(--bg-surface)]" />
             {loadingNodes && (
-              <div className="absolute inset-0 bg-[#F4F1EB]/80 backdrop-blur-sm flex items-center justify-center text-[#6E6359] text-sm">
+              <div className="absolute inset-0 bg-[var(--bg-base)]/80 backdrop-blur-sm flex items-center justify-center text-[var(--text-muted)] text-sm">
                 Cargando nodos geoespaciales...
               </div>
             )}
@@ -604,36 +604,36 @@ export function AdminMapPage() {
           )}
         </div>
 
-        <aside className="rounded-[20px] bg-white border border-[#2C2621]/10 p-4">
-          <h2 className="text-[#2C2621] text-lg mb-2">Detalle de nodo</h2>
+        <aside className="rounded-[20px] bg-[var(--bg-elevated)] border border-[var(--border-strong)] p-4">
+          <h2 className="text-[var(--text-main)] text-lg mb-2">Detalle de nodo</h2>
           {selectedNode ? (
             <div className="space-y-2 text-sm">
-              <div className="text-[#2C2621] font-medium">{selectedNode.name || `Nodo #${selectedNode.id}`}</div>
-              <div className="text-[#6E6359]"><strong>Cliente:</strong> {selectedNode.client_company_name}</div>
-              <div className="text-[#6E6359]"><strong>Predio:</strong> {selectedNode.property_name}</div>
-              <div className="text-[#6E6359]"><strong>Área:</strong> {selectedNode.irrigation_area_name}</div>
-              <div className="text-[#6E6359]"><strong>Cultivo:</strong> {selectedNode.crop_type_name}</div>
-              <div className="text-[#6E6359]"><strong>Estado:</strong> {selectedNode.is_active ? "Activo" : "Inactivo"}</div>
-              <div className="text-[#6E6359]"><strong>Frescura:</strong> {freshnessText(selectedNode)}</div>
+              <div className="text-[var(--text-main)] font-medium">{selectedNode.name || `Nodo #${selectedNode.id}`}</div>
+              <div className="text-[var(--text-muted)]"><strong>Cliente:</strong> {selectedNode.client_company_name}</div>
+              <div className="text-[var(--text-muted)]"><strong>Predio:</strong> {selectedNode.property_name}</div>
+              <div className="text-[var(--text-muted)]"><strong>Área:</strong> {selectedNode.irrigation_area_name}</div>
+              <div className="text-[var(--text-muted)]"><strong>Cultivo:</strong> {selectedNode.crop_type_name}</div>
+              <div className="text-[var(--text-muted)]"><strong>Estado:</strong> {selectedNode.is_active ? "Activo" : "Inactivo"}</div>
+              <div className="text-[var(--text-muted)]"><strong>Frescura:</strong> {freshnessText(selectedNode)}</div>
               {selectedNodeDate && (
-                <div className="text-[#6E6359]">
+                <div className="text-[var(--text-muted)]">
                   <strong>Última lectura:</strong> {selectedNodeDate.toLocaleString()}
                 </div>
               )}
             </div>
           ) : (
-            <p className="text-sm text-[#6E6359]">No hay nodos para mostrar con los filtros actuales.</p>
+            <p className="text-sm text-[var(--text-muted)]">No hay nodos para mostrar con los filtros actuales.</p>
           )}
 
-          <div className="mt-4 pt-4 border-t border-[#2C2621]/10">
-            <h3 className="text-[#2C2621] font-medium mb-2">Nodos sin GPS</h3>
+          <div className="mt-4 pt-4 border-t border-[var(--border-strong)]">
+            <h3 className="text-[var(--text-main)] font-medium mb-2">Nodos sin GPS</h3>
             {filteredNodesWithoutCoordinates.length === 0 ? (
-              <p className="text-sm text-[#6E6359]">Todos los nodos tienen coordenadas.</p>
+              <p className="text-sm text-[var(--text-muted)]">Todos los nodos tienen coordenadas.</p>
             ) : (
               <ul className="space-y-2 max-h-[180px] overflow-auto pr-1">
                 {filteredNodesWithoutCoordinates.map((node) => (
-                  <li key={node.id} className="text-sm text-[#6E6359] rounded-lg bg-[#F9F8F4] p-2">
-                    <div className="font-medium text-[#2C2621]">{node.name || `Nodo #${node.id}`}</div>
+                  <li key={node.id} className="text-sm text-[var(--text-muted)] rounded-lg bg-[var(--bg-surface)] p-2">
+                    <div className="font-medium text-[var(--text-main)]">{node.name || `Nodo #${node.id}`}</div>
                     <div>{node.client_company_name}</div>
                     <div>{node.property_name} / {node.irrigation_area_name}</div>
                   </li>
@@ -642,7 +642,7 @@ export function AdminMapPage() {
             )}
           </div>
 
-          <div className="mt-4 pt-4 border-t border-[#2C2621]/10 text-xs text-[#6E6359] flex items-start gap-2">
+          <div className="mt-4 pt-4 border-t border-[var(--border-strong)] text-xs text-[var(--text-muted)] flex items-start gap-2">
             <MapPin className="w-4 h-4 mt-0.5" />
             <span>
               Base cartográfica: OpenFreeMap sobre OpenStreetMap. Estilo renderizado con MapLibre GL JS.

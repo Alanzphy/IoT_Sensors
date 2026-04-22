@@ -3,7 +3,7 @@ import { type ReactNode } from "react";
 
 interface PillButtonProps {
   children: ReactNode;
-  variant?: "primary" | "secondary" | "outline";
+  variant?: "primary" | "secondary" | "outline" | "ghost";
   onClick?: () => void;
   type?: "button" | "submit";
   disabled?: boolean;
@@ -23,9 +23,10 @@ export function PillButton({
   "aria-label": ariaLabel,
 }: PillButtonProps) {
   const variants = {
-    primary: "bg-[#6D7E5E] text-[#F4F1EB] hover:opacity-90",
-    secondary: "bg-[#E2D4B7] text-[#2C2621] hover:bg-[#D5C5A5]",
-    outline: "border-2 border-[#6D7E5E] text-[#6D7E5E] hover:bg-[#6D7E5E]/5",
+    primary: "bg-[var(--accent-primary)] text-[var(--text-inverted)] hover:opacity-90 hover:shadow-lg dark:hover:shadow-[var(--accent-glow)]",
+    secondary: "bg-[var(--card-sand)] text-[var(--text-main)] hover:brightness-95",
+    outline: "border-2 border-[var(--accent-primary)] text-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/10",
+    ghost: "text-[var(--text-main)] hover:bg-[var(--border-subtle)]",
   };
 
   const isDisabled = disabled || loading;
@@ -42,7 +43,7 @@ export function PillButton({
         px-6 py-2.5 rounded-full font-medium
         transition-all duration-150
         active:scale-[0.97]
-        focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6D7E5E] focus-visible:ring-offset-2
+        focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] focus-visible:ring-offset-2
         ${variants[variant]}
         ${isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
         ${className}

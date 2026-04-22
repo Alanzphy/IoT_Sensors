@@ -29,27 +29,27 @@ export function MetricCard({
     <BentoCard variant={variant} className="flex flex-col gap-4">
       <div className="flex items-start justify-between">
         <div>
-          <h3 className={`text-lg ${variant === "dark" || variant === "brown" ? "text-[#F4F1EB]" : "text-[#2C2621]"}`}>
+          <h3 className={`text-lg ${variant === "dark" || variant === "brown" ? "text-[var(--text-on-dark)]" : "text-[var(--text-main)]"}`}>
             {title}
           </h3>
           {subtitle && (
-            <p className={`text-sm mt-1 ${variant === "dark" || variant === "brown" ? "text-[#F4F1EB]/70" : "text-[#6E6359]"}`}>
+            <p className={`text-sm mt-1 ${variant === "dark" || variant === "brown" ? "text-[var(--text-on-dark)]/70" : "text-[var(--text-muted)]"}`}>
               {subtitle}
             </p>
           )}
         </div>
         {icon && (
-          <div className="bg-[#E2D4B7] p-3 rounded-[24px]">
+          <div className="bg-[var(--card-sand)] text-[var(--text-main)] p-3 rounded-[24px]">
             {icon}
           </div>
         )}
       </div>
 
       <div className="flex items-baseline gap-2">
-        <span className={`${priority ? "text-5xl" : "text-4xl"} font-bold`} style={{ fontFamily: "var(--font-sans)" }}>
+        <span className={`${priority ? "text-5xl" : "text-4xl"} font-bold font-mono-data`}>
           {value}
         </span>
-        <span className={`text-xl ${variant === "dark" || variant === "brown" ? "text-[#F4F1EB]/80" : "text-[#6E6359]"}`}>
+        <span className={`text-xl ${variant === "dark" || variant === "brown" ? "text-[var(--text-on-dark)]/80" : "text-[var(--text-muted)]"}`}>
           {unit}
         </span>
       </div>

@@ -152,18 +152,18 @@ export function ReadingDateRangeSelector({
 
   const triggerBase =
     variant === "soft"
-      ? "flex w-full items-center gap-3 rounded-[24px] bg-[#F4F1EB] px-4 py-2.5 text-[#2C2621]"
-      : "flex w-full items-center gap-3 rounded-2xl border-2 border-[#E5DDD1] bg-white px-4 py-2.5 text-[#2C2621] focus:outline-none";
+      ? "flex w-full items-center gap-3 rounded-[24px] bg-[var(--bg-base)] px-4 py-2.5 text-[var(--text-main)]"
+      : "flex w-full items-center gap-3 rounded-2xl border-2 border-[#E5DDD1] bg-white px-4 py-2.5 text-[var(--text-main)] focus:outline-none";
 
   return (
     <div className={cn("space-y-3", className)}>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
-          <label className="mb-2 block text-sm text-[#6E6359]">Fecha inicio</label>
+          <label className="mb-2 block text-sm text-[var(--text-muted)]">Fecha inicio</label>
           <Popover open={startOpen} onOpenChange={setStartOpen}>
             <PopoverTrigger asChild>
               <button type="button" className={triggerBase}>
-                <CalendarIcon className="h-5 w-5 text-[#6E6359]" />
+                <CalendarIcon className="h-5 w-5 text-[var(--text-muted)]" />
                 <span className="text-sm">{format(startDate, "dd/MM/yyyy")}</span>
               </button>
             </PopoverTrigger>
@@ -180,7 +180,7 @@ export function ReadingDateRangeSelector({
                   available: (day) => availableDateSet.has(toIsoDate(day)),
                 }}
                 modifiersClassNames={{
-                  available: "font-semibold text-[#2C2621] after:absolute after:bottom-1 after:left-1/2 after:h-1.5 after:w-1.5 after:-translate-x-1/2 after:rounded-full after:bg-[#6D7E5E]",
+                  available: "font-semibold text-[var(--text-main)] after:absolute after:bottom-1 after:left-1/2 after:h-1.5 after:w-1.5 after:-translate-x-1/2 after:rounded-full after:bg-[var(--accent-primary)]",
                 }}
               />
             </PopoverContent>
@@ -188,11 +188,11 @@ export function ReadingDateRangeSelector({
         </div>
 
         <div>
-          <label className="mb-2 block text-sm text-[#6E6359]">Fecha fin</label>
+          <label className="mb-2 block text-sm text-[var(--text-muted)]">Fecha fin</label>
           <Popover open={endOpen} onOpenChange={setEndOpen}>
             <PopoverTrigger asChild>
               <button type="button" className={triggerBase}>
-                <CalendarIcon className="h-5 w-5 text-[#6E6359]" />
+                <CalendarIcon className="h-5 w-5 text-[var(--text-muted)]" />
                 <span className="text-sm">{format(endDate, "dd/MM/yyyy")}</span>
               </button>
             </PopoverTrigger>
@@ -209,7 +209,7 @@ export function ReadingDateRangeSelector({
                   available: (day) => availableDateSet.has(toIsoDate(day)),
                 }}
                 modifiersClassNames={{
-                  available: "font-semibold text-[#2C2621] after:absolute after:bottom-1 after:left-1/2 after:h-1.5 after:w-1.5 after:-translate-x-1/2 after:rounded-full after:bg-[#6D7E5E]",
+                  available: "font-semibold text-[var(--text-main)] after:absolute after:bottom-1 after:left-1/2 after:h-1.5 after:w-1.5 after:-translate-x-1/2 after:rounded-full after:bg-[var(--accent-primary)]",
                 }}
               />
             </PopoverContent>
@@ -217,7 +217,7 @@ export function ReadingDateRangeSelector({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 text-xs text-[#6E6359]">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--text-muted)]">
         {loadingAvailability && (
           <span className="inline-flex items-center gap-1">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />

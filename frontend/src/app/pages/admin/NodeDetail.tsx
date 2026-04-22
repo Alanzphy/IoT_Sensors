@@ -79,7 +79,7 @@ export function NodeDetail() {
   if (loading) {
     return (
       <div className="min-h-screen p-8 flex items-center justify-center">
-        <p className="text-[#6E6359]">Cargando nodo...</p>
+        <p className="text-[var(--text-muted)]">Cargando nodo...</p>
       </div>
     );
   }
@@ -89,7 +89,7 @@ export function NodeDetail() {
       <div className="min-h-screen p-8 flex items-center justify-center">
         <BentoCard variant="light">
           <p className="text-[#DC2626] font-medium">{error || "Nodo no encontrado"}</p>
-          <Link to="/admin/nodos" className="text-[#6D7E5E] underline mt-4 block">Volver a nodos</Link>
+          <Link to="/admin/nodos" className="text-[var(--accent-primary)] underline mt-4 block">Volver a nodos</Link>
         </BentoCard>
       </div>
     );
@@ -101,19 +101,19 @@ export function NodeDetail() {
   return (
     <div className="min-h-screen p-4 md:p-6 lg:p-8">
       <div className="mb-6">
-        <div className="flex items-center gap-2 text-sm text-[#6E6359] mb-2">
-          <Link to="/admin/nodos" className="hover:text-[#6D7E5E]">Nodos</Link>
+        <div className="flex items-center gap-2 text-sm text-[var(--text-muted)] mb-2">
+          <Link to="/admin/nodos" className="hover:text-[var(--accent-primary)]">Nodos</Link>
           <span>/</span>
           <span>{node.name || `Nodo #${node.id}`}</span>
         </div>
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl md:text-3xl text-[#2C2621] mb-2">{node.name || `Nodo #${node.id}`}</h1>
-            <p className="text-[#6E6359] font-mono">{node.serial_number || '-'}</p>
+            <h1 className="text-2xl md:text-3xl text-[var(--text-main)] mb-2">{node.name || `Nodo #${node.id}`}</h1>
+            <p className="text-[var(--text-muted)] font-mono">{node.serial_number || '-'}</p>
           </div>
           <span className={`px-4 py-2 rounded-full text-sm font-medium ${
             isNodeActive
-              ? "bg-[#6D7E5E] text-[#F4F1EB]"
+              ? "bg-[var(--accent-primary)] text-[var(--text-inverted)]"
               : "bg-[#DC2626] text-white"
           }`}>
             {isNodeActive ? "Activo" : "Inactivo"}
@@ -124,20 +124,20 @@ export function NodeDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         {/* Node info */}
         <BentoCard variant="light">
-          <h3 className="text-lg text-[#2C2621] mb-4">Información del Nodo</h3>
+          <h3 className="text-lg text-[var(--text-main)] mb-4">Información del Nodo</h3>
           <div className="space-y-4">
             <div>
-              <p className="text-sm text-[#6E6359] mb-1">Área Vinculada</p>
-              <p className="font-medium text-[#2C2621]">
-                {area?.nombre || <span className="italic text-[#6E6359]">Sin vincular</span>}
+              <p className="text-sm text-[var(--text-muted)] mb-1">Área Vinculada</p>
+              <p className="font-medium text-[var(--text-main)]">
+                {area?.nombre || <span className="italic text-[var(--text-muted)]">Sin vincular</span>}
               </p>
             </div>
 
             <div>
-              <p className="text-sm text-[#6E6359] mb-1">Coordenadas GPS</p>
+              <p className="text-sm text-[var(--text-muted)] mb-1">Coordenadas GPS</p>
               <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-[#6E6359]" />
-                <p className="font-mono text-sm text-[#2C2621]">
+                <MapPin className="w-4 h-4 text-[var(--text-muted)]" />
+                <p className="font-mono text-sm text-[var(--text-main)]">
                   {(node.latitude && node.longitude)
                     ? `${node.latitude}, ${node.longitude}`
                     : 'No configurado'
@@ -155,31 +155,31 @@ export function NodeDetail() {
         {/* API Key */}
         <div className="lg:col-span-2">
           <BentoCard variant="sand">
-            <h3 className="text-lg text-[#2C2621] mb-4">API Key (Solo Admin)</h3>
-            <div className="bg-[#F4F1EB] p-4 rounded-[24px]">
+            <h3 className="text-lg text-[var(--text-main)] mb-4">API Key (Solo Admin)</h3>
+            <div className="bg-[var(--bg-base)] p-4 rounded-[24px]">
               <div className="flex items-center gap-3 mb-2">
-                <code className="flex-1 font-mono text-sm text-[#2C2621] break-all">
+                <code className="flex-1 font-mono text-sm text-[var(--text-main)] break-all">
                   {showApiKey ? node.api_key : '••••••••••••••••••••••••••••'}
                 </code>
                 <button
                   onClick={() => setShowApiKey(!showApiKey)}
-                  className="p-2 rounded-full hover:bg-[#E2D4B7]/50 transition-colors flex-shrink-0"
+                  className="p-2 rounded-full hover:bg-[var(--card-sand)]/50 transition-colors flex-shrink-0"
                 >
                   {showApiKey ? (
-                    <EyeOff className="w-4 h-4 text-[#6E6359]" />
+                    <EyeOff className="w-4 h-4 text-[var(--text-muted)]" />
                   ) : (
-                    <Eye className="w-4 h-4 text-[#6E6359]" />
+                    <Eye className="w-4 h-4 text-[var(--text-muted)]" />
                   )}
                 </button>
                 <button
                   onClick={() => navigator.clipboard.writeText(node.api_key)}
-                  className="p-2 rounded-full hover:bg-[#E2D4B7]/50 transition-colors flex-shrink-0"
+                  className="p-2 rounded-full hover:bg-[var(--card-sand)]/50 transition-colors flex-shrink-0"
                   title="Copiar API Key"
                 >
-                  <Copy className="w-4 h-4 text-[#6E6359]" />
+                  <Copy className="w-4 h-4 text-[var(--text-muted)]" />
                 </button>
               </div>
-              <p className="text-xs text-[#6E6359]">
+              <p className="text-xs text-[var(--text-muted)]">
                 Usar esta clave para autenticar las solicitudes del sensor Módulo de Control.
               </p>
             </div>
@@ -189,7 +189,7 @@ export function NodeDetail() {
 
       {/* Real-time data */}
       <div className="mb-4">
-        <h2 className="text-xl text-[#2C2621] mb-4">Datos en Tiempo Real</h2>
+        <h2 className="text-xl text-[var(--text-main)] mb-4">Datos en Tiempo Real</h2>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
@@ -220,33 +220,33 @@ export function NodeDetail() {
 
       {/* Chart */}
       <BentoCard variant="light">
-        <h3 className="text-lg text-[#2C2621] mb-6">Humedad del Suelo - Últimas Lecturas</h3>
+        <h3 className="text-lg text-[var(--text-main)] mb-6">Humedad del Suelo - Últimas Lecturas</h3>
         <div className="h-[300px] min-h-[300px]">
           {historicalData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={historicalData}>
                 <defs>
                   <linearGradient id="colorHumidity" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6D7E5E" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#6D7E5E" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="var(--accent-primary)" stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor="var(--accent-primary)" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E6E1D8" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-strong)" />
                 <XAxis
                   dataKey="time"
-                  stroke="#6E6359"
+                  stroke="var(--text-muted)"
                   style={{ fontSize: '12px' }}
                   interval="preserveStartEnd"
                 />
                 <YAxis
-                  stroke="#6E6359"
+                  stroke="var(--text-muted)"
                   style={{ fontSize: '12px' }}
                   domain={[30, 60]} // Adjust bounds automatically might be better but maintaining mock layout
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#F9F8F4',
-                    border: '1px solid #E6E1D8',
+                    backgroundColor: "var(--bg-elevated)",
+                    border: "1px solid var(--border-strong)",
                     borderRadius: '16px',
                     padding: '12px'
                   }}
@@ -254,14 +254,14 @@ export function NodeDetail() {
                 <Area
                   type="monotone"
                   dataKey="soilHumidity"
-                  stroke="#6D7E5E"
+                  stroke="var(--accent-primary)"
                   strokeWidth={3}
                   fill="url(#colorHumidity)"
                 />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex items-center justify-center h-full text-[#6E6359]">
+            <div className="flex items-center justify-center h-full text-[var(--text-muted)]">
               {latestReading ? "Cargando histórico..." : "Sin datos históricos registrados."}
             </div>
           )}

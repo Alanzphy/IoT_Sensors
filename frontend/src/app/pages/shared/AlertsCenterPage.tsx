@@ -107,14 +107,7 @@ export function AlertsCenterPage() {
     fetchAlerts();
   }, [fetchAlerts, isPageVisible]);
 
-  useEffect(() => {
-    if (!isPageVisible) return;
 
-    const intervalId = window.setInterval(fetchAlerts, 3000); // Test real-time (3s)
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [fetchAlerts, isPageVisible]);
 
   const markAsRead = async (alertId: number) => {
     setUpdatingIds((previous) => {
@@ -161,8 +154,8 @@ export function AlertsCenterPage() {
     <div className="min-h-screen p-4 md:p-6 lg:p-8">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl md:text-3xl font-serif text-[#2C2621]">Centro de Alertas</h1>
-          <p className="text-[#6E6359]">
+          <h1 className="text-2xl md:text-3xl font-serif text-[var(--text-main)]">Centro de Alertas</h1>
+          <p className="text-[var(--text-muted)]">
             {isAdmin
               ? "Vista global de alertas de nodos, áreas y umbrales"
               : "Alertas de tus áreas de riego"}
@@ -172,7 +165,7 @@ export function AlertsCenterPage() {
         <button
           type="button"
           onClick={fetchAlerts}
-          className="inline-flex items-center gap-2 rounded-full border border-[#C9BEAF] bg-[#F9F8F4] px-4 py-2 text-sm font-medium text-[#4A433B] hover:bg-[#EFE8DD]"
+          className="inline-flex items-center gap-2 rounded-full border border-[var(--border-strong)] bg-[var(--bg-surface)] px-4 py-2 text-sm font-medium text-[var(--text-main)] hover:bg-[var(--bg-elevated)]"
         >
           <RefreshCw className="h-4 w-4" />
           Actualizar
@@ -181,7 +174,7 @@ export function AlertsCenterPage() {
 
       <BentoCard variant="light" className="mb-4">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
-          <label className="flex flex-col gap-1 text-sm text-[#5F5549]">
+          <label className="flex flex-col gap-1 text-sm text-[var(--text-muted)]">
             Severidad
             <select
               value={severity}
@@ -189,7 +182,7 @@ export function AlertsCenterPage() {
                 setSeverity(event.target.value as "" | AlertItem["severity"]);
                 setPage(1);
               }}
-              className="rounded-xl border border-[#D9D0C4] bg-white px-3 py-2 text-[#2C2621]"
+              className="rounded-xl border border-[var(--border-strong)] bg-[var(--bg-elevated)] px-3 py-2 text-[var(--text-main)]"
             >
               <option value="">Todas</option>
               <option value="info">Info</option>
@@ -198,7 +191,7 @@ export function AlertsCenterPage() {
             </select>
           </label>
 
-          <label className="flex flex-col gap-1 text-sm text-[#5F5549]">
+          <label className="flex flex-col gap-1 text-sm text-[var(--text-muted)]">
             Tipo
             <select
               value={alertType}
@@ -206,7 +199,7 @@ export function AlertsCenterPage() {
                 setAlertType(event.target.value as "" | AlertItem["type"]);
                 setPage(1);
               }}
-              className="rounded-xl border border-[#D9D0C4] bg-white px-3 py-2 text-[#2C2621]"
+              className="rounded-xl border border-[var(--border-strong)] bg-[var(--bg-elevated)] px-3 py-2 text-[var(--text-main)]"
             >
               <option value="">Todos</option>
               <option value="threshold">Umbral</option>
@@ -214,7 +207,7 @@ export function AlertsCenterPage() {
             </select>
           </label>
 
-          <label className="flex flex-col gap-1 text-sm text-[#5F5549]">
+          <label className="flex flex-col gap-1 text-sm text-[var(--text-muted)]">
             Estado
             <select
               value={readFilter}
@@ -222,7 +215,7 @@ export function AlertsCenterPage() {
                 setReadFilter(event.target.value as ReadFilter);
                 setPage(1);
               }}
-              className="rounded-xl border border-[#D9D0C4] bg-white px-3 py-2 text-[#2C2621]"
+              className="rounded-xl border border-[var(--border-strong)] bg-[var(--bg-elevated)] px-3 py-2 text-[var(--text-main)]"
             >
               <option value="all">Todas</option>
               <option value="unread">No leidas</option>
@@ -230,7 +223,7 @@ export function AlertsCenterPage() {
             </select>
           </label>
 
-          <label className="flex flex-col gap-1 text-sm text-[#5F5549]">
+          <label className="flex flex-col gap-1 text-sm text-[var(--text-muted)]">
             Desde
             <input
               type="date"
@@ -239,11 +232,11 @@ export function AlertsCenterPage() {
                 setStartDate(event.target.value);
                 setPage(1);
               }}
-              className="rounded-xl border border-[#D9D0C4] bg-white px-3 py-2 text-[#2C2621]"
+              className="rounded-xl border border-[var(--border-strong)] bg-[var(--bg-elevated)] px-3 py-2 text-[var(--text-main)]"
             />
           </label>
 
-          <label className="flex flex-col gap-1 text-sm text-[#5F5549]">
+          <label className="flex flex-col gap-1 text-sm text-[var(--text-muted)]">
             Hasta
             <input
               type="date"
@@ -252,7 +245,7 @@ export function AlertsCenterPage() {
                 setEndDate(event.target.value);
                 setPage(1);
               }}
-              className="rounded-xl border border-[#D9D0C4] bg-white px-3 py-2 text-[#2C2621]"
+              className="rounded-xl border border-[var(--border-strong)] bg-[var(--bg-elevated)] px-3 py-2 text-[var(--text-main)]"
             />
           </label>
         </div>
@@ -260,7 +253,7 @@ export function AlertsCenterPage() {
 
       <BentoCard variant="light">
         <div className="mb-4 flex items-center justify-between">
-          <div className="inline-flex items-center gap-2 text-sm text-[#5F5549]">
+          <div className="inline-flex items-center gap-2 text-sm text-[var(--text-muted)]">
             <Bell className="h-4 w-4" />
             {total} alertas · {unreadOnPage} no leidas en esta pagina
           </div>
@@ -270,18 +263,18 @@ export function AlertsCenterPage() {
               type="button"
               onClick={goToPreviousPage}
               disabled={page <= 1}
-              className="rounded-full border border-[#C9BEAF] bg-white p-2 text-[#4A433B] disabled:opacity-40"
+              className="rounded-full border border-[var(--border-strong)] bg-[var(--bg-elevated)] p-2 text-[var(--text-main)] disabled:opacity-40"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <span className="text-sm text-[#5F5549]">
+            <span className="text-sm text-[var(--text-muted)]">
               Pagina {page} de {totalPages}
             </span>
             <button
               type="button"
               onClick={goToNextPage}
               disabled={page >= totalPages}
-              className="rounded-full border border-[#C9BEAF] bg-white p-2 text-[#4A433B] disabled:opacity-40"
+              className="rounded-full border border-[var(--border-strong)] bg-[var(--bg-elevated)] p-2 text-[var(--text-main)] disabled:opacity-40"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
@@ -289,7 +282,7 @@ export function AlertsCenterPage() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center gap-2 py-12 text-[#6E6359]">
+          <div className="flex items-center justify-center gap-2 py-12 text-[var(--text-muted)]">
             <Loader2 className="h-5 w-5 animate-spin" />
             Cargando alertas...
           </div>
@@ -298,7 +291,7 @@ export function AlertsCenterPage() {
             {errorMessage}
           </div>
         ) : items.length === 0 ? (
-          <div className="rounded-xl border border-[#E6DDD1] bg-white px-3 py-6 text-center text-sm text-[#6E6359]">
+          <div className="rounded-xl border border-[var(--border-strong)] bg-[var(--bg-elevated)] px-3 py-6 text-center text-sm text-[var(--text-muted)]">
             No hay alertas para los filtros seleccionados.
           </div>
         ) : (
@@ -311,8 +304,8 @@ export function AlertsCenterPage() {
                   key={item.id}
                   className={`rounded-xl border px-3 py-3 transition-colors ${
                     item.read
-                      ? "border-[#E6DDD1] bg-white"
-                      : "border-[#D6CCBF] bg-[#F4EFE5]"
+                      ? "border-[var(--border-strong)] bg-[var(--bg-elevated)]"
+                      : "border-[var(--accent-gold)] bg-[var(--accent-gold-glow)]"
                   }`}
                 >
                   <div className="mb-2 flex items-start justify-between gap-2">
@@ -322,7 +315,7 @@ export function AlertsCenterPage() {
                       >
                         {item.severity.toUpperCase()}
                       </span>
-                      <span className="rounded-full bg-[#E9E3D8] px-2 py-0.5 text-[11px] font-medium text-[#4A433B]">
+                      <span className="rounded-full bg-[#E9E3D8] px-2 py-0.5 text-[11px] font-medium text-[var(--text-main)]">
                         {typeLabels[item.type]}
                       </span>
                     </div>
@@ -332,7 +325,7 @@ export function AlertsCenterPage() {
                         type="button"
                         disabled={isUpdating}
                         onClick={() => markAsRead(item.id)}
-                        className="inline-flex items-center gap-1 rounded-full border border-[#C9BEAF] bg-white px-2 py-1 text-[11px] font-medium text-[#5B5248] hover:bg-[#F8F3EA] disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex items-center gap-1 rounded-full border border-[var(--border-strong)] bg-[var(--bg-elevated)] px-2 py-1 text-[11px] font-medium text-[var(--text-main)] hover:bg-[var(--bg-surface)] disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {isUpdating ? (
                           <Loader2 className="h-3 w-3 animate-spin" />
@@ -344,9 +337,9 @@ export function AlertsCenterPage() {
                     )}
                   </div>
 
-                  <p className="mb-2 text-sm text-[#2C2621]">{item.message}</p>
+                  <p className="mb-2 text-sm text-[var(--text-main)]">{item.message}</p>
 
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#6E6359]">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">
                     <span className="inline-flex items-center gap-1">
                       <RadioTower className="h-3.5 w-3.5" />
                       Nodo {item.node_id}

@@ -11,9 +11,12 @@ import {
     Users,
     Warehouse,
     BellRing,
+    Sun,
+    Moon,
 } from "lucide-react";
 import { Link, useLocation } from "react-router";
 import { preloadMapRoutes } from "../../services/routePreload";
+import { useTheme } from "../../context/ThemeContext";
 
 interface MobileTabBarProps {
   role: "client" | "admin";
@@ -21,6 +24,7 @@ interface MobileTabBarProps {
 
 export function MobileTabBar({ role }: MobileTabBarProps) {
   const location = useLocation();
+  const { theme, toggleTheme } = useTheme();
 
   const maybePreloadMaps = (path: string) => {
     if (path.includes("/mapa")) {
@@ -52,13 +56,13 @@ export function MobileTabBar({ role }: MobileTabBarProps) {
   const tabs = role === "client" ? clientTabs : adminTabs;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-[#F9F8F4] border-t border-[#2C2621]/10 safe-area-inset-bottom z-50">
+    <div className="fixed bottom-0 left-0 right-0 glass-sidebar border-t border-sidebar-border safe-area-inset-bottom z-50">
       {/* Scrollable container with fade edges */}
       <div className="relative">
         {/* Left fade */}
-        <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-[#F9F8F4] to-transparent z-10" />
+        <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-sidebar to-transparent z-10" />
         {/* Right fade */}
-        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-[#F9F8F4] to-transparent z-10" />
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-sidebar to-transparent z-10" />
 
         <div
           className="flex items-center gap-1 px-3 py-2 overflow-x-auto scroll-smooth"
@@ -83,16 +87,16 @@ export function MobileTabBar({ role }: MobileTabBarProps) {
                 className={`
                   flex flex-col items-center gap-0.5 px-3 py-2 rounded-2xl
                   transition-colors flex-shrink-0 min-w-[56px]
-                  focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6D7E5E]
-                  ${isActive ? "bg-[#6D7E5E]/10" : "hover:bg-[#E2D4B7]/40"}
+                  focus:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring
+                  ${isActive ? "bg-sidebar-primary/10" : "hover:bg-sidebar-accent/50"}
                 `}
               >
                 <Icon
-                  className={`w-5 h-5 transition-colors ${isActive ? "text-[#6D7E5E]" : "text-[#6E6359]"}`}
+                  className={`w-5 h-5 transition-colors ${isActive ? "text-sidebar-primary" : "text-sidebar-foreground/70"}`}
                 />
                 <span
                   className={`text-[10px] font-medium leading-tight transition-colors whitespace-nowrap ${
-                    isActive ? "text-[#6D7E5E]" : "text-[#6E6359]"
+                    isActive ? "text-sidebar-primary" : "text-sidebar-foreground/70"
                   }`}
                 >
                   {tab.label}
@@ -100,6 +104,27 @@ export function MobileTabBar({ role }: MobileTabBarProps) {
               </Link>
             );
           })}
+
+          {/* Theme Toggle Button */}
+          <button
+            onClick={toggleTheme}
+            className={`
+              flex flex-col items-center gap-0.5 px-3 py-2 rounded-2xl
+              transition-colors flex-shrink-0 min-w-[56px]
+              focus:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring
+              hover:bg-sidebar-accent/50
+            `}
+            aria-label="Cambiar tema"
+          >
+            {theme === "light" ? (
+              <Moon className="w-5 h-5 text-sidebar-foreground/70" />
+            ) : (
+              <Sun className="w-5 h-5 text-sidebar-foreground/70" />
+            )}
+            <span className="text-[10px] font-medium leading-tight text-sidebar-foreground/70 whitespace-nowrap">
+              Tema
+            </span>
+          </button>
         </div>
       </div>
     </div>

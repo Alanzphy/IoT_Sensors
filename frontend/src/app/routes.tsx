@@ -40,7 +40,7 @@ const AdminMapPage = lazy(() => loadAdminMapPage().then((module) => ({ default: 
 
 function PageFallback() {
   return (
-    <div className="min-h-[45vh] grid place-items-center text-[#6E6359] text-sm">
+    <div className="min-h-[45vh] grid place-items-center text-[var(--text-muted)] text-sm">
       Cargando vista...
     </div>
   );

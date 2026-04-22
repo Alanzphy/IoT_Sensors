@@ -88,13 +88,7 @@ export function AlertsPopover({
 
     loadAlerts();
 
-    const intervalId = window.setInterval(() => {
-      loadAlerts();
-    }, refreshIntervalMs);
 
-    return () => {
-      window.clearInterval(intervalId);
-    };
   }, [refreshIntervalMs, loadAlerts, isPageVisible, isAlertsPage]);
 
   const handleMarkRead = async (alertId: number) => {
@@ -136,7 +130,7 @@ export function AlertsPopover({
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[#C8BDAF] bg-[#F9F8F4] text-[#2C2621] shadow-sm transition-all hover:bg-[#EEE8DC]"
+            className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--bg-elevated)] text-[var(--text-main)] shadow-sm transition-all hover:bg-[var(--border-subtle)]"
             aria-label="Abrir notificaciones"
           >
             <Bell className="h-5 w-5" />
@@ -153,36 +147,36 @@ export function AlertsPopover({
 
         <PopoverContent
           align="end"
-          className="w-[min(92vw,430px)] rounded-2xl border-[#D8CFC3] bg-[#FBFAF6] p-0 shadow-xl"
+          className="w-[min(92vw,430px)] rounded-2xl border-[var(--border-strong)] bg-[var(--bg-elevated)] p-0 shadow-xl"
         >
-          <div className="border-b border-[#E6DDD1] px-4 py-3">
+          <div className="border-b border-[var(--border-strong)] px-4 py-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-[#2C2621]">Alertas del sistema</h3>
+              <h3 className="text-sm font-semibold text-[var(--text-main)]">Alertas del sistema</h3>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={loadAlerts}
-                  className="text-xs font-medium text-[#6D7E5E] hover:text-[#4F5C45]"
+                  className="text-xs font-medium text-[var(--accent-primary)] hover:brightness-95"
                 >
                   Actualizar
                 </button>
                 <Link
                   to={alertsPagePath}
                   onClick={() => setOpen(false)}
-                  className="text-xs font-semibold text-[#5B6B4E] hover:text-[#425139]"
+                  className="text-xs font-semibold text-[var(--accent-primary)] hover:opacity-80"
                 >
                   Ver todas
                 </Link>
               </div>
             </div>
-            <p className="mt-1 text-xs text-[#6E6359]">
+            <p className="mt-1 text-xs text-[var(--text-muted)]">
               {unreadCount} no leídas · {visibleUnreadCount} visibles no leídas
             </p>
           </div>
 
           <div className="max-h-[62vh] overflow-y-auto p-3">
             {loading ? (
-              <div className="flex items-center justify-center gap-2 py-10 text-sm text-[#6E6359]">
+              <div className="flex items-center justify-center gap-2 py-10 text-sm text-[var(--text-muted)]">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Cargando alertas...
               </div>
@@ -191,7 +185,7 @@ export function AlertsPopover({
                 {errorMessage}
               </div>
             ) : alerts.length === 0 ? (
-              <div className="rounded-xl border border-[#E6DDD1] bg-white px-3 py-6 text-center text-sm text-[#6E6359]">
+              <div className="rounded-xl border border-[var(--border-strong)] bg-[var(--bg-elevated)] px-3 py-6 text-center text-sm text-[var(--text-muted)]">
                 Sin alertas registradas por ahora.
               </div>
             ) : (
@@ -204,8 +198,8 @@ export function AlertsPopover({
                       key={item.id}
                       className={`rounded-xl border px-3 py-3 transition-colors ${
                         item.read
-                          ? "border-[#E6DDD1] bg-white"
-                          : "border-[#D6CCBF] bg-[#F4EFE5]"
+                          ? "border-[var(--border-strong)] bg-[var(--bg-elevated)]"
+                          : "border-[var(--accent-gold)] bg-[var(--accent-gold-glow)]"
                       }`}
                     >
                       <div className="mb-2 flex items-start justify-between gap-2">
@@ -215,7 +209,7 @@ export function AlertsPopover({
                           >
                             {item.severity.toUpperCase()}
                           </span>
-                          <span className="rounded-full bg-[#E9E3D8] px-2 py-0.5 text-[11px] font-medium text-[#4A433B]">
+                          <span className="rounded-full bg-[var(--bg-surface)] border border-[var(--border-strong)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-main)]">
                             {typeLabels[item.type]}
                           </span>
                         </div>
@@ -225,7 +219,7 @@ export function AlertsPopover({
                             type="button"
                             disabled={isUpdating}
                             onClick={() => handleMarkRead(item.id)}
-                            className="inline-flex items-center gap-1 rounded-full border border-[#C9BEAF] bg-white px-2 py-1 text-[11px] font-medium text-[#5B5248] hover:bg-[#F8F3EA] disabled:cursor-not-allowed disabled:opacity-60"
+                            className="inline-flex items-center gap-1 rounded-full border border-[var(--border-strong)] bg-[var(--bg-elevated)] px-2 py-1 text-[11px] font-medium text-[var(--text-main)] hover:bg-[var(--bg-surface)] disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {isUpdating ? (
                               <Loader2 className="h-3 w-3 animate-spin" />
@@ -237,9 +231,9 @@ export function AlertsPopover({
                         )}
                       </div>
 
-                      <p className="mb-2 text-sm text-[#2C2621]">{item.message}</p>
+                      <p className="mb-2 text-sm text-[var(--text-main)]">{item.message}</p>
 
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#6E6359]">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">
                         <span className="inline-flex items-center gap-1">
                           <RadioTower className="h-3.5 w-3.5" />
                           Nodo {item.node_id}

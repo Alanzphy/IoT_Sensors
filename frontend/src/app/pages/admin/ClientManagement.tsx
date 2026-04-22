@@ -128,8 +128,8 @@ export function ClientManagement() {
     <div className="min-h-screen p-4 md:p-6 lg:p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl md:text-3xl text-[#2C2621] mb-2">Gestión de Clientes</h1>
-          <p className="text-[#6E6359]">Administra los clientes del sistema</p>
+          <h1 className="text-2xl md:text-3xl text-[var(--text-main)] mb-2">Gestión de Clientes</h1>
+          <p className="text-[var(--text-muted)]">Administra los clientes del sistema</p>
         </div>
         <PillButton variant="primary" onClick={() => setShowCreateForm(true)}>
           <Plus className="w-4 h-4 mr-2" />
@@ -139,13 +139,13 @@ export function ClientManagement() {
 
       <BentoCard variant="light" className="mb-6">
         <div className="flex items-center gap-3">
-          <Search className="w-5 h-5 text-[#6E6359]" />
+          <Search className="w-5 h-5 text-[var(--text-muted)]" />
           <input
             type="text"
             placeholder="Buscar por nombre, email o teléfono..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 bg-transparent text-[#2C2621] placeholder:text-[#6E6359]/50 focus:outline-none"
+            className="flex-1 bg-transparent text-[var(--text-main)] placeholder:text-[var(--text-muted)]/50 focus:outline-none"
           />
         </div>
       </BentoCard>
@@ -157,13 +157,13 @@ export function ClientManagement() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-[#2C2621]/10">
-                  <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Empresa</th>
-                  <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Contacto</th>
-                  <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Email</th>
-                  <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Teléfono</th>
-                  <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[#6E6359]">Estado</th>
-                  <th scope="col" className="text-right py-3 px-4 text-sm font-medium text-[#6E6359]">Acciones</th>
+                <tr className="border-b border-[var(--border-strong)]">
+                  <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Empresa</th>
+                  <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Contacto</th>
+                  <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Email</th>
+                  <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Teléfono</th>
+                  <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Estado</th>
+                  <th scope="col" className="text-right py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -172,11 +172,11 @@ export function ClientManagement() {
                 ) : filteredClients.map((client, index) => {
                   const staggerClass = index === 0 ? 'animate-stagger-1' : index === 1 ? 'animate-stagger-2' : 'animate-stagger-3';
                   return (
-                  <tr key={client.id} className={`border-b border-[#2C2621]/5 last:border-0 hover:bg-[#2C2621]/5 transition-colors ${staggerClass}`}>
-                    <td className="py-3 px-4 text-[#2C2621]">{client.company_name}</td>
-                    <td className="py-3 px-4 text-[#2C2621]">{client.user?.full_name || "-"}</td>
-                    <td className="py-3 px-4 text-[#6E6359]">{client.user?.email || "-"}</td>
-                    <td className="py-3 px-4 text-[#6E6359]">{client.phone || "-"}</td>
+                  <tr key={client.id} className={`border-b border-[var(--border-subtle)] last:border-0 hover:bg-[var(--text-main)]/5 transition-colors ${staggerClass}`}>
+                    <td className="py-3 px-4 text-[var(--text-main)]">{client.company_name}</td>
+                    <td className="py-3 px-4 text-[var(--text-main)]">{client.user?.full_name || "-"}</td>
+                    <td className="py-3 px-4 text-[var(--text-muted)]">{client.user?.email || "-"}</td>
+                    <td className="py-3 px-4 text-[var(--text-muted)]">{client.phone || "-"}</td>
                     <td className="py-3 px-4">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${client.user?.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                         {client.user?.is_active ? "Activo" : "Inactivo"}
@@ -225,16 +225,16 @@ export function ClientManagement() {
           <BentoCard key={client.id} variant="light" className={`p-4 ${staggerClass}`}>
             <div className="flex justify-between items-start mb-3">
               <div>
-                <h3 className="text-[#2C2621] font-medium">{client.company_name}</h3>
-                <p className="text-sm text-[#6E6359]">{client.user?.full_name}</p>
+                <h3 className="text-[var(--text-main)] font-medium">{client.company_name}</h3>
+                <p className="text-sm text-[var(--text-muted)]">{client.user?.full_name}</p>
               </div>
               <span className={`px-2 py-1 rounded-full text-xs ${client.user?.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                 {client.user?.is_active ? "Activo" : "Inactivo"}
               </span>
             </div>
             <div className="space-y-1 mb-4">
-              <p className="text-sm text-[#6E6359]">{client.user?.email}</p>
-              <p className="text-sm text-[#6E6359]">{client.phone || "Sin teléfono"}</p>
+              <p className="text-sm text-[var(--text-muted)]">{client.user?.email}</p>
+              <p className="text-sm text-[var(--text-muted)]">{client.phone || "Sin teléfono"}</p>
             </div>
             <div className="flex gap-2">
               <PillButton
@@ -264,10 +264,10 @@ export function ClientManagement() {
       </div>
 
       {showEditForm && (
-        <div className="fixed inset-0 bg-[#2C2621]/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-[var(--text-main)]/50 z-50 flex items-center justify-center p-4">
           <BentoCard variant="light" className="w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
-               <h2 className="text-xl text-[#2C2621]">Editar Cliente</h2>
+               <h2 className="text-xl text-[var(--text-main)]">Editar Cliente</h2>
                <button
                  onClick={() => {
                    setShowEditForm(false);
@@ -275,29 +275,29 @@ export function ClientManagement() {
                  }}
                  type="button"
                >
-                 <XCircle className="w-6 h-6 text-[#6E6359]" />
+                 <XCircle className="w-6 h-6 text-[var(--text-muted)]" />
                </button>
             </div>
             <form className="space-y-4" onSubmit={handleUpdate}>
               <div>
-                <label className="block text-sm text-[#6E6359] mb-1">Nombre de la Empresa</label>
-                <input required type="text" value={editFormData.company_name} onChange={e => setEditFormData({...editFormData, company_name: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 focus:outline-none" />
+                <label className="block text-sm text-[var(--text-muted)] mb-1">Nombre de la Empresa</label>
+                <input required type="text" value={editFormData.company_name} onChange={e => setEditFormData({...editFormData, company_name: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] focus:outline-none" />
               </div>
               <div>
-                <label className="block text-sm text-[#6E6359] mb-1">Nombre de Contacto</label>
-                <input required type="text" value={editFormData.full_name} onChange={e => setEditFormData({...editFormData, full_name: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 focus:outline-none" />
+                <label className="block text-sm text-[var(--text-muted)] mb-1">Nombre de Contacto</label>
+                <input required type="text" value={editFormData.full_name} onChange={e => setEditFormData({...editFormData, full_name: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] focus:outline-none" />
               </div>
               <div>
-                <label className="block text-sm text-[#6E6359] mb-1">Email</label>
-                <input required type="email" value={editFormData.email} onChange={e => setEditFormData({...editFormData, email: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 focus:outline-none" />
+                <label className="block text-sm text-[var(--text-muted)] mb-1">Email</label>
+                <input required type="email" value={editFormData.email} onChange={e => setEditFormData({...editFormData, email: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] focus:outline-none" />
               </div>
               <div>
-                <label className="block text-sm text-[#6E6359] mb-1">Teléfono / WhatsApp</label>
-                <input type="tel" value={editFormData.phone} onChange={e => setEditFormData({...editFormData, phone: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 focus:outline-none" />
+                <label className="block text-sm text-[var(--text-muted)] mb-1">Teléfono / WhatsApp</label>
+                <input type="tel" value={editFormData.phone} onChange={e => setEditFormData({...editFormData, phone: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] focus:outline-none" />
               </div>
               <div>
-                <label className="block text-sm text-[#6E6359] mb-1">Dirección</label>
-                <input type="text" value={editFormData.address} onChange={e => setEditFormData({...editFormData, address: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 focus:outline-none" />
+                <label className="block text-sm text-[var(--text-muted)] mb-1">Dirección</label>
+                <input type="text" value={editFormData.address} onChange={e => setEditFormData({...editFormData, address: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] focus:outline-none" />
               </div>
               <div className="flex gap-3 pt-4">
                 <PillButton variant="outline" className="flex-1 justify-center" onClick={() => {
@@ -312,36 +312,36 @@ export function ClientManagement() {
       )}
 
       {showCreateForm && (
-        <div className="fixed inset-0 bg-[#2C2621]/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-[var(--text-main)]/50 z-50 flex items-center justify-center p-4">
           <BentoCard variant="light" className="w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
-               <h2 className="text-xl text-[#2C2621]">Nuevo Cliente</h2>
-               <button onClick={() => setShowCreateForm(false)} type="button"><XCircle className="w-6 h-6 text-[#6E6359]" /></button>
+               <h2 className="text-xl text-[var(--text-main)]">Nuevo Cliente</h2>
+               <button onClick={() => setShowCreateForm(false)} type="button"><XCircle className="w-6 h-6 text-[var(--text-muted)]" /></button>
             </div>
             <form className="space-y-4" onSubmit={handleCreate}>
               <div>
-                <label className="block text-sm text-[#6E6359] mb-1">Nombre de la Empresa</label>
-                <input required type="text" value={formData.company_name} onChange={e => setFormData({...formData, company_name: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 focus:outline-none" />
+                <label className="block text-sm text-[var(--text-muted)] mb-1">Nombre de la Empresa</label>
+                <input required type="text" value={formData.company_name} onChange={e => setFormData({...formData, company_name: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] focus:outline-none" />
               </div>
               <div>
-                <label className="block text-sm text-[#6E6359] mb-1">Nombre de Contacto</label>
-                <input required type="text" value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 focus:outline-none" />
+                <label className="block text-sm text-[var(--text-muted)] mb-1">Nombre de Contacto</label>
+                <input required type="text" value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] focus:outline-none" />
               </div>
               <div>
-                <label className="block text-sm text-[#6E6359] mb-1">Email</label>
-                <input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 focus:outline-none" />
+                <label className="block text-sm text-[var(--text-muted)] mb-1">Email</label>
+                <input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] focus:outline-none" />
               </div>
               <div>
-                <label className="block text-sm text-[#6E6359] mb-1">Contraseña (Temporal)</label>
-                <input required type="password" minLength={6} value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 focus:outline-none" />
+                <label className="block text-sm text-[var(--text-muted)] mb-1">Contraseña (Temporal)</label>
+                <input required type="password" minLength={6} value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] focus:outline-none" />
               </div>
               <div>
-                <label className="block text-sm text-[#6E6359] mb-1">Teléfono</label>
-                <input type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 focus:outline-none" />
+                <label className="block text-sm text-[var(--text-muted)] mb-1">Teléfono</label>
+                <input type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] focus:outline-none" />
               </div>
               <div>
-                <label className="block text-sm text-[#6E6359] mb-1">Dirección (Opcional)</label>
-                <input type="text" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 focus:outline-none" />
+                <label className="block text-sm text-[var(--text-muted)] mb-1">Dirección (Opcional)</label>
+                <input type="text" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] focus:outline-none" />
               </div>
               <div className="flex gap-3 pt-4">
                 <PillButton variant="outline" className="flex-1 justify-center" onClick={() => setShowCreateForm(false)} type="button">Cancelar</PillButton>

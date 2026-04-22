@@ -29,7 +29,7 @@ export function FreshnessIndicator({ lastUpdate, variant = "light" }: FreshnessI
   let statusLabel: string;
 
   if (minutesAgo < 30) {
-    dotColor = "#6D7E5E"; // green — recent
+    dotColor = "var(--accent-primary)"; // green — recent
     statusLabel = "En línea";
   } else if (minutesAgo < 120) {
     dotColor = "#D97706"; // amber — warning
@@ -39,7 +39,7 @@ export function FreshnessIndicator({ lastUpdate, variant = "light" }: FreshnessI
     statusLabel = "Sin conexión";
   }
 
-  const textColor = variant === "dark" ? "text-[#F4F1EB]/70" : "text-[#6E6359]";
+  const textColor = variant === "dark" ? "text-[var(--text-on-dark)]/70" : "text-[var(--text-muted)]";
   const isPulsing = minutesAgo < 30;
 
   return (

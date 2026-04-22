@@ -54,14 +54,14 @@ export function ConfirmDialog({
     >
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-[#2C2621]/30 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-[var(--text-main)]/30 backdrop-blur-[2px]"
         onClick={onCancel}
         aria-hidden="true"
       />
 
       {/* Dialog */}
       <div
-        className="relative w-full max-w-sm bg-[#F9F8F4] rounded-[32px] p-8 shadow-lg"
+        className="relative w-full max-w-sm bg-[var(--bg-surface)] rounded-[32px] p-8 shadow-lg"
         style={{ animation: "fadeInUp 0.25s ease-out both" }}
       >
         {variant === "danger" && (
@@ -74,13 +74,13 @@ export function ConfirmDialog({
 
         <h2
           id="confirm-dialog-title"
-          className="text-lg font-serif font-medium text-[#2C2621] text-center mb-2"
+          className="text-lg font-serif font-medium text-[var(--text-main)] text-center mb-2"
         >
           {title}
         </h2>
 
         {description && (
-          <p className="text-sm text-[#6E6359] text-center mb-6">{description}</p>
+          <p className="text-sm text-[var(--text-muted)] text-center mb-6">{description}</p>
         )}
 
         <div className="flex gap-3 mt-6">
@@ -88,8 +88,8 @@ export function ConfirmDialog({
             ref={cancelRef}
             onClick={onCancel}
             className="flex-1 px-4 py-2.5 rounded-full text-sm font-medium
-              bg-[#E2D4B7] text-[#2C2621] hover:bg-[#D5C5A5] active:scale-[0.97]
-              transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6D7E5E] focus-visible:ring-offset-2"
+              bg-[var(--card-sand)] text-[var(--text-main)] hover:brightness-95 active:scale-[0.97]
+              transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] focus-visible:ring-offset-2"
           >
             {cancelLabel}
           </button>
@@ -99,8 +99,8 @@ export function ConfirmDialog({
               active:scale-[0.97] transition-all
               focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
               ${variant === "danger"
-                ? "bg-[#DC2626] text-white hover:opacity-90 focus-visible:ring-[#DC2626]"
-                : "bg-[#6D7E5E] text-[#F4F1EB] hover:opacity-90 focus-visible:ring-[#6D7E5E]"
+                ? "bg-[var(--status-danger)] text-white hover:opacity-90 focus-visible:ring-[var(--status-danger)]"
+                : "bg-[var(--accent-primary)] text-[var(--text-inverted)] hover:opacity-90 focus-visible:ring-[var(--accent-primary)]"
               }`}
           >
             {confirmLabel}

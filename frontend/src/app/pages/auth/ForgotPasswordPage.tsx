@@ -29,19 +29,19 @@ export function ForgotPasswordPage() {
 
   return (
     <PageTransition>
-      <div className="min-h-screen bg-[#F4F1EB] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[var(--bg-base)] flex items-center justify-center p-4">
         <div className="w-full max-w-md">
-          <div className="bg-[#F9F8F4] rounded-[32px] p-8 md:p-10 border border-[#2C2621]/5">
+          <div className="bg-[var(--bg-surface)] rounded-[32px] p-8 md:p-10 border border-[var(--border-subtle)]">
             <div className="flex justify-center mb-8">
-              <div className="w-20 h-20 rounded-full bg-[#6D7E5E] flex items-center justify-center">
-                <Leaf className="w-10 h-10 text-[#F4F1EB]" />
+              <div className="w-20 h-20 rounded-full bg-[var(--accent-primary)] flex items-center justify-center">
+                <Leaf className="w-10 h-10 text-[var(--text-inverted)]" />
               </div>
             </div>
 
-            <h1 className="text-center mb-2 text-3xl font-serif font-medium tracking-tight text-[#2C2621]">
+            <h1 className="text-center mb-2 text-3xl font-serif font-medium tracking-tight text-[var(--text-main)]">
               Recuperar contraseña
             </h1>
-            <p className="text-center text-[#6E6359] mb-8">
+            <p className="text-center text-[var(--text-muted)] mb-8">
               Ingresa tu correo para recibir un enlace de restablecimiento.
             </p>
 
@@ -59,7 +59,7 @@ export function ForgotPasswordPage() {
               <div
                 role="status"
                 aria-live="polite"
-                className="mb-6 p-4 bg-[#6D7E5E]/10 text-[#6D7E5E] rounded-[16px] text-sm text-center border border-[#6D7E5E]/20"
+                className="mb-6 p-4 bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] rounded-[16px] text-sm text-center border border-[var(--accent-primary)]/20"
               >
                 {detail}
               </div>
@@ -67,7 +67,7 @@ export function ForgotPasswordPage() {
 
             <form onSubmit={handleSubmit} className="space-y-5" noValidate>
               <div>
-                <label htmlFor="forgot-email" className="block text-sm font-medium text-[#2C2621] mb-2">
+                <label htmlFor="forgot-email" className="block text-sm font-medium text-[var(--text-main)] mb-2">
                   Correo electrónico
                 </label>
                 <input
@@ -77,8 +77,8 @@ export function ForgotPasswordPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="usuario@ejemplo.mx"
                   autoComplete="email"
-                  className="w-full px-5 py-3 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] placeholder:text-[#6E6359]/50
-                    focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6D7E5E] focus-visible:ring-offset-1 transition-shadow"
+                  className="w-full px-5 py-3 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] placeholder:text-[var(--text-muted)]/50
+                    focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] focus-visible:ring-offset-1 transition-shadow"
                   required
                   disabled={isLoading}
                 />
@@ -92,7 +92,7 @@ export function ForgotPasswordPage() {
             <div className="mt-6 text-center">
               <Link
                 to="/"
-                className="text-sm text-[#6E6359] hover:text-[#6D7E5E] transition-colors focus:outline-none focus-visible:underline"
+                className="text-sm text-[var(--text-muted)] hover:text-[var(--accent-primary)] transition-colors focus:outline-none focus-visible:underline"
               >
                 ← Volver a inicio de sesión
               </Link>

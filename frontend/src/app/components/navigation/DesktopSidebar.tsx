@@ -9,15 +9,18 @@ import {
   LayoutDashboard,
   LogOut,
   MapPin,
+  Moon,
   Radio,
   SlidersHorizontal,
   Sprout,
+  Sun,
   Users,
   Warehouse,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { useAuth } from "../../context/AuthContext";
+import { useTheme } from "../../context/ThemeContext";
 import { preloadMapRoutes } from "../../services/routePreload";
 
 interface DesktopSidebarProps {
@@ -27,6 +30,7 @@ interface DesktopSidebarProps {
 export function DesktopSidebar({ role }: DesktopSidebarProps) {
   const [expanded, setExpanded] = useState(true);
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -78,26 +82,26 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
 
   return (
     <div
-      className={`${expanded ? "w-64" : "w-16"} h-screen sticky top-0 self-start shrink-0 overflow-hidden bg-[#F9F8F4] border-r border-[#2C2621]/10 transition-all duration-300 flex flex-col`}
+      className={`glass-sidebar ${expanded ? "w-64" : "w-16"} h-screen sticky top-0 self-start shrink-0 overflow-hidden transition-all duration-300 flex flex-col`}
     >
       {/* Logo */}
       <div className="px-4 py-6 flex items-center justify-between min-h-[80px] gap-2">
         <div
           className={`overflow-hidden transition-all duration-300 ${expanded ? "flex-1 opacity-100" : "w-0 opacity-0 hidden"}`}
         >
-          <h2 className="font-serif text-lg leading-tight text-[#2C2621] whitespace-nowrap">
+          <h2 className="font-serif text-lg leading-tight text-sidebar-foreground whitespace-nowrap">
             Sensores Agrícolas
           </h2>
         </div>
         <button
           onClick={handleSidebarToggle}
-          className="p-2 rounded-full hover:bg-[#E2D4B7]/50 transition-colors flex-shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6D7E5E]"
+          className="p-2 rounded-full hover:bg-sidebar-accent transition-colors flex-shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
           aria-label={expanded ? "Colapsar menú" : "Expandir menú"}
         >
           {expanded ? (
-            <ChevronLeft className="w-5 h-5 text-[#6E6359]" />
+            <ChevronLeft className="w-5 h-5 text-sidebar-foreground/70" />
           ) : (
-            <ChevronRight className="w-5 h-5 text-[#6E6359]" />
+            <ChevronRight className="w-5 h-5 text-sidebar-foreground/70" />
           )}
         </button>
       </div>
@@ -122,11 +126,11 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
               aria-current={isActive ? "page" : undefined}
               title={!expanded ? item.label : undefined}
               className={`flex items-center gap-3 px-3 py-3 rounded-full transition-all
-                focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6D7E5E] focus-visible:ring-offset-1
+                focus:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-1
                 ${expanded ? "mx-2" : "justify-center mx-auto"}
                 ${isActive
-                  ? "bg-[#6D7E5E] text-[#F4F1EB]"
-                  : "text-[#6E6359] hover:bg-[#E2D4B7]/30"
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                 }`}
             >
               <Icon className="w-5 h-5 flex-shrink-0" />
@@ -143,9 +147,9 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
       </nav>
 
       {/* User section */}
-      <div className="py-4 border-t border-[#2C2621]/10">
+      <div className="py-4 border-t border-sidebar-border relative">
         <div className={`flex items-center ${expanded ? "justify-between px-4" : "justify-center flex-col gap-4"}`}>
-          <div className="w-10 h-10 rounded-full bg-[#6D7E5E] flex items-center justify-center text-[#F4F1EB] font-medium text-base flex-shrink-0">
+          <div className="w-10 h-10 rounded-full bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground font-medium text-base flex-shrink-0">
             {user?.nombre ? user.nombre.charAt(0).toUpperCase() : (role === "client" ? "C" : "A")}
           </div>
 
@@ -154,19 +158,30 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
               expanded ? "flex-1 min-w-0 px-3 opacity-100" : "w-0 h-0 opacity-0 hidden"
             }`}
           >
-            <p className="font-medium text-[#2C2621] text-sm truncate">{user?.nombre || "Usuario"}</p>
-            <p className="text-xs text-[#6E6359] truncate">{role === "client" ? "Cliente" : "Admin"}</p>
+            <p className="font-medium text-sidebar-foreground text-sm truncate">{user?.nombre || "Usuario"}</p>
+            <p className="text-xs text-sidebar-foreground/60 truncate">{role === "client" ? "Cliente" : "Admin"}</p>
           </div>
 
-          <button
-            onClick={handleLogout}
-            className="p-2 rounded-full hover:bg-[#E2D4B7]/50 transition-colors flex-shrink-0
-              focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6D7E5E]"
-            aria-label="Cerrar sesión"
-            title="Cerrar sesión"
-          >
-            <LogOut className="w-5 h-5 text-[#6E6359]" />
-          </button>
+          <div className={`flex items-center ${expanded ? "gap-1" : "flex-col gap-3"}`}>
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-full hover:bg-sidebar-accent hover:text-sidebar-foreground text-sidebar-foreground/70 transition-colors flex-shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+              aria-label={theme === "light" ? "Cambiar a tema oscuro" : "Cambiar a tema claro"}
+              title="Cambiar tema"
+            >
+              {theme === "light" ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+            </button>
+
+            <button
+              onClick={handleLogout}
+              className="p-2 rounded-full hover:bg-destructive/10 hover:text-destructive text-sidebar-foreground/70 transition-colors flex-shrink-0
+                focus:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+              aria-label="Cerrar sesión"
+              title="Cerrar sesión"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

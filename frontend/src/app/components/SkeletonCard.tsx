@@ -11,7 +11,7 @@ interface SkeletonCardProps {
 export function SkeletonCard({ className = "", lines = 3, showHeader = true }: SkeletonCardProps) {
   return (
     <div
-      className={`bg-[#F9F8F4] rounded-[32px] p-6 overflow-hidden ${className}`}
+      className={`bg-[var(--bg-surface)] rounded-[32px] p-6 overflow-hidden ${className}`}
       role="status"
       aria-label="Cargando..."
     >

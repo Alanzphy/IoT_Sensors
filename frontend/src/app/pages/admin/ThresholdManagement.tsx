@@ -256,8 +256,8 @@ export function ThresholdManagement() {
     <div className="min-h-screen p-4 md:p-6 lg:p-8">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-serif text-[#2C2621] mb-2">Umbrales de Alertas</h1>
-          <p className="text-[#6E6359]">
+          <h1 className="text-2xl md:text-3xl font-serif text-[var(--text-main)] mb-2">Umbrales de Alertas</h1>
+          <p className="text-[var(--text-muted)]">
             Configura rangos para activar alertas automáticas por parámetro
           </p>
         </div>
@@ -278,7 +278,7 @@ export function ThresholdManagement() {
             <select
               value={filterAreaId}
               onChange={(event) => setFilterAreaId(event.target.value)}
-              className="rounded-xl border border-[#D9D0C4] bg-white px-3 py-2 text-[#2C2621]"
+              className="rounded-xl border border-[#D9D0C4] bg-white px-3 py-2 text-[var(--text-main)]"
             >
               <option value="">Todas</option>
               {areas.map((area) => (
@@ -294,7 +294,7 @@ export function ThresholdManagement() {
             <select
               value={filterParameter}
               onChange={(event) => setFilterParameter(event.target.value)}
-              className="rounded-xl border border-[#D9D0C4] bg-white px-3 py-2 text-[#2C2621]"
+              className="rounded-xl border border-[#D9D0C4] bg-white px-3 py-2 text-[var(--text-main)]"
             >
               <option value="">Todos</option>
               {parameterOptions.map((option) => (
@@ -310,7 +310,7 @@ export function ThresholdManagement() {
             <select
               value={filterActive}
               onChange={(event) => setFilterActive(event.target.value)}
-              className="rounded-xl border border-[#D9D0C4] bg-white px-3 py-2 text-[#2C2621]"
+              className="rounded-xl border border-[#D9D0C4] bg-white px-3 py-2 text-[var(--text-main)]"
             >
               <option value="">Todos</option>
               <option value="true">Activos</option>
@@ -324,52 +324,52 @@ export function ThresholdManagement() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-[#2C2621]/10">
-                <th className="py-3 px-4 text-sm font-medium text-[#6E6359]">Area</th>
-                <th className="py-3 px-4 text-sm font-medium text-[#6E6359]">Parametro</th>
-                <th className="py-3 px-4 text-sm font-medium text-[#6E6359]">Min</th>
-                <th className="py-3 px-4 text-sm font-medium text-[#6E6359]">Max</th>
-                <th className="py-3 px-4 text-sm font-medium text-[#6E6359]">Severidad</th>
-                <th className="py-3 px-4 text-sm font-medium text-[#6E6359]">Estado</th>
-                <th className="py-3 px-4 text-sm font-medium text-[#6E6359]">Acciones</th>
+              <tr className="border-b border-[var(--border-strong)]">
+                <th className="py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Area</th>
+                <th className="py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Parametro</th>
+                <th className="py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Min</th>
+                <th className="py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Max</th>
+                <th className="py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Severidad</th>
+                <th className="py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Estado</th>
+                <th className="py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-6 text-center text-[#6E6359]">
+                  <td colSpan={7} className="py-6 text-center text-[var(--text-muted)]">
                     Cargando umbrales...
                   </td>
                 </tr>
               ) : thresholds.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-6 text-center text-[#6E6359]">
+                  <td colSpan={7} className="py-6 text-center text-[var(--text-muted)]">
                     No hay umbrales para los filtros actuales.
                   </td>
                 </tr>
               ) : (
                 thresholds.map((threshold, index) => (
-                  <tr key={threshold.id} className={index % 2 === 0 ? "bg-[#F4F1EB]/30" : ""}>
-                    <td className="py-4 px-4 text-[#2C2621]">
+                  <tr key={threshold.id} className={index % 2 === 0 ? "bg-[var(--bg-base)]/30" : ""}>
+                    <td className="py-4 px-4 text-[var(--text-main)]">
                       {areaNameMap.get(threshold.irrigation_area_id) ?? `Area #${threshold.irrigation_area_id}`}
                     </td>
-                    <td className="py-4 px-4 text-[#2C2621]">
+                    <td className="py-4 px-4 text-[var(--text-main)]">
                       {parameterLabelMap.get(threshold.parameter) ?? threshold.parameter}
                     </td>
-                    <td className="py-4 px-4 text-[#2C2621]">
+                    <td className="py-4 px-4 text-[var(--text-main)]">
                       {threshold.min_value ?? "-"}
                     </td>
-                    <td className="py-4 px-4 text-[#2C2621]">
+                    <td className="py-4 px-4 text-[var(--text-main)]">
                       {threshold.max_value ?? "-"}
                     </td>
-                    <td className="py-4 px-4 text-[#2C2621] uppercase">
+                    <td className="py-4 px-4 text-[var(--text-main)] uppercase">
                       {threshold.severity}
                     </td>
                     <td className="py-4 px-4">
                       <span
                         className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                           threshold.active
-                            ? "bg-[#6D7E5E]/10 text-[#6D7E5E] border border-[#6D7E5E]/20"
+                            ? "bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] border border-[var(--accent-primary)]/20"
                             : "bg-[#DC2626]/10 text-[#DC2626] border border-[#DC2626]/20"
                         }`}
                       >
@@ -380,10 +380,10 @@ export function ThresholdManagement() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => openEdit(threshold)}
-                          className="p-2 rounded-full hover:bg-[#E2D4B7]/50 transition-colors"
+                          className="p-2 rounded-full hover:bg-[var(--card-sand)]/50 transition-colors"
                           title="Editar umbral"
                         >
-                          <Edit className="w-4 h-4 text-[#6E6359]" />
+                          <Edit className="w-4 h-4 text-[var(--text-muted)]" />
                         </button>
                         <button
                           onClick={() => handleDelete(threshold.id)}
@@ -403,22 +403,22 @@ export function ThresholdManagement() {
       </BentoCard>
 
       {showForm && (
-        <div className="fixed inset-0 bg-[#2C2621]/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-[var(--text-main)]/50 z-50 flex items-center justify-center p-4">
           <BentoCard variant="light" className="w-full max-w-lg">
-            <h2 className="text-xl text-[#2C2621] mb-6">
+            <h2 className="text-xl text-[var(--text-main)] mb-6">
               {editingThreshold ? "Editar Umbral" : "Nuevo Umbral"}
             </h2>
 
             <form onSubmit={submitForm} className="space-y-4">
               <div>
-                <label className="block text-sm text-[#6E6359] mb-2">Area de riego</label>
+                <label className="block text-sm text-[var(--text-muted)] mb-2">Area de riego</label>
                 <select
                   required
                   value={form.irrigation_area_id}
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, irrigation_area_id: event.target.value }))
                   }
-                  className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
+                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
                 >
                   <option value="">Selecciona un area</option>
                   {areas.map((area) => (
@@ -430,7 +430,7 @@ export function ThresholdManagement() {
               </div>
 
               <div>
-                <label className="block text-sm text-[#6E6359] mb-2">Parametro</label>
+                <label className="block text-sm text-[var(--text-muted)] mb-2">Parametro</label>
                 <select
                   required
                   value={form.parameter}
@@ -440,7 +440,7 @@ export function ThresholdManagement() {
                       parameter: event.target.value as ThresholdParameter,
                     }))
                   }
-                  className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
+                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
                 >
                   {parameterOptions.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -452,7 +452,7 @@ export function ThresholdManagement() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm text-[#6E6359] mb-2">Minimo</label>
+                  <label className="block text-sm text-[var(--text-muted)] mb-2">Minimo</label>
                   <input
                     type="number"
                     step="any"
@@ -460,11 +460,11 @@ export function ThresholdManagement() {
                     onChange={(event) =>
                       setForm((prev) => ({ ...prev, min_value: event.target.value }))
                     }
-                    className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
+                    className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-[#6E6359] mb-2">Maximo</label>
+                  <label className="block text-sm text-[var(--text-muted)] mb-2">Maximo</label>
                   <input
                     type="number"
                     step="any"
@@ -472,14 +472,14 @@ export function ThresholdManagement() {
                     onChange={(event) =>
                       setForm((prev) => ({ ...prev, max_value: event.target.value }))
                     }
-                    className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
+                    className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm text-[#6E6359] mb-2">Severidad</label>
+                  <label className="block text-sm text-[var(--text-muted)] mb-2">Severidad</label>
                   <select
                     value={form.severity}
                     onChange={(event) =>
@@ -488,7 +488,7 @@ export function ThresholdManagement() {
                         severity: event.target.value as ThresholdSeverity,
                       }))
                     }
-                    className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
+                    className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
                   >
                     <option value="info">Info</option>
                     <option value="warning">Warning</option>
@@ -540,8 +540,8 @@ export function ThresholdManagement() {
       <div className="mt-6">
         <BentoCard variant="sand">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-[16px] bg-[#E2D4B7]">
-              <SlidersHorizontal className="w-5 h-5 text-[#6D7E5E]" />
+            <div className="p-2 rounded-[16px] bg-[var(--card-sand)]">
+              <SlidersHorizontal className="w-5 h-5 text-[var(--accent-primary)]" />
             </div>
             <p className="text-sm text-[#5F5549]">
               Tip: define al menos un rango para humedad de suelo, flujo de agua y ETO para habilitar semaforos completos en dashboard.

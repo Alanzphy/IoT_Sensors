@@ -91,8 +91,8 @@ export function AuditLogsPage() {
     <div className="min-h-screen p-4 md:p-6 lg:p-8">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl md:text-3xl text-[#2C2621]">Bitacora de Auditoria</h1>
-          <p className="text-[#6E6359]">
+          <h1 className="text-2xl md:text-3xl text-[var(--text-main)]">Bitacora de Auditoria</h1>
+          <p className="text-[var(--text-muted)]">
             Historial de cambios administrativos en la plataforma
           </p>
         </div>
@@ -100,7 +100,7 @@ export function AuditLogsPage() {
         <button
           type="button"
           onClick={fetchAuditLogs}
-          className="inline-flex items-center gap-2 rounded-full border border-[#C9BEAF] bg-[#F9F8F4] px-4 py-2 text-sm font-medium text-[#4A433B] hover:bg-[#EFE8DD]"
+          className="inline-flex items-center gap-2 rounded-full border border-[#C9BEAF] bg-[var(--bg-surface)] px-4 py-2 text-sm font-medium text-[#4A433B] hover:bg-[#EFE8DD]"
         >
           <RefreshCw className="h-4 w-4" />
           Actualizar
@@ -119,7 +119,7 @@ export function AuditLogsPage() {
                 setAction(event.target.value.trim());
                 setPage(1);
               }}
-              className="rounded-xl border border-[#D9D0C4] bg-white px-3 py-2 text-[#2C2621]"
+              className="rounded-xl border border-[#D9D0C4] bg-white px-3 py-2 text-[var(--text-main)]"
             />
           </label>
 
@@ -133,7 +133,7 @@ export function AuditLogsPage() {
                 setEntity(event.target.value.trim());
                 setPage(1);
               }}
-              className="rounded-xl border border-[#D9D0C4] bg-white px-3 py-2 text-[#2C2621]"
+              className="rounded-xl border border-[#D9D0C4] bg-white px-3 py-2 text-[var(--text-main)]"
             />
           </label>
 
@@ -146,7 +146,7 @@ export function AuditLogsPage() {
                 setStartDate(event.target.value);
                 setPage(1);
               }}
-              className="rounded-xl border border-[#D9D0C4] bg-white px-3 py-2 text-[#2C2621]"
+              className="rounded-xl border border-[#D9D0C4] bg-white px-3 py-2 text-[var(--text-main)]"
             />
           </label>
 
@@ -159,7 +159,7 @@ export function AuditLogsPage() {
                 setEndDate(event.target.value);
                 setPage(1);
               }}
-              className="rounded-xl border border-[#D9D0C4] bg-white px-3 py-2 text-[#2C2621]"
+              className="rounded-xl border border-[#D9D0C4] bg-white px-3 py-2 text-[var(--text-main)]"
             />
           </label>
         </div>
@@ -195,7 +195,7 @@ export function AuditLogsPage() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center gap-2 py-12 text-[#6E6359]">
+          <div className="flex items-center justify-center gap-2 py-12 text-[var(--text-muted)]">
             <Loader2 className="h-5 w-5 animate-spin" />
             Cargando bitacora...
           </div>
@@ -204,37 +204,37 @@ export function AuditLogsPage() {
             {errorMessage}
           </div>
         ) : normalizedItems.length === 0 ? (
-          <div className="rounded-xl border border-[#E6DDD1] bg-white px-3 py-6 text-center text-sm text-[#6E6359]">
+          <div className="rounded-xl border border-[var(--border-strong)] bg-white px-3 py-6 text-center text-sm text-[var(--text-muted)]">
             No hay eventos para los filtros seleccionados.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-[#2C2621]/10">
-                  <th className="px-3 py-2 text-xs font-semibold text-[#6E6359]">Fecha</th>
-                  <th className="px-3 py-2 text-xs font-semibold text-[#6E6359]">Usuario</th>
-                  <th className="px-3 py-2 text-xs font-semibold text-[#6E6359]">Accion</th>
-                  <th className="px-3 py-2 text-xs font-semibold text-[#6E6359]">Entidad</th>
-                  <th className="px-3 py-2 text-xs font-semibold text-[#6E6359]">Detalle</th>
-                  <th className="px-3 py-2 text-xs font-semibold text-[#6E6359]">Ver</th>
+                <tr className="border-b border-[var(--border-strong)]">
+                  <th className="px-3 py-2 text-xs font-semibold text-[var(--text-muted)]">Fecha</th>
+                  <th className="px-3 py-2 text-xs font-semibold text-[var(--text-muted)]">Usuario</th>
+                  <th className="px-3 py-2 text-xs font-semibold text-[var(--text-muted)]">Accion</th>
+                  <th className="px-3 py-2 text-xs font-semibold text-[var(--text-muted)]">Entidad</th>
+                  <th className="px-3 py-2 text-xs font-semibold text-[var(--text-muted)]">Detalle</th>
+                  <th className="px-3 py-2 text-xs font-semibold text-[var(--text-muted)]">Ver</th>
                 </tr>
               </thead>
               <tbody>
                 {normalizedItems.map((item, index) => (
-                  <tr key={item.id} className={index % 2 === 0 ? "bg-[#F4F1EB]/30" : ""}>
-                    <td className="px-3 py-3 text-sm text-[#2C2621]">
+                  <tr key={item.id} className={index % 2 === 0 ? "bg-[var(--bg-base)]/30" : ""}>
+                    <td className="px-3 py-3 text-sm text-[var(--text-main)]">
                       {formatRelativeDate(item.created_at)}
                     </td>
-                    <td className="px-3 py-3 text-sm text-[#2C2621]">
+                    <td className="px-3 py-3 text-sm text-[var(--text-main)]">
                       {item.user?.full_name ?? "Sistema"}
                     </td>
-                    <td className="px-3 py-3 text-sm text-[#2C2621]">{item.action}</td>
-                    <td className="px-3 py-3 text-sm text-[#2C2621]">
+                    <td className="px-3 py-3 text-sm text-[var(--text-main)]">{item.action}</td>
+                    <td className="px-3 py-3 text-sm text-[var(--text-main)]">
                       {item.entity}
                       {item.entity_id ? ` #${item.entity_id}` : ""}
                     </td>
-                    <td className="px-3 py-3 text-sm text-[#6E6359] max-w-[420px] truncate">
+                    <td className="px-3 py-3 text-sm text-[var(--text-muted)] max-w-[420px] truncate">
                       {item.detail ?? "-"}
                     </td>
                     <td className="px-3 py-3">
@@ -256,10 +256,10 @@ export function AuditLogsPage() {
       </BentoCard>
 
       {selectedLog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#2C2621]/45 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--text-main)]/45 p-4">
           <BentoCard variant="light" className="w-full max-w-2xl">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl text-[#2C2621]">Detalle de evento #{selectedLog.id}</h2>
+              <h2 className="text-xl text-[var(--text-main)]">Detalle de evento #{selectedLog.id}</h2>
               <button
                 type="button"
                 onClick={() => setSelectedLog(null)}
@@ -270,12 +270,12 @@ export function AuditLogsPage() {
             </div>
 
             {loadingDetail ? (
-              <div className="flex items-center gap-2 text-[#6E6359]">
+              <div className="flex items-center gap-2 text-[var(--text-muted)]">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Cargando detalle...
               </div>
             ) : (
-              <div className="space-y-2 text-sm text-[#2C2621]">
+              <div className="space-y-2 text-sm text-[var(--text-main)]">
                 <p><strong>Fecha:</strong> {selectedLog.created_at}</p>
                 <p><strong>Usuario:</strong> {selectedLog.user?.full_name ?? "Sistema"}</p>
                 <p><strong>Email:</strong> {selectedLog.user?.email ?? "-"}</p>

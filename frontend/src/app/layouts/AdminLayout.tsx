@@ -17,7 +17,7 @@ export function AdminLayout() {
 
   return (
     <div
-      className={`bg-[#F4F1EB] flex overflow-x-hidden ${
+      className={`bg-background flex overflow-x-hidden transition-colors duration-300 ${
         isMobile ? "min-h-screen" : "h-screen overflow-hidden"
       }`}
     >
@@ -25,9 +25,8 @@ export function AdminLayout() {
 
       <main
         ref={mainRef}
-        className={`flex-1 min-w-0 overflow-x-hidden ${
-          isMobile ? "pb-20" : "h-screen overflow-y-auto"
-        }`}
+        className={`flex-1 min-w-0 overflow-x-hidden ${isMobile ? "pb-20" : "h-screen overflow-y-auto"
+          }`}
       >
         <Outlet />
       </main>

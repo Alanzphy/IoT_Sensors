@@ -72,7 +72,7 @@ export function CropTypeManagement() {
   if (loading && cropTypes.length === 0) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <p className="text-[#6E6359]">Cargando cultivos...</p>
+        <p className="text-[var(--text-muted)]">Cargando cultivos...</p>
       </div>
     );
   }
@@ -81,8 +81,8 @@ export function CropTypeManagement() {
     <div className="min-h-screen p-4 md:p-6 lg:p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl md:text-3xl text-[#2C2621] mb-2">Catálogo de Cultivos</h1>
-          <p className="text-[#6E6359]">Gestiona los tipos de cultivo disponibles</p>
+          <h1 className="text-2xl md:text-3xl text-[var(--text-main)] mb-2">Catálogo de Cultivos</h1>
+          <p className="text-[var(--text-muted)]">Gestiona los tipos de cultivo disponibles</p>
         </div>
         <PillButton variant="primary" onClick={() => setShowCreateForm(true)}>
           <Plus className="w-4 h-4 mr-2" />
@@ -106,17 +106,17 @@ export function CropTypeManagement() {
             <BentoCard key={crop.id} variant="light">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-3 rounded-[24px] bg-[#E2D4B7]">
+                  <div className="p-3 rounded-[24px] bg-[var(--card-sand)]">
                     <CropIcon className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="font-medium text-[#2C2621]">{crop.name}</h3>
+                    <h3 className="font-medium text-[var(--text-main)]">{crop.name}</h3>
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
                   {/* Edit functionality left for future if needed */}
-                  <button className="p-2 rounded-full hover:bg-[#E2D4B7]/50 transition-colors">
-                    <Edit className="w-4 h-4 text-[#6E6359]/30" />
+                  <button className="p-2 rounded-full hover:bg-[var(--card-sand)]/50 transition-colors">
+                    <Edit className="w-4 h-4 text-[var(--text-muted)]/30" />
                   </button>
                   <button
                     onClick={() => handleDelete(crop.id)}
@@ -126,41 +126,41 @@ export function CropTypeManagement() {
                   </button>
                 </div>
               </div>
-              <p className="text-sm text-[#6E6359]">{crop.description}</p>
+              <p className="text-sm text-[var(--text-muted)]">{crop.description}</p>
             </BentoCard>
           );
         })}
         {cropTypes.length === 0 && !loading && (
-          <p className="text-[#6E6359]">No hay tipos de cultivo registrados.</p>
+          <p className="text-[var(--text-muted)]">No hay tipos de cultivo registrados.</p>
         )}
       </div>
 
       {/* Create form */}
       {showCreateForm && (
-        <div className="fixed inset-0 bg-[#2C2621]/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-[var(--text-main)]/50 z-50 flex items-center justify-center p-4">
           <BentoCard variant="light" className="w-full max-w-md">
-            <h2 className="text-xl text-[#2C2621] mb-6">Nuevo Tipo de Cultivo</h2>
+            <h2 className="text-xl text-[var(--text-main)] mb-6">Nuevo Tipo de Cultivo</h2>
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="block text-sm text-[#6E6359] mb-2">Nombre del Cultivo</label>
+                <label className="block text-sm text-[var(--text-muted)] mb-2">Nombre del Cultivo</label>
                 <input
                   type="text"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Ej: Nogal"
-                  className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E]"
+                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-[#6E6359] mb-2">Descripción</label>
+                <label className="block text-sm text-[var(--text-muted)] mb-2">Descripción</label>
                 <textarea
                   rows={3}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Ej: Nogal pecanero"
-                  className="w-full px-4 py-2.5 rounded-[24px] bg-[#F4F1EB] border border-[#2C2621]/10 text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#6D7E5E] resize-none"
+                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] resize-none"
                 />
               </div>
 

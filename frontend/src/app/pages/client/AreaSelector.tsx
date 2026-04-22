@@ -58,7 +58,7 @@ function AreaCard({
       tabIndex={0}
       aria-label={`Ver área ${area.name}`}
       onKeyDown={(e) => e.key === "Enter" && onClick()}
-      className="cursor-pointer animate-fade-in-up focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6D7E5E] rounded-[32px]"
+      className="cursor-pointer animate-fade-in-up focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] rounded-[32px]"
       style={{ animationDelay: `${animationDelay}ms` }}
     >
       <BentoCard
@@ -68,20 +68,20 @@ function AreaCard({
         <div>
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-[24px] bg-[#E2D4B7]">
+              <div className="p-3 rounded-[24px] bg-[var(--card-sand)]">
                 <CropIcon className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-base text-[#2C2621] font-medium">{area.name}</h3>
-                <p className="text-sm text-[#6E6359]">{area.area_size || 0} ha</p>
+                <h3 className="text-base text-[var(--text-main)] font-medium">{area.name}</h3>
+                <p className="text-sm text-[var(--text-muted)]">{area.area_size || 0} ha</p>
               </div>
             </div>
-            <ChevronRight className="w-5 h-5 text-[#6E6359] flex-shrink-0" />
+            <ChevronRight className="w-5 h-5 text-[var(--text-muted)] flex-shrink-0" />
           </div>
 
           {/* Crop type badge */}
           {area.crop_type?.name && (
-            <span className="inline-block px-3 py-1 rounded-full bg-[#6D7E5E]/10 text-[#6D7E5E] text-xs font-medium mb-4">
+            <span className="inline-block px-3 py-1 rounded-full bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] text-xs font-medium mb-4">
               {area.crop_type.name}
             </span>
           )}
@@ -89,14 +89,14 @@ function AreaCard({
           {/* Humidity bar */}
           <div className="mb-3">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs text-[#6E6359]">Humedad actual</span>
-              <span className="text-sm font-bold text-[#2C2621]">
+              <span className="text-xs text-[var(--text-muted)]">Humedad actual</span>
+              <span className="text-sm font-bold text-[var(--text-main)]">
                 {humidity !== null ? `${humidity.toFixed(1)}%` : "N/D"}
               </span>
             </div>
-            <div className="h-2 bg-[#E6E1D8] rounded-full overflow-hidden">
+            <div className="h-2 bg-[var(--progress-track)] rounded-full overflow-hidden">
               <div
-                className="h-full bg-[#6D7E5E] rounded-full transition-all duration-700"
+                className="h-full bg-[var(--accent-primary)] rounded-full transition-all duration-700"
                 style={{ width: humidity !== null ? `${Math.min(100, Math.max(0, humidity))}%` : "0%" }}
               />
             </div>
@@ -141,8 +141,8 @@ export function AreaSelector() {
     <PageTransition>
       <div className="min-h-screen p-4 md:p-6 lg:p-8">
         <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-serif text-[#2C2621] mb-2">Predios y Áreas de Riego</h1>
-          <p className="text-[#6E6359]">Selecciona un área para ver sus datos en tiempo real</p>
+          <h1 className="text-2xl md:text-3xl font-serif text-[var(--text-main)] mb-2">Predios y Áreas de Riego</h1>
+          <p className="text-[var(--text-muted)]">Selecciona un área para ver sus datos en tiempo real</p>
         </div>
 
         {!hasAreas && (
@@ -160,9 +160,9 @@ export function AreaSelector() {
           return (
             <div key={property.id} className="mb-8">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-serif text-[#2C2621]">{property.name}</h2>
+                <h2 className="text-xl font-serif text-[var(--text-main)]">{property.name}</h2>
                 {property.location && (
-                  <span className="text-sm text-[#6E6359]">{property.location}</span>
+                  <span className="text-sm text-[var(--text-muted)]">{property.location}</span>
                 )}
               </div>
 

@@ -14,10 +14,10 @@ export function BentoCard({
   padding = "md"
 }: BentoCardProps) {
   const backgrounds = {
-    light: "bg-[#F9F8F4]",
-    sand: "bg-[#E2D4B7]",
-    dark: "bg-[#3B312B] text-[#F4F1EB]",
-    brown: "bg-[#705541] text-[#F4F1EB]",
+    light: "glass-card text-[var(--text-main)]",
+    sand: "bg-[var(--card-sand)] text-[var(--text-main)]",
+    dark: "bg-[var(--card-dark)] text-[var(--text-on-dark)]",
+    brown: "bg-[var(--card-brown)] text-[var(--text-on-dark)]",
   };
 
   const paddings = {
