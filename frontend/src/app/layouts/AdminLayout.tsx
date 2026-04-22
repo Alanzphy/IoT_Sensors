@@ -25,7 +25,7 @@ export function AdminLayout() {
 
       <main
         ref={mainRef}
-        className={`flex-1 min-w-0 overflow-x-hidden ${isMobile ? "pb-20" : "h-screen overflow-y-auto"
+        className={`flex-1 min-w-0 overflow-x-hidden bg-[var(--surface-page)] ${isMobile ? "pb-20" : "h-screen overflow-y-auto"
           }`}
       >
         <Outlet />

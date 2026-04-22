@@ -1,6 +1,6 @@
-import { Leaf } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
+import { AuthSplitLayout } from "../../components/auth/AuthSplitLayout";
 import { PageTransition } from "../../components/PageTransition";
 import { PillButton } from "../../components/PillButton";
 import { api } from "../../services/api";
@@ -29,77 +29,64 @@ export function ForgotPasswordPage() {
 
   return (
     <PageTransition>
-      <div className="min-h-screen bg-[var(--bg-base)] flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="bg-[var(--bg-surface)] rounded-[32px] p-8 md:p-10 border border-[var(--border-subtle)]">
-            <div className="flex justify-center mb-8">
-              <div className="w-20 h-20 rounded-full bg-[var(--accent-primary)] flex items-center justify-center">
-                <Leaf className="w-10 h-10 text-[var(--text-inverted)]" />
-              </div>
-            </div>
-
-            <h1 className="text-center mb-2 text-3xl font-serif font-medium tracking-tight text-[var(--text-main)]">
-              Recuperar contraseña
-            </h1>
-            <p className="text-center text-[var(--text-muted)] mb-8">
-              Ingresa tu correo para recibir un enlace de restablecimiento.
-            </p>
-
-            {error && (
-              <div
-                role="alert"
-                aria-live="assertive"
-                className="mb-6 p-4 bg-[#DC2626]/8 text-[#DC2626] rounded-[16px] text-sm text-center border border-[#DC2626]/15"
-              >
-                {error}
-              </div>
-            )}
-
-            {detail && (
-              <div
-                role="status"
-                aria-live="polite"
-                className="mb-6 p-4 bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] rounded-[16px] text-sm text-center border border-[var(--accent-primary)]/20"
-              >
-                {detail}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-              <div>
-                <label htmlFor="forgot-email" className="block text-sm font-medium text-[var(--text-main)] mb-2">
-                  Correo electrónico
-                </label>
-                <input
-                  id="forgot-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="usuario@ejemplo.mx"
-                  autoComplete="email"
-                  className="w-full px-5 py-3 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] placeholder:text-[var(--text-muted)]/50
-                    focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] focus-visible:ring-offset-1 transition-shadow"
-                  required
-                  disabled={isLoading}
-                />
-              </div>
-
-              <PillButton type="submit" variant="primary" className="w-full" disabled={isLoading} loading={isLoading}>
-                {isLoading ? "Enviando..." : "Enviar enlace"}
-              </PillButton>
-            </form>
-
-            <div className="mt-6 text-center">
-              <Link
-                to="/"
-                className="text-sm text-[var(--text-muted)] hover:text-[var(--accent-primary)] transition-colors focus:outline-none focus-visible:underline"
-              >
-                ← Volver a inicio de sesión
-              </Link>
-            </div>
+      <AuthSplitLayout
+        heading="Recuperar contraseña"
+        description="Ingresa tu correo y te enviaremos un enlace para restablecer el acceso."
+        footer={
+          <div className="text-center">
+            <Link
+              to="/"
+              className="text-sm text-[var(--text-subtle)] transition-colors hover:text-[var(--accent-primary)] focus:outline-none focus-visible:underline"
+            >
+              ← Volver a inicio de sesión
+            </Link>
           </div>
-        </div>
-      </div>
+        }
+      >
+        {error && (
+          <div
+            role="alert"
+            aria-live="assertive"
+            className="mb-6 rounded-[16px] border border-[#DC2626]/25 bg-[#DC2626]/10 p-4 text-center text-sm text-[#DC2626]"
+          >
+            {error}
+          </div>
+        )}
+
+        {detail && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="mb-6 rounded-[16px] border border-[var(--accent-primary)]/25 bg-[var(--accent-primary)]/10 p-4 text-center text-sm text-[var(--accent-primary)]"
+          >
+            {detail}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+          <div>
+            <label htmlFor="forgot-email" className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-subtle)]">
+              Correo electrónico
+            </label>
+            <input
+              id="forgot-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="usuario@ejemplo.mx"
+              autoComplete="email"
+              className="w-full rounded-[24px] border border-[var(--border-strong)] bg-[var(--surface-card-primary)] px-5 py-3 text-[var(--text-body)] placeholder:text-[var(--text-subtle)]/70
+                focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-1"
+              required
+              disabled={isLoading}
+            />
+          </div>
+
+          <PillButton type="submit" variant="primary" className="w-full" disabled={isLoading} loading={isLoading}>
+            {isLoading ? "Enviando..." : "Enviar enlace"}
+          </PillButton>
+        </form>
+      </AuthSplitLayout>
     </PageTransition>
   );
 }

@@ -1,6 +1,8 @@
-import { useState, useEffect } from "react";
-import { Plus, Calendar, Trash2 } from "lucide-react";
+import { Calendar, Plus, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { BentoCard } from "../../components/BentoCard";
+import { EmptyState } from "../../components/EmptyState";
+import { PageTransition } from "../../components/PageTransition";
 import { PillButton } from "../../components/PillButton";
 import { api } from "../../services/api";
 
@@ -11,7 +13,7 @@ interface IrrigationArea {
 
 interface CropCycle {
   id: number;
-  irrigation_area_id: int;
+  irrigation_area_id: number;
   start_date: string;
   end_date: string | null;
 }
@@ -107,18 +109,21 @@ export function CropCycleManagement() {
 
   if (loading && areas.length === 0) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <p className="text-[var(--text-muted)]">Cargando datos...</p>
-      </div>
+      <PageTransition>
+        <div className="flex justify-center items-center min-h-screen p-4 text-[var(--text-subtle)]">
+          Cargando datos...
+        </div>
+      </PageTransition>
     );
   }
 
   return (
+    <PageTransition>
     <div className="min-h-screen p-4 md:p-6 lg:p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl md:text-3xl text-[var(--text-main)] mb-2">Gestión de Ciclos de Cultivo</h1>
-          <p className="text-[var(--text-muted)]">Administra los ciclos de cultivo por área</p>
+          <h1 className="text-2xl md:text-3xl font-serif text-[var(--text-title)] mb-2">Gestión de Ciclos de Cultivo</h1>
+          <p className="text-[var(--text-subtle)]">Administra los ciclos de cultivo por área</p>
         </div>
         <PillButton variant="primary" onClick={() => setShowCreateForm(true)}>
           <Plus className="w-4 h-4 mr-2" />
@@ -127,12 +132,11 @@ export function CropCycleManagement() {
       </div>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
+        <div className="mb-4 rounded-2xl border border-[var(--status-danger)]/25 bg-[var(--status-danger-bg)] px-4 py-3 text-sm text-[var(--status-danger)]">
           {error}
         </div>
       )}
 
-      {/* Timeline view */}
       <div className="space-y-6">
         {areas.map((area) => {
           const areaCycles = cycles.filter(c => c.irrigation_area_id === area.id)
@@ -143,22 +147,22 @@ export function CropCycleManagement() {
           return (
             <BentoCard key={area.id} variant="light">
               <h3 className="text-lg font-medium text-[var(--text-main)] mb-4">{area.nombre}</h3>
-              
+
               <div className="space-y-3">
                 {areaCycles.map((cycle) => {
                   const isActive = !cycle.end_date || new Date(cycle.end_date) > new Date();
 
                   return (
-                    <div 
-                      key={cycle.id} 
-                      className={`p-4 rounded-[24px] flex items-center justify-between ${
-                        isActive 
-                          ? "bg-[var(--accent-primary)]/10 border-2 border-[var(--accent-primary)]" 
-                          : "bg-[var(--bg-base)]"
+                    <div
+                      key={cycle.id}
+                      className={`p-4 rounded-[24px] border flex items-center justify-between ${
+                        isActive
+                          ? "bg-[var(--status-active-bg)] border-[var(--status-active)]/40"
+                          : "bg-[var(--surface-panel)] border-[var(--border-subtle)]"
                       }`}
                     >
                       <div className="flex items-center gap-4">
-                        <div className={`p-2 rounded-full ${isActive ? 'bg-[var(--accent-primary)] text-white' : 'bg-[var(--card-sand)] text-[var(--text-muted)]'}`}>
+                        <div className={`p-2 rounded-full ${isActive ? 'bg-[var(--status-active)] text-[var(--text-inverted)]' : 'bg-[var(--surface-card-secondary)] text-[var(--text-subtle)]'}`}>
                           <Calendar className="w-5 h-5" />
                         </div>
                         <div>
@@ -167,18 +171,19 @@ export function CropCycleManagement() {
                               {formatDate(cycle.start_date)} - {cycle.end_date ? formatDate(cycle.end_date) : 'Actual'}
                             </span>
                             {isActive && (
-                              <span className="px-2 py-0.5 text-xs rounded-full bg-[var(--accent-primary)] text-white">
+                              <span className="px-2 py-0.5 text-xs rounded-full bg-[var(--status-active-bg)] text-[var(--status-active)] border border-[var(--status-active)]/30">
                                 Activo
                               </span>
                             )}
                           </div>
                         </div>
                       </div>
-                      <button 
+                      <button
+                        type="button"
                         onClick={() => handleDelete(cycle.id)}
-                        className="p-2 rounded-full hover:bg-[#DC2626]/10 transition-colors"
+                        className="p-2 rounded-full hover:bg-[var(--status-danger-bg)] transition-colors"
                       >
-                        <Trash2 className="w-4 h-4 text-[#DC2626]" />
+                        <Trash2 className="w-4 h-4 text-[var(--status-danger)]" />
                       </button>
                     </div>
                   );
@@ -188,26 +193,37 @@ export function CropCycleManagement() {
           );
         })}
         {areas.length === 0 && !loading && (
-          <p className="text-[var(--text-muted)]">No hay áreas de riego registradas.</p>
+          <EmptyState
+            icon={Calendar}
+            title="Sin áreas de riego"
+            description="Aún no existen áreas para crear ciclos de cultivo."
+          />
         )}
         {areas.length > 0 && areas.every(a => cycles.filter(c => c.irrigation_area_id === a.id).length === 0) && !loading && (
-          <p className="text-[var(--text-muted)]">No hay ciclos de cultivo registrados en ninguna área.</p>
+          <EmptyState
+            icon={Calendar}
+            title="Sin ciclos de cultivo"
+            description="Crea el primer ciclo para comenzar el historial de temporadas agrícolas."
+            action={{
+              label: "Crear primer ciclo",
+              onClick: () => setShowCreateForm(true),
+            }}
+          />
         )}
       </div>
 
-      {/* Create form */}
       {showCreateForm && (
-        <div className="fixed inset-0 bg-[var(--text-main)]/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-[var(--surface-page)]/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <BentoCard variant="light" className="w-full max-w-md">
-            <h2 className="text-xl text-[var(--text-main)] mb-6">Nuevo Ciclo de Cultivo</h2>
+            <h2 className="text-xl font-serif text-[var(--text-title)] mb-6">Nuevo Ciclo de Cultivo</h2>
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="block text-sm text-[var(--text-muted)] mb-2">Área de Riego</label>
-                <select 
+                <label className="block text-sm text-[var(--text-subtle)] mb-2">Área de Riego</label>
+                <select
                   required
                   value={formAreaId}
                   onChange={(e) => setFormAreaId(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
+                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--surface-panel)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
                 >
                   <option value="">Seleccionar área</option>
                   {areas.map((area) => (
@@ -215,25 +231,25 @@ export function CropCycleManagement() {
                   ))}
                 </select>
               </div>
-              
+
               <div>
-                <label className="block text-sm text-[var(--text-muted)] mb-2">Fecha de Inicio</label>
+                <label className="block text-sm text-[var(--text-subtle)] mb-2">Fecha de Inicio</label>
                 <input
                   type="date"
                   required
                   value={formStartDate}
                   onChange={(e) => setFormStartDate(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
+                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--surface-panel)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-[var(--text-muted)] mb-2">Fecha de Fin (opcional)</label>
+                <label className="block text-sm text-[var(--text-subtle)] mb-2">Fecha de Fin (opcional)</label>
                 <input
                   type="date"
                   value={formEndDate}
                   onChange={(e) => setFormEndDate(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
+                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--surface-panel)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
                 />
               </div>
 
@@ -250,5 +266,6 @@ export function CropCycleManagement() {
         </div>
       )}
     </div>
+    </PageTransition>
   );
 }

@@ -12,10 +12,10 @@ interface PillButtonProps {
   "aria-label"?: string;
 }
 
-export function PillButton({ 
-  children, 
-  variant = "primary", 
-  onClick, 
+export function PillButton({
+  children,
+  variant = "primary",
+  onClick,
   type = "button",
   disabled = false,
   loading = false,
@@ -23,10 +23,10 @@ export function PillButton({
   "aria-label": ariaLabel,
 }: PillButtonProps) {
   const variants = {
-    primary: "bg-[var(--accent-primary)] text-[var(--text-inverted)] hover:opacity-90 hover:shadow-lg dark:hover:shadow-[var(--accent-glow)]",
-    secondary: "bg-[var(--card-sand)] text-[var(--text-main)] hover:brightness-95",
-    outline: "border-2 border-[var(--accent-primary)] text-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/10",
-    ghost: "text-[var(--text-main)] hover:bg-[var(--border-subtle)]",
+    primary: "bg-[var(--accent-primary)] text-[var(--text-inverted)] hover:opacity-90 active:opacity-95",
+    secondary: "bg-[var(--card-sand)] text-[var(--text-main)] hover:opacity-90",
+    outline: "border border-[var(--outline-contrast)] text-[var(--text-main)] bg-transparent hover:bg-[var(--hover-overlay)]",
+    ghost: "text-[var(--text-main)] hover:bg-[var(--hover-overlay)]",
   };
 
   const isDisabled = disabled || loading;
@@ -41,11 +41,12 @@ export function PillButton({
       className={`
         inline-flex items-center justify-center gap-2
         px-6 py-2.5 rounded-full font-medium
-        transition-all duration-150
+        transition-[background-color,color,opacity,transform,box-shadow] duration-200
         active:scale-[0.97]
-        focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] focus-visible:ring-offset-2
+        focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2
+        focus-visible:ring-offset-[var(--bg-base)]
         ${variants[variant]}
-        ${isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
+        ${isDisabled ? "opacity-[var(--disabled-opacity)] cursor-not-allowed" : "cursor-pointer"}
         ${className}
       `}
     >

@@ -2,6 +2,7 @@ import { Copy, Eye, EyeOff, Plus, Radio, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BentoCard } from "../../components/BentoCard";
 import { EmptyState } from "../../components/EmptyState";
+import { PageTransition } from "../../components/PageTransition";
 import { PillButton } from "../../components/PillButton";
 import { useToast } from "../../components/Toast";
 import { api } from "../../services/api";
@@ -127,45 +128,48 @@ export function NodeManagement() {
 
   if (loading && nodes.length === 0) {
     return (
-      <div className="min-h-screen p-4 md:p-6 lg:p-8">
-        <div className="mb-6">
-          <div className="h-8 w-48 rounded-full animate-pulse bg-black/10 mb-2" />
-          <div className="h-5 w-64 rounded-full animate-pulse bg-black/10 opacity-60" />
-        </div>
-        <BentoCard variant="light" className="overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-[var(--border-strong)]">
-                {Array.from({ length: 7 }).map((_, i) => (
-                  <th key={i} scope="col" className="py-3 px-4">
-                    <div className="h-4 rounded-full animate-pulse bg-black/10 opacity-50" />
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {Array.from({ length: 3 }).map((_, i) => (
-                <tr key={i} className={i % 2 === 0 ? "bg-[var(--bg-base)]/30" : ""}>
-                  {Array.from({ length: 7 }).map((_, j) => (
-                    <td key={j} className="py-4 px-4">
-                      <div className="h-4 rounded-full animate-pulse bg-black/10" />
-                    </td>
+      <PageTransition>
+        <div className="min-h-screen p-4 md:p-6 lg:p-8">
+          <div className="mb-6">
+            <div className="h-8 w-48 rounded-full animate-pulse bg-[var(--text-main)]/10 mb-2" />
+            <div className="h-5 w-64 rounded-full animate-pulse bg-[var(--text-main)]/10 opacity-60" />
+          </div>
+          <BentoCard variant="light" className="overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-[var(--border-strong)]">
+                  {Array.from({ length: 7 }).map((_, i) => (
+                    <th key={i} scope="col" className="py-3 px-4">
+                      <div className="h-4 rounded-full animate-pulse bg-[var(--text-main)]/10 opacity-50" />
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </BentoCard>
-      </div>
+              </thead>
+              <tbody>
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <tr key={i} className={i % 2 === 0 ? "bg-[var(--bg-base)]/30" : ""}>
+                    {Array.from({ length: 7 }).map((_, j) => (
+                      <td key={j} className="py-4 px-4">
+                        <div className="h-4 rounded-full animate-pulse bg-[var(--text-main)]/10" />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </BentoCard>
+        </div>
+      </PageTransition>
     );
   }
 
   return (
+    <PageTransition>
     <div className="min-h-screen p-4 md:p-6 lg:p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl md:text-3xl text-[var(--text-main)] mb-2">Gestión de Nodos</h1>
-          <p className="text-[var(--text-muted)]">Administra los sensores IoT del sistema</p>
+          <h1 className="text-2xl md:text-3xl font-serif text-[var(--text-title)] mb-2">Gestión de Nodos</h1>
+          <p className="text-[var(--text-subtle)]">Administra los sensores IoT del sistema</p>
         </div>
         <PillButton variant="primary" onClick={() => setShowCreateForm(true)}>
           <Plus className="w-4 h-4 mr-2" />
@@ -174,7 +178,7 @@ export function NodeManagement() {
       </div>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
+        <div className="mb-4 rounded-2xl border border-[var(--status-danger)]/25 bg-[var(--status-danger-bg)] px-4 py-3 text-sm text-[var(--status-danger)]">
           {error}
         </div>
       )}
@@ -185,13 +189,13 @@ export function NodeManagement() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-[var(--border-strong)]">
-                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Nombre</th>
-                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Serie</th>
-                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">API Key</th>
-                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Área Vinculada</th>
-                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">GPS</th>
-                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Estado</th>
-                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Acciones</th>
+                <th scope="col" className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-subtle)]">Nombre</th>
+                <th scope="col" className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-subtle)]">Serie</th>
+                <th scope="col" className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-subtle)]">API Key</th>
+                <th scope="col" className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-subtle)]">Área Vinculada</th>
+                <th scope="col" className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-subtle)]">GPS</th>
+                <th scope="col" className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-subtle)]">Estado</th>
+                <th scope="col" className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-subtle)]">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -214,8 +218,9 @@ export function NodeManagement() {
                         }
                       </span>
                       <button
+                        type="button"
                         onClick={() => toggleApiKeyVisibility(node.id)}
-                        className="p-1 rounded hover:bg-[var(--card-sand)]/50 transition-colors"
+                        className="p-1 rounded hover:bg-[var(--hover-overlay)] transition-colors"
                       >
                         {visibleApiKeys[node.id] ? (
                           <EyeOff className="w-4 h-4 text-[var(--text-muted)]" />
@@ -224,8 +229,9 @@ export function NodeManagement() {
                         )}
                       </button>
                       <button
+                        type="button"
                         onClick={() => copyToClipboard(node.api_key)}
-                        className="p-1 rounded hover:bg-[var(--card-sand)]/50 transition-colors"
+                        className="p-1 rounded hover:bg-[var(--hover-overlay)] transition-colors"
                       >
                         <Copy className="w-4 h-4 text-[var(--text-muted)]" />
                       </button>
@@ -234,7 +240,7 @@ export function NodeManagement() {
                   <td className="py-4 px-4 text-sm text-[var(--text-main)]">
                     {getAreaName(node.irrigation_area_id)}
                   </td>
-                  <td className="py-4 px-4 text-sm text-[var(--text-muted)]">
+                  <td className="py-4 px-4 text-sm text-[var(--text-subtle)]">
                     {node.latitude && node.longitude
                       ? `${node.latitude}, ${node.longitude}`
                       : 'No configurado'
@@ -244,18 +250,19 @@ export function NodeManagement() {
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                       node.is_active
                         ? 'bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] border border-[var(--accent-primary)]/20'
-                        : 'bg-[#DC2626]/10 text-[#DC2626] border border-[#DC2626]/20'
+                        : 'bg-[var(--status-danger-bg)] text-[var(--status-danger)] border border-[var(--status-danger)]/30'
                     }`}>
                       {node.is_active ? 'Activo' : 'Inactivo'}
                     </span>
                   </td>
                   <td className="py-4 px-4">
                     <button
+                      type="button"
                       onClick={() => handleDelete(node.id)}
-                      className="p-2 rounded-full hover:bg-[#DC2626]/10 transition-colors"
+                      className="p-2 rounded-full hover:bg-[var(--status-danger-bg)] transition-colors"
                       title="Eliminar nodo"
                     >
-                      <Trash2 className="w-4 h-4 text-[#DC2626]" />
+                      <Trash2 className="w-4 h-4 text-[var(--status-danger)]" />
                     </button>
                   </td>
                 </tr>
@@ -280,17 +287,17 @@ export function NodeManagement() {
 
       {/* Create form */}
       {showCreateForm && (
-        <div className="fixed inset-0 bg-[var(--text-main)]/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-[var(--surface-page)]/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <BentoCard variant="light" className="w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl text-[var(--text-main)] mb-6">Nuevo Nodo IoT</h2>
+            <h2 className="text-xl font-serif text-[var(--text-title)] mb-6">Nuevo Nodo IoT</h2>
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="block text-sm text-[var(--text-muted)] mb-2">Área de Riego (Obligatorio)</label>
+                <label className="block text-sm text-[var(--text-subtle)] mb-2">Área de Riego (Obligatorio)</label>
                 <select
                   required
                   value={formAreaId}
                   onChange={(e) => setFormAreaId(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
+                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--surface-panel)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
                 >
                   <option value="">Seleccione un área</option>
                   {areas.map(a => (
@@ -300,48 +307,48 @@ export function NodeManagement() {
               </div>
 
               <div>
-                <label className="block text-sm text-[var(--text-muted)] mb-2">Nombre del Nodo</label>
+                <label className="block text-sm text-[var(--text-subtle)] mb-2">Nombre del Nodo</label>
                 <input
                   type="text"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder="Ej: Sensor Nogal-01"
-                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
+                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--surface-panel)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-[var(--text-muted)] mb-2">Número de Serie</label>
+                <label className="block text-sm text-[var(--text-subtle)] mb-2">Número de Serie</label>
                 <input
                   type="text"
                   value={formSerialNumber}
                   onChange={(e) => setFormSerialNumber(e.target.value)}
                   placeholder="SN-2026-001"
-                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
+                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--surface-panel)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm text-[var(--text-muted)] mb-2">Latitud GPS</label>
+                  <label className="block text-sm text-[var(--text-subtle)] mb-2">Latitud GPS</label>
                   <input
                     type="number"
                     step="any"
                     value={formLat}
                     onChange={(e) => setFormLat(e.target.value)}
                     placeholder="28.6329"
-                    className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
+                    className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--surface-panel)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-[var(--text-muted)] mb-2">Longitud GPS</label>
+                  <label className="block text-sm text-[var(--text-subtle)] mb-2">Longitud GPS</label>
                   <input
                     type="number"
                     step="any"
                     value={formLng}
                     onChange={(e) => setFormLng(e.target.value)}
                     placeholder="-106.0691"
-                    className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
+                    className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--surface-panel)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
                   />
                 </div>
               </div>
@@ -359,5 +366,6 @@ export function NodeManagement() {
         </div>
       )}
     </div>
+    </PageTransition>
   );
 }

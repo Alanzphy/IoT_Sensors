@@ -29,13 +29,13 @@ export function FreshnessIndicator({ lastUpdate, variant = "light" }: FreshnessI
   let statusLabel: string;
 
   if (minutesAgo < 30) {
-    dotColor = "var(--accent-primary)"; // green — recent
+    dotColor = "var(--status-active)";
     statusLabel = "En línea";
   } else if (minutesAgo < 120) {
-    dotColor = "#D97706"; // amber — warning
+    dotColor = "var(--status-warning)";
     statusLabel = "Advertencia";
   } else {
-    dotColor = "#DC2626"; // red — error
+    dotColor = "var(--status-danger)";
     statusLabel = "Sin conexión";
   }
 

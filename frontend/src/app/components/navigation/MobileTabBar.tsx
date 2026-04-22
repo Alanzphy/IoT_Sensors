@@ -1,22 +1,22 @@
 import {
-    Bell,
-    ClipboardList,
-    Clock,
-    Download,
-    LayoutDashboard,
-    MapPin,
-    Radio,
-    SlidersHorizontal,
-    Sprout,
-    Users,
-    Warehouse,
-    BellRing,
-    Sun,
-    Moon,
+  Bell,
+  BellRing,
+  ClipboardList,
+  Clock,
+  Download,
+  LayoutDashboard,
+  MapPin,
+  Moon,
+  Radio,
+  SlidersHorizontal,
+  Sprout,
+  Sun,
+  Users,
+  Warehouse,
 } from "lucide-react";
 import { Link, useLocation } from "react-router";
-import { preloadMapRoutes } from "../../services/routePreload";
 import { useTheme } from "../../context/ThemeContext";
+import { preloadMapRoutes } from "../../services/routePreload";
 
 interface MobileTabBarProps {
   role: "client" | "admin";
@@ -88,7 +88,7 @@ export function MobileTabBar({ role }: MobileTabBarProps) {
                   flex flex-col items-center gap-0.5 px-3 py-2 rounded-2xl
                   transition-colors flex-shrink-0 min-w-[56px]
                   focus:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring
-                  ${isActive ? "bg-sidebar-primary/10" : "hover:bg-sidebar-accent/50"}
+                  ${isActive ? "bg-sidebar-primary/16" : "hover:bg-sidebar-accent"}
                 `}
               >
                 <Icon
@@ -112,7 +112,7 @@ export function MobileTabBar({ role }: MobileTabBarProps) {
               flex flex-col items-center gap-0.5 px-3 py-2 rounded-2xl
               transition-colors flex-shrink-0 min-w-[56px]
               focus:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring
-              hover:bg-sidebar-accent/50
+              hover:bg-sidebar-accent
             `}
             aria-label="Cambiar tema"
           >

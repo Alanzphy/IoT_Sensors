@@ -10,7 +10,7 @@ describe("BentoCard Component", () => {
       </BentoCard>
     );
 
-    expect(screen.getByText("Test Content inside Bento")).toBeInTheDocument();
+    expect(screen.getByText("Test Content inside Bento")).toBeTruthy();
   });
 
   it("applies the dark variant styling class correctly", () => {
@@ -21,6 +21,6 @@ describe("BentoCard Component", () => {
     );
 
     // Test that variant-specific classes apply (e.g. background class)
-    expect(container.firstChild).toHaveClass("bg-[#3B312B]");
+    expect((container.firstChild as HTMLElement).className).toContain("bg-[var(--card-dark)]");
   });
 });

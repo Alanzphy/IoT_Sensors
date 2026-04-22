@@ -141,8 +141,8 @@ export function AreaSelector() {
     <PageTransition>
       <div className="min-h-screen p-4 md:p-6 lg:p-8">
         <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-serif text-[var(--text-main)] mb-2">Predios y Áreas de Riego</h1>
-          <p className="text-[var(--text-muted)]">Selecciona un área para ver sus datos en tiempo real</p>
+          <h1 className="text-2xl md:text-3xl font-serif text-[var(--text-title)] mb-2">Predios y Áreas de Riego</h1>
+          <p className="text-[var(--text-subtle)]">Selecciona un área para ver sus datos en tiempo real</p>
         </div>
 
         {!hasAreas && (
@@ -160,9 +160,9 @@ export function AreaSelector() {
           return (
             <div key={property.id} className="mb-8">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-serif text-[var(--text-main)]">{property.name}</h2>
+                <h2 className="text-xl font-serif text-[var(--text-title)]">{property.name}</h2>
                 {property.location && (
-                  <span className="text-sm text-[var(--text-muted)]">{property.location}</span>
+                  <span className="text-sm text-[var(--text-subtle)]">{property.location}</span>
                 )}
               </div>
 

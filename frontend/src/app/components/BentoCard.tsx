@@ -7,17 +7,17 @@ interface BentoCardProps {
   padding?: "sm" | "md" | "lg";
 }
 
-export function BentoCard({ 
-  children, 
-  variant = "light", 
+export function BentoCard({
+  children,
+  variant = "light",
   className = "",
   padding = "md"
 }: BentoCardProps) {
   const backgrounds = {
-    light: "glass-card text-[var(--text-main)]",
-    sand: "bg-[var(--card-sand)] text-[var(--text-main)]",
-    dark: "bg-[var(--card-dark)] text-[var(--text-on-dark)]",
-    brown: "bg-[var(--card-brown)] text-[var(--text-on-dark)]",
+    light: "glass-card text-[var(--text-body)] border border-[var(--border-subtle)]",
+    sand: "bg-[var(--card-sand)] text-[var(--text-body)] border border-[var(--border-subtle)]",
+    dark: "bg-[var(--card-dark)] text-[var(--text-on-dark)] border border-[var(--border-glass)]",
+    brown: "bg-[var(--card-brown)] text-[var(--text-on-dark)] border border-[var(--border-glass)]",
   };
 
   const paddings = {
@@ -27,7 +27,7 @@ export function BentoCard({
   };
 
   return (
-    <div className={`${backgrounds[variant]} ${paddings[padding]} rounded-[32px] ${className}`}>
+    <div className={`${backgrounds[variant]} ${paddings[padding]} rounded-[32px] transition-colors duration-300 ${className}`}>
       {children}
     </div>
   );

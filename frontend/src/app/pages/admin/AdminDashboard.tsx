@@ -70,8 +70,8 @@ export function AdminDashboard() {
     <PageTransition>
       <div className="min-h-screen p-4 md:p-6 lg:p-8">
       <div className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-serif text-[var(--text-main)] mb-2">Panel de Administración</h1>
-        <p className="text-[var(--text-muted)]">
+        <h1 className="text-2xl md:text-3xl font-serif text-[var(--text-title)] mb-2">Panel de Administración</h1>
+        <p className="text-[var(--text-subtle)]">
           {new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
         </p>
       </div>
@@ -83,15 +83,15 @@ export function AdminDashboard() {
       ) : (
         <>
           {/* Summary cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             <BentoCard variant="sand">
               <div className="flex items-start justify-between mb-4">
                 <div className="p-3 rounded-[24px] bg-[var(--accent-primary)]">
                   <Users className="w-6 h-6 text-[var(--text-inverted)]" />
                 </div>
               </div>
-              <p className="text-sm text-[var(--text-muted)] mb-1">Total Clientes</p>
-              <p className="text-3xl font-bold text-[var(--text-main)]">{stats.clients}</p>
+              <p className="text-sm text-[var(--text-subtle)] mb-1">Total Clientes</p>
+              <p className="text-3xl font-bold font-mono-data text-[var(--text-body)]">{stats.clients}</p>
             </BentoCard>
 
             <BentoCard variant="sand">
@@ -100,8 +100,8 @@ export function AdminDashboard() {
                   <MapPin className="w-6 h-6 text-[var(--text-inverted)]" />
                 </div>
               </div>
-              <p className="text-sm text-[var(--text-muted)] mb-1">Total Predios</p>
-              <p className="text-3xl font-bold text-[var(--text-main)]">{stats.properties}</p>
+              <p className="text-sm text-[var(--text-subtle)] mb-1">Total Predios</p>
+              <p className="text-3xl font-bold font-mono-data text-[var(--text-body)]">{stats.properties}</p>
             </BentoCard>
 
             <BentoCard variant="sand">
@@ -110,8 +110,8 @@ export function AdminDashboard() {
                   <Radio className="w-6 h-6 text-[var(--text-inverted)]" />
                 </div>
               </div>
-              <p className="text-sm text-[var(--text-muted)] mb-1">Nodos Activos</p>
-              <p className="text-3xl font-bold text-[var(--text-main)]">
+              <p className="text-sm text-[var(--text-subtle)] mb-1">Nodos Activos</p>
+              <p className="text-3xl font-bold font-mono-data text-[var(--text-body)]">
                 {stats.nodesActive}/{stats.nodesTotal}
               </p>
             </BentoCard>
@@ -122,8 +122,8 @@ export function AdminDashboard() {
                   <Database className="w-6 h-6 text-[var(--text-inverted)]" />
                 </div>
               </div>
-              <p className="text-sm text-[var(--text-muted)] mb-1">Lecturas Hoy</p>
-              <p className="text-3xl font-bold text-[var(--text-main)]">
+              <p className="text-sm text-[var(--text-subtle)] mb-1">Lecturas Hoy</p>
+              <p className="text-3xl font-bold font-mono-data text-[var(--text-body)]">
                 {stats.readingsToday.toLocaleString()}
               </p>
             </BentoCard>
@@ -134,29 +134,29 @@ export function AdminDashboard() {
             <div className="lg:col-span-2">
               <BentoCard variant="light">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg text-[var(--text-main)]">Nodos Inactivos / Sin Comunicación</h3>
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#DC2626]/10">
-                    <AlertCircle className="w-4 h-4 text-[#DC2626]" />
-                    <span className="text-sm font-medium text-[#DC2626]">{offlineNodes.length}</span>
+                  <h3 className="text-lg text-[var(--text-title)]">Nodos Inactivos / Sin Comunicación</h3>
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--status-danger-bg)]">
+                    <AlertCircle className="w-4 h-4 text-[var(--status-danger)]" />
+                    <span className="text-sm font-medium text-[var(--status-danger)]">{offlineNodes.length}</span>
                   </div>
                 </div>
 
                 <div className="space-y-3">
                   {offlineNodes.map((node) => (
-                    <div key={node.id} className="p-4 rounded-[24px] bg-[var(--bg-base)] border-l-4 border-[#DC2626]">
+                    <div key={node.id} className="p-4 rounded-[24px] bg-[var(--surface-card-primary)] border-l-4 border-[var(--status-danger)]">
                       <div className="flex items-start justify-between mb-2">
                         <div>
-                          <h4 className="font-medium text-[var(--text-main)]">{node.name || `Nodo #${node.id}`}</h4>
-                          <p className="text-sm text-[var(--text-muted)]">Serial: {node.serial_number || '-'}</p>
+                          <h4 className="font-medium text-[var(--text-body)]">{node.name || `Nodo #${node.id}`}</h4>
+                          <p className="text-sm text-[var(--text-subtle)]">Serial: {node.serial_number || '-'}</p>
                         </div>
-                        <span className="px-3 py-1 rounded-full bg-[#DC2626]/10 text-[#DC2626] text-xs font-medium">
+                        <span className="px-3 py-1 rounded-full bg-[var(--status-danger-bg)] text-[var(--status-danger)] text-xs font-medium">
                           Sin conexión / Inactivo
                         </span>
                       </div>
                     </div>
                   ))}
                   {offlineNodes.length === 0 && (
-                    <p className="text-sm text-[var(--text-muted)]">Todos los nodos registrados están activos y operando correctamente.</p>
+                    <p className="text-sm text-[var(--text-subtle)]">Todos los nodos registrados están activos y operando correctamente.</p>
                   )}
                 </div>
               </BentoCard>
@@ -165,7 +165,7 @@ export function AdminDashboard() {
             {/* Quick Actions & Recent Activity */}
             <div className="space-y-6">
               <BentoCard variant="light">
-                <h3 className="text-lg text-[var(--text-main)] mb-6">Acciones Rápidas</h3>
+                <h3 className="text-lg text-[var(--text-title)] mb-6">Acciones Rápidas</h3>
                 <div className="space-y-3">
                   <Link to="/admin/clientes" className="block">
                     <PillButton variant="primary" className="w-full justify-center">
@@ -188,9 +188,9 @@ export function AdminDashboard() {
               </BentoCard>
 
               <BentoCard variant="sand">
-                <h3 className="text-lg text-[var(--text-main)] mb-4">Actividad Reciente</h3>
+                <h3 className="text-lg text-[var(--text-title)] mb-4">Actividad Reciente</h3>
                 <div className="space-y-3">
-                  <p className="text-sm text-[var(--text-muted)]">
+                  <p className="text-sm text-[var(--text-subtle)]">
                     Consulta la bitácora completa de eventos administrativos y operativos.
                   </p>
                   <Link to="/admin/auditoria" className="block">

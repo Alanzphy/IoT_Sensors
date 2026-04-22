@@ -1,6 +1,8 @@
-import { Edit, Leaf, Plus, Trash2 } from "lucide-react";
+import { Edit, Leaf, Plus, Trash2, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BentoCard } from "../../components/BentoCard";
+import { EmptyState } from "../../components/EmptyState";
+import { PageTransition } from "../../components/PageTransition";
 import { PillButton } from "../../components/PillButton";
 import { cropIcons } from "../../components/icons/CropIcons";
 import { api } from "../../services/api";
@@ -71,18 +73,21 @@ export function CropTypeManagement() {
 
   if (loading && cropTypes.length === 0) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <p className="text-[var(--text-muted)]">Cargando cultivos...</p>
-      </div>
+      <PageTransition>
+        <div className="flex justify-center items-center min-h-screen p-4 text-[var(--text-subtle)]">
+          Cargando cultivos...
+        </div>
+      </PageTransition>
     );
   }
 
   return (
+    <PageTransition>
     <div className="min-h-screen p-4 md:p-6 lg:p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl md:text-3xl text-[var(--text-main)] mb-2">Catálogo de Cultivos</h1>
-          <p className="text-[var(--text-muted)]">Gestiona los tipos de cultivo disponibles</p>
+          <h1 className="text-2xl md:text-3xl font-serif text-[var(--text-title)] mb-2">Catálogo de Cultivos</h1>
+          <p className="text-[var(--text-subtle)]">Gestiona los tipos de cultivo disponibles</p>
         </div>
         <PillButton variant="primary" onClick={() => setShowCreateForm(true)}>
           <Plus className="w-4 h-4 mr-2" />
@@ -91,12 +96,11 @@ export function CropTypeManagement() {
       </div>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
+        <div className="mb-4 rounded-2xl border border-[var(--status-danger)]/25 bg-[var(--status-danger-bg)] px-4 py-3 text-sm text-[var(--status-danger)]">
           {error}
         </div>
       )}
 
-      {/* Desktop grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {cropTypes.map((crop) => {
           const rawName = crop.name.toLowerCase();
@@ -106,61 +110,79 @@ export function CropTypeManagement() {
             <BentoCard key={crop.id} variant="light">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-3 rounded-[24px] bg-[var(--card-sand)]">
-                    <CropIcon className="w-6 h-6" />
+                  <div className="p-3 rounded-[24px] bg-[var(--surface-card-secondary)] border border-[var(--border-subtle)]">
+                    <CropIcon className="w-6 h-6 text-[var(--accent-primary)]" />
                   </div>
                   <div>
                     <h3 className="font-medium text-[var(--text-main)]">{crop.name}</h3>
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
-                  {/* Edit functionality left for future if needed */}
-                  <button className="p-2 rounded-full hover:bg-[var(--card-sand)]/50 transition-colors">
+                  <button type="button" className="p-2 rounded-full hover:bg-[var(--hover-overlay)] transition-colors" title="Edición disponible próximamente">
                     <Edit className="w-4 h-4 text-[var(--text-muted)]/30" />
                   </button>
                   <button
+                    type="button"
                     onClick={() => handleDelete(crop.id)}
-                    className="p-2 rounded-full hover:bg-[#DC2626]/10 transition-colors"
+                    className="p-2 rounded-full hover:bg-[var(--status-danger-bg)] transition-colors"
                   >
-                    <Trash2 className="w-4 h-4 text-[#DC2626]" />
+                    <Trash2 className="w-4 h-4 text-[var(--status-danger)]" />
                   </button>
                 </div>
               </div>
-              <p className="text-sm text-[var(--text-muted)]">{crop.description}</p>
+              <p className="text-sm text-[var(--text-subtle)]">{crop.description || "Sin descripción"}</p>
             </BentoCard>
           );
         })}
         {cropTypes.length === 0 && !loading && (
-          <p className="text-[var(--text-muted)]">No hay tipos de cultivo registrados.</p>
+          <div className="md:col-span-2 lg:col-span-3">
+            <EmptyState
+              icon={Leaf}
+              title="Sin tipos de cultivo"
+              description="Agrega cultivos al catálogo para asignarlos en áreas de riego."
+              action={{
+                label: "Crear primer cultivo",
+                onClick: () => setShowCreateForm(true),
+              }}
+            />
+          </div>
         )}
       </div>
 
-      {/* Create form */}
       {showCreateForm && (
-        <div className="fixed inset-0 bg-[var(--text-main)]/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-[var(--surface-page)]/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <BentoCard variant="light" className="w-full max-w-md">
-            <h2 className="text-xl text-[var(--text-main)] mb-6">Nuevo Tipo de Cultivo</h2>
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-xl font-serif text-[var(--text-title)]">Nuevo Tipo de Cultivo</h2>
+              <button
+                type="button"
+                onClick={() => setShowCreateForm(false)}
+                className="rounded-full p-1 text-[var(--text-subtle)] hover:bg-[var(--hover-overlay)] transition-colors"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="block text-sm text-[var(--text-muted)] mb-2">Nombre del Cultivo</label>
+                <label className="block text-sm text-[var(--text-subtle)] mb-2">Nombre del Cultivo</label>
                 <input
                   type="text"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Ej: Nogal"
-                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
+                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--surface-panel)] border border-[var(--border-strong)] text-[var(--text-body)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-[var(--text-muted)] mb-2">Descripción</label>
+                <label className="block text-sm text-[var(--text-subtle)] mb-2">Descripción</label>
                 <textarea
                   rows={3}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Ej: Nogal pecanero"
-                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] resize-none"
+                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--surface-panel)] border border-[var(--border-strong)] text-[var(--text-body)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] resize-none"
                 />
               </div>
 
@@ -177,5 +199,6 @@ export function CropTypeManagement() {
         </div>
       )}
     </div>
+    </PageTransition>
   );
 }

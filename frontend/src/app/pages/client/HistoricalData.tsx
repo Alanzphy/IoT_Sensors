@@ -202,15 +202,15 @@ export function HistoricalData() {
     <PageTransition>
     <div className="min-h-screen p-4 md:p-6 lg:p-8 overflow-x-hidden">
       <div className="mb-6 animate-fade-in-up">
-        <h1 className="text-2xl md:text-3xl font-serif text-[var(--text-main)] mb-2">Datos Históricos</h1>
-        <p className="text-[var(--text-muted)]">Consulta el histórico de lecturas de {selectedArea ? selectedArea.name : "tus sensores"}</p>
+        <h1 className="text-2xl md:text-3xl font-serif text-[var(--text-title)] mb-2">Datos Históricos</h1>
+        <p className="text-[var(--text-subtle)]">Consulta el histórico de lecturas de {selectedArea ? selectedArea.name : "tus sensores"}</p>
       </div>
 
       {/* Filters */}
       <BentoCard variant="light" className="mb-6">
         <div className="flex flex-col md:flex-row md:items-center gap-4">
           <div className="flex-1">
-            <label className="block text-sm text-[var(--text-muted)] mb-2">Rango de fechas</label>
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-subtle)]">Rango de fechas</label>
             <div className="flex gap-2">
               {(["Semana", "Mes", "Año"] as const).map((range) => (
                 <button
@@ -219,7 +219,7 @@ export function HistoricalData() {
                   className={`px-4 py-2 rounded-full transition-all ${
                     dateRange === range
                       ? "bg-[var(--accent-primary)] text-[var(--text-inverted)]"
-                      : "bg-[var(--bg-surface)] border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                      : "bg-[var(--surface-card-primary)] border border-[var(--border-subtle)] text-[var(--text-subtle)] hover:bg-[var(--hover-overlay)] hover:text-[var(--text-body)]"
                   }`}
                 >
                   {range}
@@ -244,7 +244,7 @@ export function HistoricalData() {
 
       {/* Multi-line Chart */}
       <BentoCard variant="light" className="mb-6">
-        <h3 className="text-lg text-[var(--text-main)] mb-6">Gráfica de Métricas</h3>
+        <h3 className="text-lg text-[var(--text-title)] mb-6">Gráfica de Métricas</h3>
 
         {loading && readings.length === 0 ? (
           <ChartSkeleton title={false} height="sm" />
@@ -252,20 +252,20 @@ export function HistoricalData() {
           <div className="space-y-8">
             <div className="relative h-[320px] min-h-[320px]">
               {loading && (
-                <div className="absolute inset-0 z-10 bg-[var(--bg-base)]/50 flex items-center justify-center">
+                <div className="absolute inset-0 z-10 bg-[var(--surface-page)]/60 flex items-center justify-center backdrop-blur-[1px]">
                   <Loader2 className="w-8 h-8 text-[var(--accent-primary)] animate-spin" />
                 </div>
               )}
 
               <div className="flex flex-col gap-3 mb-2">
-                <h4 className="text-sm md:text-base text-[var(--text-main)]">Suelo + Ambiental (Temperaturas y Humedades)</h4>
+                <h4 className="text-sm md:text-base text-[var(--text-body)]">Suelo + Ambiental (Temperaturas y Humedades)</h4>
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => toggleSoilEnvSeries("soilHumidity")}
                     className={`px-3 py-1.5 rounded-full text-xs md:text-sm transition-all ${
                       soilEnvSeries.soilHumidity
                         ? "bg-[var(--accent-primary)] text-[var(--text-inverted)]"
-                        : "bg-[var(--bg-surface)] border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                        : "bg-[var(--surface-card-primary)] border border-[var(--border-subtle)] text-[var(--text-subtle)] hover:bg-[var(--hover-overlay)] hover:text-[var(--text-body)]"
                     }`}
                   >
                     Humedad suelo
@@ -275,7 +275,7 @@ export function HistoricalData() {
                     className={`px-3 py-1.5 rounded-full text-xs md:text-sm transition-all ${
                       soilEnvSeries.relativeHumidity
                         ? "bg-[var(--accent-gold)] text-[var(--text-inverted)]"
-                        : "bg-[var(--bg-surface)] border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                        : "bg-[var(--surface-card-primary)] border border-[var(--border-subtle)] text-[var(--text-subtle)] hover:bg-[var(--hover-overlay)] hover:text-[var(--text-body)]"
                     }`}
                   >
                     H. Relativa
@@ -285,7 +285,7 @@ export function HistoricalData() {
                     className={`px-3 py-1.5 rounded-full text-xs md:text-sm transition-all ${
                       soilEnvSeries.soilTemp
                         ? "bg-[var(--chart-4)] text-[var(--text-inverted)]"
-                        : "bg-[var(--bg-surface)] border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                        : "bg-[var(--surface-card-primary)] border border-[var(--border-subtle)] text-[var(--text-subtle)] hover:bg-[var(--hover-overlay)] hover:text-[var(--text-body)]"
                     }`}
                   >
                     Temp. suelo
@@ -295,7 +295,7 @@ export function HistoricalData() {
                     className={`px-3 py-1.5 rounded-full text-xs md:text-sm transition-all ${
                       soilEnvSeries.airTemp
                         ? "bg-[var(--chart-3)] text-[var(--text-inverted)]"
-                        : "bg-[var(--bg-surface)] border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                        : "bg-[var(--surface-card-primary)] border border-[var(--border-subtle)] text-[var(--text-subtle)] hover:bg-[var(--hover-overlay)] hover:text-[var(--text-body)]"
                     }`}
                   >
                     Temp. aire
@@ -312,7 +312,7 @@ export function HistoricalData() {
                     domain={["dataMin", "dataMax"]}
                     tickFormatter={getXAxisTickLabel}
                     minTickGap={isMobile ? 36 : 24}
-                    stroke="var(--text-muted)"
+                    stroke="var(--text-subtle)"
                     style={{ fontSize: '12px' }}
                   />
                   {showSoilEnvPercentAxis && (
@@ -320,7 +320,7 @@ export function HistoricalData() {
                       yAxisId="percent"
                       domain={[0, 100]}
                       tickFormatter={(v) => `${v}%`}
-                      stroke="var(--text-muted)"
+                      stroke="var(--text-subtle)"
                       style={{ fontSize: '12px' }}
                     />
                   )}
@@ -345,9 +345,9 @@ export function HistoricalData() {
                       format(new Date(Number(value)), "dd MMM yyyy, HH:mm", { locale: es })
                     }
                     formatter={(value: number, name: string) => getLineValueFormatter(value, name)}
-                    labelStyle={{ color: "var(--text-main)", marginBottom: "4px" }}
+                    labelStyle={{ color: "var(--text-body)", marginBottom: "4px" }}
                   />
-                  <Legend wrapperStyle={{ color: "var(--text-main)" }} />
+                  <Legend wrapperStyle={{ color: "var(--text-body)" }} />
                   {soilEnvSeries.soilHumidity && (
                     <Line yAxisId="percent" type="monotone" dataKey="soilHumidity" name="Humedad suelo (%)" stroke="var(--accent-primary)" strokeWidth={2.5} dot={false} />
                   )}
@@ -366,20 +366,20 @@ export function HistoricalData() {
 
             <div className="relative h-[320px] min-h-[320px]">
               {loading && (
-                <div className="absolute inset-0 z-10 bg-[var(--bg-base)]/50 flex items-center justify-center">
+                <div className="absolute inset-0 z-10 bg-[var(--surface-page)]/60 flex items-center justify-center backdrop-blur-[1px]">
                   <Loader2 className="w-8 h-8 text-[var(--accent-primary)] animate-spin" />
                 </div>
               )}
 
               <div className="flex flex-col gap-3 mb-2">
-                <h4 className="text-sm md:text-base text-[var(--text-main)]">Riego + E.T.O.</h4>
+                <h4 className="text-sm md:text-base text-[var(--text-body)]">Riego + E.T.O.</h4>
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => toggleIrrigationSeries("waterFlow")}
                     className={`px-3 py-1.5 rounded-full text-xs md:text-sm transition-all ${
                       irrigationSeries.waterFlow
                         ? "bg-[var(--accent-gold)] text-[var(--text-inverted)]"
-                        : "bg-[var(--bg-surface)] border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                        : "bg-[var(--surface-card-primary)] border border-[var(--border-subtle)] text-[var(--text-subtle)] hover:bg-[var(--hover-overlay)] hover:text-[var(--text-body)]"
                     }`}
                   >
                     Flujo agua
@@ -389,7 +389,7 @@ export function HistoricalData() {
                     className={`px-3 py-1.5 rounded-full text-xs md:text-sm transition-all ${
                       irrigationSeries.eto
                         ? "bg-[var(--accent-primary)] text-[var(--text-inverted)]"
-                        : "bg-[var(--bg-surface)] border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                        : "bg-[var(--surface-card-primary)] border border-[var(--border-subtle)] text-[var(--text-subtle)] hover:bg-[var(--hover-overlay)] hover:text-[var(--text-body)]"
                     }`}
                   >
                     E.T.O.
@@ -406,7 +406,7 @@ export function HistoricalData() {
                     domain={["dataMin", "dataMax"]}
                     tickFormatter={getXAxisTickLabel}
                     minTickGap={isMobile ? 36 : 24}
-                    stroke="var(--text-muted)"
+                    stroke="var(--text-subtle)"
                     style={{ fontSize: '12px' }}
                   />
                   {showIrrigationFlowAxis && (
@@ -439,9 +439,9 @@ export function HistoricalData() {
                       format(new Date(Number(value)), "dd MMM yyyy, HH:mm", { locale: es })
                     }
                     formatter={(value: number, name: string) => getLineValueFormatter(value, name)}
-                    labelStyle={{ color: "var(--text-main)", marginBottom: "4px" }}
+                    labelStyle={{ color: "var(--text-body)", marginBottom: "4px" }}
                   />
-                  <Legend wrapperStyle={{ color: "var(--text-main)" }} />
+                  <Legend wrapperStyle={{ color: "var(--text-body)" }} />
                   {irrigationSeries.waterFlow && (
                     <Line yAxisId="flow" type="monotone" dataKey="waterFlow" name="Flujo agua (L/min)" stroke="var(--accent-gold)" strokeWidth={2.5} dot={false} />
                   )}
@@ -453,7 +453,7 @@ export function HistoricalData() {
             </div>
           </div>
         ) : (
-          <div className="w-full h-[120px] flex items-center justify-center text-[var(--text-muted)]">
+          <div className="w-full h-[120px] flex items-center justify-center text-[var(--text-subtle)]">
             {!loading && "No hay datos para el rango seleccionado"}
           </div>
         )}
@@ -462,9 +462,9 @@ export function HistoricalData() {
       {/* Data Table */}
       <BentoCard variant="light">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-          <h3 className="text-lg text-[var(--text-main)]">
+          <h3 className="text-lg text-[var(--text-title)]">
             Tabla de Datos{" "}
-            <span className="text-sm text-[var(--text-muted)] font-normal">
+            <span className="text-sm text-[var(--text-subtle)] font-normal">
               {totalItems > 0 && `${totalItems} registros — pág. ${page} de ${totalPages}`}
             </span>
           </h3>
@@ -485,38 +485,38 @@ export function HistoricalData() {
           <table className="w-full min-w-[800px]">
             <thead>
               <tr className="border-b border-[var(--border-strong)]">
-                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Fecha/Hora</th>
-                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Humedad Suelo (%)</th>
-                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Temp. Suelo (°C)</th>
-                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Flujo (L/min)</th>
-                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Temp. Aire (°C)</th>
-                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">H. Relativa (%)</th>
+                <th scope="col" className="text-left py-3 px-4 text-xs uppercase tracking-[0.08em] font-semibold text-[var(--text-subtle)]">Fecha/Hora</th>
+                <th scope="col" className="text-left py-3 px-4 text-xs uppercase tracking-[0.08em] font-semibold text-[var(--text-subtle)]">Humedad Suelo (%)</th>
+                <th scope="col" className="text-left py-3 px-4 text-xs uppercase tracking-[0.08em] font-semibold text-[var(--text-subtle)]">Temp. Suelo (°C)</th>
+                <th scope="col" className="text-left py-3 px-4 text-xs uppercase tracking-[0.08em] font-semibold text-[var(--text-subtle)]">Flujo (L/min)</th>
+                <th scope="col" className="text-left py-3 px-4 text-xs uppercase tracking-[0.08em] font-semibold text-[var(--text-subtle)]">Temp. Aire (°C)</th>
+                <th scope="col" className="text-left py-3 px-4 text-xs uppercase tracking-[0.08em] font-semibold text-[var(--text-subtle)]">H. Relativa (%)</th>
               </tr>
             </thead>
             <tbody className="relative">
               {!loading && readings.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-[var(--text-muted)]">No hay registros.</td>
+                  <td colSpan={6} className="py-8 text-center text-[var(--text-subtle)]">No hay registros.</td>
                 </tr>
               )}
               {readings.map((r, i) => (
-                <tr key={r.id} className={i % 2 === 0 ? "bg-[var(--bg-elevated)]/30 hover:bg-[var(--bg-elevated)]" : "hover:bg-[var(--bg-elevated)] transition-colors"}>
-                  <td className="py-3 px-4 text-sm text-[var(--text-main)]">
+                <tr key={r.id} className={i % 2 === 0 ? "bg-[var(--surface-card-primary)]/60 hover:bg-[var(--hover-overlay)]" : "hover:bg-[var(--hover-overlay)] transition-colors"}>
+                  <td className="py-3 px-4 text-sm text-[var(--text-body)]">
                     {format(parseISO(r.timestamp + (r.timestamp.endsWith("Z") ? "" : "Z")), "dd MMM yyyy, HH:mm", { locale: es })}
                   </td>
-                  <td className="py-3 px-4 text-sm text-[var(--text-main)] font-mono-data font-medium">
+                  <td className="py-3 px-4 text-sm text-[var(--text-body)] font-mono-data font-medium">
                     {r.soil?.humidity?.toFixed(1) ?? "-"}
                   </td>
-                  <td className="py-3 px-4 text-sm text-[var(--text-main)] font-mono-data font-medium">
+                  <td className="py-3 px-4 text-sm text-[var(--text-body)] font-mono-data font-medium">
                     {r.soil?.temperature?.toFixed(1) ?? "-"}
                   </td>
-                  <td className="py-3 px-4 text-sm text-[var(--text-main)] font-mono-data font-medium">
+                  <td className="py-3 px-4 text-sm text-[var(--text-body)] font-mono-data font-medium">
                     {r.irrigation?.flow_per_minute?.toFixed(1) ?? "-"}
                   </td>
-                  <td className="py-3 px-4 text-sm text-[var(--text-main)] font-mono-data font-medium">
+                  <td className="py-3 px-4 text-sm text-[var(--text-body)] font-mono-data font-medium">
                     {r.environmental?.temperature?.toFixed(1) ?? "-"}
                   </td>
-                  <td className="py-3 px-4 text-sm text-[var(--text-main)] font-mono-data font-medium">
+                  <td className="py-3 px-4 text-sm text-[var(--text-body)] font-mono-data font-medium">
                     {r.environmental?.relative_humidity?.toFixed(1) ?? "-"}
                   </td>
                 </tr>
@@ -531,24 +531,24 @@ export function HistoricalData() {
             <button
               disabled={page === 1}
               onClick={() => setPage(1)}
-              className="px-4 py-2 rounded-full text-sm bg-[var(--bg-surface)] border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text-main)] disabled:opacity-50 transition-all"
+              className="px-4 py-2 rounded-full text-sm bg-[var(--surface-card-primary)] border border-[var(--border-subtle)] text-[var(--text-subtle)] hover:bg-[var(--hover-overlay)] hover:text-[var(--text-body)] disabled:opacity-50 transition-all"
             >
               Inicio
             </button>
             <button
               disabled={page === 1}
               onClick={() => setPage(p => p - 1)}
-              className="px-4 py-2 rounded-full text-sm bg-[var(--bg-surface)] border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text-main)] disabled:opacity-50 transition-all"
+              className="px-4 py-2 rounded-full text-sm bg-[var(--surface-card-primary)] border border-[var(--border-subtle)] text-[var(--text-subtle)] hover:bg-[var(--hover-overlay)] hover:text-[var(--text-body)] disabled:opacity-50 transition-all"
             >
               Anterior
             </button>
-            <div className="px-4 text-sm text-[var(--text-muted)] font-medium">
+            <div className="px-4 text-sm text-[var(--text-subtle)] font-medium">
               Página {page} de {totalPages}
             </div>
             <button
               disabled={page === totalPages}
               onClick={() => setPage(p => p + 1)}
-              className="px-4 py-2 rounded-full text-sm bg-[var(--bg-surface)] border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text-main)] disabled:opacity-50 transition-all"
+              className="px-4 py-2 rounded-full text-sm bg-[var(--surface-card-primary)] border border-[var(--border-subtle)] text-[var(--text-subtle)] hover:bg-[var(--hover-overlay)] hover:text-[var(--text-body)] disabled:opacity-50 transition-all"
             >
               Siguiente
             </button>

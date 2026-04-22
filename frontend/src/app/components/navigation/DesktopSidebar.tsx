@@ -82,16 +82,17 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
 
   return (
     <div
-      className={`glass-sidebar ${expanded ? "w-64" : "w-16"} h-screen sticky top-0 self-start shrink-0 overflow-hidden transition-all duration-300 flex flex-col`}
+      className={`glass-sidebar ${expanded ? "w-[272px]" : "w-[76px]"} h-screen sticky top-0 self-start shrink-0 overflow-hidden border-r border-[var(--sidebar-border)] transition-all duration-300 flex flex-col`}
     >
       {/* Logo */}
-      <div className="px-4 py-6 flex items-center justify-between min-h-[80px] gap-2">
+      <div className="px-4 py-6 flex items-center justify-between min-h-[88px] gap-2 border-b border-[var(--sidebar-border)]">
         <div
           className={`overflow-hidden transition-all duration-300 ${expanded ? "flex-1 opacity-100" : "w-0 opacity-0 hidden"}`}
         >
-          <h2 className="font-serif text-lg leading-tight text-sidebar-foreground whitespace-nowrap">
+          <h2 className="font-serif text-xl leading-tight text-sidebar-foreground whitespace-nowrap">
             Sensores Agrícolas
           </h2>
+          <p className="mt-1 text-xs text-sidebar-foreground/60 whitespace-nowrap">Monitoreo de riego IoT</p>
         </div>
         <button
           onClick={handleSidebarToggle}
@@ -107,7 +108,7 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto space-y-2 pb-4 pt-2">
+      <nav className="flex-1 overflow-y-auto space-y-2 pb-4 pt-3">
         {navItems.map((item) => {
           const Icon = item.icon;
           const currentPath = location.pathname.replace(/\/+$/, "") || "/";
@@ -129,8 +130,8 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
                 focus:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-1
                 ${expanded ? "mx-2" : "justify-center mx-auto"}
                 ${isActive
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-soft"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                 }`}
             >
               <Icon className="w-5 h-5 flex-shrink-0" />
@@ -147,7 +148,7 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
       </nav>
 
       {/* User section */}
-      <div className="py-4 border-t border-sidebar-border relative">
+      <div className="py-4 border-t border-sidebar-border relative bg-[var(--sidebar)]/70">
         <div className={`flex items-center ${expanded ? "justify-between px-4" : "justify-center flex-col gap-4"}`}>
           <div className="w-10 h-10 rounded-full bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground font-medium text-base flex-shrink-0">
             {user?.nombre ? user.nombre.charAt(0).toUpperCase() : (role === "client" ? "C" : "A")}

@@ -1,19 +1,22 @@
 import { formatDistanceToNowStrict } from "date-fns";
 import { es } from "date-fns/locale";
 import {
-    ChevronLeft,
-    ChevronRight,
-    FileSearch,
-    Loader2,
-    RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  FileSearch,
+  Loader2,
+  RefreshCw,
+  X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { BentoCard } from "../../components/BentoCard";
+import { PageTransition } from "../../components/PageTransition";
+import { PillButton } from "../../components/PillButton";
 import {
-    AuditLogItem,
-    getAuditLog,
-    listAuditLogs,
+  AuditLogItem,
+  getAuditLog,
+  listAuditLogs,
 } from "../../services/auditLogs";
 
 const PAGE_SIZE = 20;
@@ -88,29 +91,26 @@ export function AuditLogsPage() {
   };
 
   return (
+    <PageTransition>
     <div className="min-h-screen p-4 md:p-6 lg:p-8">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl md:text-3xl text-[var(--text-main)]">Bitacora de Auditoria</h1>
-          <p className="text-[var(--text-muted)]">
+          <h1 className="text-2xl md:text-3xl font-serif text-[var(--text-title)]">Bitácora de Auditoría</h1>
+          <p className="text-[var(--text-subtle)]">
             Historial de cambios administrativos en la plataforma
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={fetchAuditLogs}
-          className="inline-flex items-center gap-2 rounded-full border border-[#C9BEAF] bg-[var(--bg-surface)] px-4 py-2 text-sm font-medium text-[#4A433B] hover:bg-[#EFE8DD]"
-        >
+        <PillButton type="button" variant="outline" onClick={fetchAuditLogs}>
           <RefreshCw className="h-4 w-4" />
           Actualizar
-        </button>
+        </PillButton>
       </div>
 
       <BentoCard variant="light" className="mb-4">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <label className="flex flex-col gap-1 text-sm text-[#5F5549]">
-            Accion
+          <label className="flex flex-col gap-1 text-sm text-[var(--text-subtle)]">
+            Acción
             <input
               type="text"
               value={action}
@@ -119,11 +119,11 @@ export function AuditLogsPage() {
                 setAction(event.target.value.trim());
                 setPage(1);
               }}
-              className="rounded-xl border border-[#D9D0C4] bg-white px-3 py-2 text-[var(--text-main)]"
+              className="rounded-[20px] border border-[var(--border-strong)] bg-[var(--surface-panel)] px-3 py-2 text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
             />
           </label>
 
-          <label className="flex flex-col gap-1 text-sm text-[#5F5549]">
+          <label className="flex flex-col gap-1 text-sm text-[var(--text-subtle)]">
             Entidad
             <input
               type="text"
@@ -133,11 +133,11 @@ export function AuditLogsPage() {
                 setEntity(event.target.value.trim());
                 setPage(1);
               }}
-              className="rounded-xl border border-[#D9D0C4] bg-white px-3 py-2 text-[var(--text-main)]"
+              className="rounded-[20px] border border-[var(--border-strong)] bg-[var(--surface-panel)] px-3 py-2 text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
             />
           </label>
 
-          <label className="flex flex-col gap-1 text-sm text-[#5F5549]">
+          <label className="flex flex-col gap-1 text-sm text-[var(--text-subtle)]">
             Desde
             <input
               type="date"
@@ -146,11 +146,11 @@ export function AuditLogsPage() {
                 setStartDate(event.target.value);
                 setPage(1);
               }}
-              className="rounded-xl border border-[#D9D0C4] bg-white px-3 py-2 text-[var(--text-main)]"
+              className="rounded-[20px] border border-[var(--border-strong)] bg-[var(--surface-panel)] px-3 py-2 text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
             />
           </label>
 
-          <label className="flex flex-col gap-1 text-sm text-[#5F5549]">
+          <label className="flex flex-col gap-1 text-sm text-[var(--text-subtle)]">
             Hasta
             <input
               type="date"
@@ -159,7 +159,7 @@ export function AuditLogsPage() {
                 setEndDate(event.target.value);
                 setPage(1);
               }}
-              className="rounded-xl border border-[#D9D0C4] bg-white px-3 py-2 text-[var(--text-main)]"
+              className="rounded-[20px] border border-[var(--border-strong)] bg-[var(--surface-panel)] px-3 py-2 text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
             />
           </label>
         </div>
@@ -167,7 +167,7 @@ export function AuditLogsPage() {
 
       <BentoCard variant="light" className="overflow-hidden">
         <div className="mb-4 flex items-center justify-between">
-          <span className="text-sm text-[#5F5549]">
+          <span className="text-sm text-[var(--text-subtle)]">
             {total} eventos registrados
           </span>
 
@@ -176,18 +176,18 @@ export function AuditLogsPage() {
               type="button"
               onClick={() => setPage((previous) => Math.max(1, previous - 1))}
               disabled={page <= 1}
-              className="rounded-full border border-[#C9BEAF] bg-white p-2 text-[#4A433B] disabled:opacity-40"
+              className="rounded-full border border-[var(--border-strong)] bg-[var(--surface-panel)] p-2 text-[var(--text-subtle)] disabled:opacity-40"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <span className="text-sm text-[#5F5549]">
-              Pagina {page} de {totalPages}
+            <span className="text-sm text-[var(--text-subtle)]">
+              Página {page} de {totalPages}
             </span>
             <button
               type="button"
               onClick={() => setPage((previous) => Math.min(totalPages, previous + 1))}
               disabled={page >= totalPages}
-              className="rounded-full border border-[#C9BEAF] bg-white p-2 text-[#4A433B] disabled:opacity-40"
+              className="rounded-full border border-[var(--border-strong)] bg-[var(--surface-panel)] p-2 text-[var(--text-subtle)] disabled:opacity-40"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
@@ -195,16 +195,16 @@ export function AuditLogsPage() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center gap-2 py-12 text-[var(--text-muted)]">
+          <div className="flex items-center justify-center gap-2 py-12 text-[var(--text-subtle)]">
             <Loader2 className="h-5 w-5 animate-spin" />
             Cargando bitacora...
           </div>
         ) : errorMessage ? (
-          <div className="rounded-xl border border-[#F0C3C3] bg-[#FCE8E8] px-3 py-2 text-sm text-[#7F1D1D]">
+          <div className="rounded-2xl border border-[var(--status-danger)]/25 bg-[var(--status-danger-bg)] px-3 py-2 text-sm text-[var(--status-danger)]">
             {errorMessage}
           </div>
         ) : normalizedItems.length === 0 ? (
-          <div className="rounded-xl border border-[var(--border-strong)] bg-white px-3 py-6 text-center text-sm text-[var(--text-muted)]">
+          <div className="rounded-2xl border border-[var(--border-strong)] bg-[var(--surface-panel)] px-3 py-6 text-center text-sm text-[var(--text-subtle)]">
             No hay eventos para los filtros seleccionados.
           </div>
         ) : (
@@ -212,17 +212,17 @@ export function AuditLogsPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-[var(--border-strong)]">
-                  <th className="px-3 py-2 text-xs font-semibold text-[var(--text-muted)]">Fecha</th>
-                  <th className="px-3 py-2 text-xs font-semibold text-[var(--text-muted)]">Usuario</th>
-                  <th className="px-3 py-2 text-xs font-semibold text-[var(--text-muted)]">Accion</th>
-                  <th className="px-3 py-2 text-xs font-semibold text-[var(--text-muted)]">Entidad</th>
-                  <th className="px-3 py-2 text-xs font-semibold text-[var(--text-muted)]">Detalle</th>
-                  <th className="px-3 py-2 text-xs font-semibold text-[var(--text-muted)]">Ver</th>
+                  <th className="px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-subtle)]">Fecha</th>
+                  <th className="px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-subtle)]">Usuario</th>
+                  <th className="px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-subtle)]">Acción</th>
+                  <th className="px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-subtle)]">Entidad</th>
+                  <th className="px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-subtle)]">Detalle</th>
+                  <th className="px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-subtle)]">Ver</th>
                 </tr>
               </thead>
               <tbody>
                 {normalizedItems.map((item, index) => (
-                  <tr key={item.id} className={index % 2 === 0 ? "bg-[var(--bg-base)]/30" : ""}>
+                  <tr key={item.id} className={index % 2 === 0 ? "bg-[var(--surface-card-primary)]/60" : ""}>
                     <td className="px-3 py-3 text-sm text-[var(--text-main)]">
                       {formatRelativeDate(item.created_at)}
                     </td>
@@ -234,18 +234,14 @@ export function AuditLogsPage() {
                       {item.entity}
                       {item.entity_id ? ` #${item.entity_id}` : ""}
                     </td>
-                    <td className="px-3 py-3 text-sm text-[var(--text-muted)] max-w-[420px] truncate">
+                    <td className="px-3 py-3 text-sm text-[var(--text-subtle)] max-w-[420px] truncate">
                       {item.detail ?? "-"}
                     </td>
                     <td className="px-3 py-3">
-                      <button
-                        type="button"
-                        onClick={() => openLogDetail(item.id)}
-                        className="inline-flex items-center gap-1 rounded-full border border-[#C9BEAF] bg-white px-2 py-1 text-xs font-medium text-[#4A433B] hover:bg-[#F8F3EA]"
-                      >
+                      <PillButton type="button" variant="outline" className="px-3 py-1 text-xs" onClick={() => openLogDetail(item.id)}>
                         <FileSearch className="h-3.5 w-3.5" />
                         Detalle
-                      </button>
+                      </PillButton>
                     </td>
                   </tr>
                 ))}
@@ -256,21 +252,17 @@ export function AuditLogsPage() {
       </BentoCard>
 
       {selectedLog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--text-main)]/45 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--surface-page)]/75 backdrop-blur-sm p-4">
           <BentoCard variant="light" className="w-full max-w-2xl">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl text-[var(--text-main)]">Detalle de evento #{selectedLog.id}</h2>
-              <button
-                type="button"
-                onClick={() => setSelectedLog(null)}
-                className="rounded-full border border-[#C9BEAF] bg-white px-3 py-1 text-xs font-medium text-[#4A433B] hover:bg-[#F8F3EA]"
-              >
-                Cerrar
+              <h2 className="text-xl font-serif text-[var(--text-title)]">Detalle de evento #{selectedLog.id}</h2>
+              <button type="button" onClick={() => setSelectedLog(null)} className="rounded-full p-1 text-[var(--text-subtle)] hover:bg-[var(--hover-overlay)] transition-colors">
+                <X className="h-5 w-5" />
               </button>
             </div>
 
             {loadingDetail ? (
-              <div className="flex items-center gap-2 text-[var(--text-muted)]">
+              <div className="flex items-center gap-2 text-[var(--text-subtle)]">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Cargando detalle...
               </div>
@@ -279,7 +271,7 @@ export function AuditLogsPage() {
                 <p><strong>Fecha:</strong> {selectedLog.created_at}</p>
                 <p><strong>Usuario:</strong> {selectedLog.user?.full_name ?? "Sistema"}</p>
                 <p><strong>Email:</strong> {selectedLog.user?.email ?? "-"}</p>
-                <p><strong>Accion:</strong> {selectedLog.action}</p>
+                <p><strong>Acción:</strong> {selectedLog.action}</p>
                 <p><strong>Entidad:</strong> {selectedLog.entity}</p>
                 <p><strong>ID Entidad:</strong> {selectedLog.entity_id ?? "-"}</p>
                 <p><strong>Detalle:</strong> {selectedLog.detail ?? "-"}</p>
@@ -289,5 +281,6 @@ export function AuditLogsPage() {
         </div>
       )}
     </div>
+    </PageTransition>
   );
 }

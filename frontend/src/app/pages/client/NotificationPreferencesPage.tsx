@@ -6,13 +6,13 @@ import { PageTransition } from "../../components/PageTransition";
 import { SkeletonCard } from "../../components/SkeletonCard";
 import { useSelection } from "../../context/SelectionContext";
 import {
-    NotificationAlertType,
-    NotificationChannel,
-    NotificationSeverity,
-    bulkUpsertNotificationPreferences,
-    getMyNotificationSettings,
-    listNotificationPreferences,
-    updateMyNotificationSettings,
+  NotificationAlertType,
+  NotificationChannel,
+  NotificationSeverity,
+  bulkUpsertNotificationPreferences,
+  getMyNotificationSettings,
+  listNotificationPreferences,
+  updateMyNotificationSettings,
 } from "../../services/notificationPreferences";
 
 const ALERT_TYPES: Array<{ value: NotificationAlertType; label: string }> = [
@@ -222,10 +222,10 @@ export function NotificationPreferencesPage() {
     <div className="min-h-screen p-4 md:p-6 lg:p-8">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl md:text-3xl text-[var(--text-main)]">
+          <h1 className="text-2xl md:text-3xl text-[var(--text-title)]">
             Notificaciones
           </h1>
-          <p className="text-[var(--text-muted)]">
+          <p className="text-[var(--text-subtle)]">
             Configura qué alertas recibir por área, severidad y canal.
           </p>
         </div>
@@ -234,7 +234,7 @@ export function NotificationPreferencesPage() {
           <button
             type="button"
             onClick={() => void loadData()}
-            className="inline-flex items-center gap-2 rounded-full border border-[#C9BEAF] bg-[var(--bg-surface)] px-4 py-2 text-sm font-medium text-[#4A433B] hover:bg-[#EFE8DD]"
+            className="inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] px-4 py-2 text-sm font-medium text-[var(--text-body)] hover:bg-[var(--hover-overlay)]"
           >
             <RefreshCw className="h-4 w-4" />
             Recargar
@@ -243,7 +243,7 @@ export function NotificationPreferencesPage() {
             type="button"
             onClick={saveChanges}
             disabled={saving}
-            className="inline-flex items-center gap-2 rounded-full bg-[var(--accent-primary)] px-4 py-2 text-sm font-medium text-[var(--text-inverted)] hover:bg-[#5B6A4D] disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-full bg-[var(--accent-primary)] px-4 py-2 text-sm font-medium text-[var(--text-inverted)] hover:opacity-90 disabled:opacity-60"
           >
             {saving ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -256,30 +256,30 @@ export function NotificationPreferencesPage() {
       </div>
 
       {errorMessage && (
-        <BentoCard variant="light" className="mb-4 border border-red-200">
-          <p className="text-red-700">{errorMessage}</p>
+        <BentoCard variant="light" className="mb-4 border border-[var(--status-danger)]/30 bg-[var(--status-danger-bg)]">
+          <p className="text-[var(--status-danger)]">{errorMessage}</p>
         </BentoCard>
       )}
       {successMessage && (
-        <BentoCard variant="light" className="mb-4 border border-green-200">
-          <p className="text-green-700">{successMessage}</p>
+        <BentoCard variant="light" className="mb-4 border border-[var(--status-active)]/30 bg-[var(--status-active-bg)]">
+          <p className="text-[var(--status-active)]">{successMessage}</p>
         </BentoCard>
       )}
 
       <BentoCard variant="light" className="mb-6">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-lg text-[var(--text-main)]">Interruptor global</h2>
-            <p className="text-sm text-[var(--text-muted)]">
+            <h2 className="text-lg text-[var(--text-title)]">Interruptor global</h2>
+            <p className="text-sm text-[var(--text-subtle)]">
               Si está apagado, no se envía ninguna notificación externa.
             </p>
           </div>
-          <label className="inline-flex items-center gap-2 text-sm text-[#4A433B]">
+          <label className="inline-flex items-center gap-2 text-sm text-[var(--text-body)]">
             <input
               type="checkbox"
               checked={globalEnabled}
               onChange={(event) => setGlobalEnabled(event.target.checked)}
-              className="h-5 w-5 rounded border-[#C9BEAF] text-[var(--accent-primary)]"
+              className="h-5 w-5 rounded border-[var(--border-subtle)] text-[var(--accent-primary)]"
             />
             {globalEnabled ? "Activado" : "Desactivado"}
           </label>
@@ -296,8 +296,8 @@ export function NotificationPreferencesPage() {
           return (
             <BentoCard key={property.id} variant="light" className="space-y-4">
               <div>
-                <h2 className="text-xl text-[var(--text-main)]">{property.name}</h2>
-                <p className="text-sm text-[var(--text-muted)]">
+                <h2 className="text-xl text-[var(--text-title)]">{property.name}</h2>
+                <p className="text-sm text-[var(--text-subtle)]">
                   {property.location || "Ubicación no definida"}
                 </p>
               </div>
@@ -306,20 +306,20 @@ export function NotificationPreferencesPage() {
                 {propertyAreas.map((area) => (
                   <div
                     key={area.id}
-                    className="rounded-2xl border border-[#D9D0C4] bg-white p-4"
+                    className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] p-4"
                   >
-                    <h3 className="text-base text-[var(--text-main)] mb-3">{area.name}</h3>
+                    <h3 className="text-base text-[var(--text-body)] mb-3">{area.name}</h3>
 
                     <div className="space-y-4">
                       {ALERT_TYPES.map((alertType) => (
                         <div key={alertType.value}>
-                          <h4 className="text-sm text-[var(--text-muted)] mb-2">
+                          <h4 className="text-sm text-[var(--text-subtle)] mb-2">
                             {alertType.label}
                           </h4>
                           <div className="overflow-x-auto">
                             <table className="w-full min-w-[420px] border-separate border-spacing-y-2">
                               <thead>
-                                <tr className="text-left text-xs text-[var(--text-muted)]">
+                                <tr className="text-left text-xs uppercase tracking-[0.08em] text-[var(--text-subtle)]">
                                   <th className="pr-4">Severidad</th>
                                   {CHANNELS.map((channel) => (
                                     <th key={channel.value} className="pr-4">
@@ -330,7 +330,7 @@ export function NotificationPreferencesPage() {
                               </thead>
                               <tbody>
                                 {SEVERITIES.map((severity) => (
-                                  <tr key={severity.value} className="text-sm text-[var(--text-main)]">
+                                  <tr key={severity.value} className="text-sm text-[var(--text-body)]">
                                     <td className="py-1 pr-4">{severity.label}</td>
                                     {CHANNELS.map((channel) => {
                                       const checked = getCurrentValue(
@@ -353,9 +353,9 @@ export function NotificationPreferencesPage() {
                                                   channel.value,
                                                 )
                                               }
-                                              className="h-4 w-4 rounded border-[#C9BEAF] text-[var(--accent-primary)]"
+                                              className="h-4 w-4 rounded border-[var(--border-subtle)] text-[var(--accent-primary)]"
                                             />
-                                            <span className="text-xs text-[var(--text-muted)]">
+                                            <span className="text-xs text-[var(--text-subtle)]">
                                               {checked ? "On" : "Off"}
                                             </span>
                                           </label>
@@ -379,7 +379,7 @@ export function NotificationPreferencesPage() {
       </div>
 
       {!hasChanges && (
-        <p className="mt-4 text-sm text-[var(--text-muted)]">
+        <p className="mt-4 text-sm text-[var(--text-subtle)]">
           No hay cambios pendientes por guardar.
         </p>
       )}

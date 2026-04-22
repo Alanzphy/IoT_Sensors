@@ -2,6 +2,8 @@ import { MapPin, RefreshCw, TriangleAlert } from "lucide-react";
 import maplibregl, { LngLatBoundsLike, Map as MapLibreMap, Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { PageTransition } from "../../components/PageTransition";
+import { PillButton } from "../../components/PillButton";
 import { api } from "../../services/api";
 import { GeoNode, getGeoNodes } from "../../services/nodes";
 
@@ -31,8 +33,8 @@ const UNCLUSTERED_LAYER_ID = "admin-geo-nodes-unclustered";
 
 function markerColorByStatus(status: GeoNode["freshness_status"]): string {
   if (status === "fresh") return "var(--accent-primary)";
-  if (status === "stale") return "#D97706";
-  return "var(--text-muted)";
+  if (status === "stale") return "var(--status-warning)";
+  return "var(--text-subtle)";
 }
 
 function freshnessText(node: GeoNode): string {
@@ -226,12 +228,13 @@ export function AdminMapPage() {
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
+    const runtimeEnv = (import.meta as unknown as { env?: Record<string, string | undefined> }).env;
+
     mapRef.current = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: import.meta.env.VITE_MAP_STYLE_URL || DEFAULT_STYLE_URL,
+      style: runtimeEnv?.VITE_MAP_STYLE_URL || DEFAULT_STYLE_URL,
       center: [-106.0691, 28.632],
       zoom: 5,
-      attributionControl: true,
     });
 
     mapRef.current.addControl(new maplibregl.NavigationControl(), "top-right");
@@ -276,7 +279,7 @@ export function AdminMapPage() {
             freshness_status: node.freshness_status,
           },
         })),
-      };
+      } as GeoJSON.FeatureCollection<GeoJSON.Point, { node_id: number; freshness_status: GeoNode["freshness_status"] }>;
 
       map.addSource(CLUSTER_SOURCE_ID, {
         type: "geojson",
@@ -292,7 +295,7 @@ export function AdminMapPage() {
         source: CLUSTER_SOURCE_ID,
         filter: ["has", "point_count"],
         paint: {
-          "circle-color": ["step", ["get", "point_count"], "#9CA3AF", 20, "var(--accent-primary)", 60, "#14532D"],
+          "circle-color": ["step", ["get", "point_count"], "#9CA3AF", 20, "#8CA478", 60, "#6D7E5E"],
           "circle-radius": ["step", ["get", "point_count"], 18, 20, 24, 60, 30],
           "circle-stroke-width": 1,
           "circle-stroke-color": "#FFFFFF",
@@ -320,7 +323,7 @@ export function AdminMapPage() {
         source: CLUSTER_SOURCE_ID,
         filter: ["!", ["has", "point_count"]],
         paint: {
-          "circle-color": ["match", ["get", "freshness_status"], "fresh", "var(--accent-primary)", "stale", "#D97706", "var(--text-muted)"],
+          "circle-color": ["match", ["get", "freshness_status"], "fresh", "#8CA478", "stale", "#D97706", "#6E6359"],
           "circle-radius": 7,
           "circle-stroke-width": 2,
           "circle-stroke-color": "#FFFFFF",
@@ -338,14 +341,19 @@ export function AdminMapPage() {
         const source = map.getSource(CLUSTER_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
         if (!source || clusterId === undefined) return;
 
-        source.getClusterExpansionZoom(clusterId, (err, zoom) => {
-          if (err || !feature.geometry || feature.geometry.type !== "Point") return;
-          map.easeTo({
-            center: feature.geometry.coordinates as [number, number],
-            zoom,
-            duration: 400,
+        source
+          .getClusterExpansionZoom(clusterId)
+          .then((zoom) => {
+            if (!feature.geometry || feature.geometry.type !== "Point") return;
+            map.easeTo({
+              center: feature.geometry.coordinates as [number, number],
+              zoom,
+              duration: 400,
+            });
+          })
+          .catch(() => {
+            // noop: keep current zoom on failure
           });
-        });
       };
 
       onUnclusteredClick = (event) => {
@@ -448,10 +456,11 @@ export function AdminMapPage() {
     : null;
 
   return (
+    <PageTransition>
     <div className="min-h-screen p-4 md:p-6 lg:p-8">
       <div className="mb-5">
-        <h1 className="text-2xl md:text-3xl text-[var(--text-main)]">Mapa Global de Nodos</h1>
-        <p className="text-[var(--text-muted)] mt-1">
+        <h1 className="text-2xl md:text-3xl font-serif text-[var(--text-title)]">Mapa Global de Nodos</h1>
+        <p className="text-[var(--text-subtle)] mt-1">
           Vista administrativa con filtros por cliente, predio y área para monitoreo geoespacial.
         </p>
       </div>
@@ -459,7 +468,7 @@ export function AdminMapPage() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4">
         <div className="rounded-[20px] bg-[var(--bg-elevated)] border border-[var(--border-strong)] p-4 lg:col-span-3">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
-            <label className="flex flex-col gap-1 text-sm text-[var(--text-muted)]">
+            <label className="flex flex-col gap-1 text-sm text-[var(--text-subtle)]">
               Cliente
               <select
                 disabled={loadingFilters}
@@ -476,7 +485,7 @@ export function AdminMapPage() {
               </select>
             </label>
 
-            <label className="flex flex-col gap-1 text-sm text-[var(--text-muted)]">
+            <label className="flex flex-col gap-1 text-sm text-[var(--text-subtle)]">
               Predio
               <select
                 disabled={loadingFilters}
@@ -493,7 +502,7 @@ export function AdminMapPage() {
               </select>
             </label>
 
-            <label className="flex flex-col gap-1 text-sm text-[var(--text-muted)]">
+            <label className="flex flex-col gap-1 text-sm text-[var(--text-subtle)]">
               Área de riego
               <select
                 disabled={selectedPropertyId === null || loadingFilters}
@@ -511,19 +520,20 @@ export function AdminMapPage() {
             </label>
 
             <div className="flex items-end">
-              <button
+              <PillButton
                 type="button"
                 onClick={fetchNodes}
-                className="w-full md:w-auto inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 bg-[var(--accent-primary)] text-[var(--text-inverted)] hover:opacity-90 transition"
+                variant="primary"
+                className="w-full md:w-auto inline-flex items-center justify-center gap-2"
               >
                 <RefreshCw className="w-4 h-4" />
                 Actualizar capa
-              </button>
+              </PillButton>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-            <label className="flex flex-col gap-1 text-sm text-[var(--text-muted)]">
+            <label className="flex flex-col gap-1 text-sm text-[var(--text-subtle)]">
               Modo de visualización
               <select
                 className="rounded-xl border border-[var(--border-strong)] px-3 py-2 text-[var(--text-main)] bg-[var(--bg-surface)]"
@@ -535,7 +545,7 @@ export function AdminMapPage() {
               </select>
             </label>
 
-            <div className="flex flex-wrap items-end gap-3 text-sm text-[var(--text-muted)]">
+            <div className="flex flex-wrap items-end gap-3 text-sm text-[var(--text-subtle)]">
               <label className="inline-flex items-center gap-2">
                 <input
                   type="checkbox"
@@ -573,15 +583,15 @@ export function AdminMapPage() {
                 Fresco: {statusCounts.fresh}
               </span>
               <span className="inline-flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#D97706]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[var(--status-warning)]" />
                 Tardío: {statusCounts.stale}
               </span>
               <span className="inline-flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[var(--text-muted)]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[var(--text-subtle)]" />
                 Sin lectura: {statusCounts.no_data}
               </span>
               <span className="inline-flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#9CA3AF]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[var(--outline-contrast)]" />
                 Sin GPS: {filteredNodesWithoutCoordinates.length}
               </span>
             </div>
@@ -597,7 +607,7 @@ export function AdminMapPage() {
           </div>
 
           {error && (
-            <div className="mt-3 rounded-xl border border-red-300 bg-red-50 text-red-700 px-4 py-3 text-sm flex items-center gap-2">
+            <div className="mt-3 rounded-xl border border-[var(--status-danger)]/25 bg-[var(--status-danger-bg)] text-[var(--status-danger)] px-4 py-3 text-sm flex items-center gap-2">
               <TriangleAlert className="w-4 h-4" />
               {error}
             </div>
@@ -613,7 +623,7 @@ export function AdminMapPage() {
               <div className="text-[var(--text-muted)]"><strong>Predio:</strong> {selectedNode.property_name}</div>
               <div className="text-[var(--text-muted)]"><strong>Área:</strong> {selectedNode.irrigation_area_name}</div>
               <div className="text-[var(--text-muted)]"><strong>Cultivo:</strong> {selectedNode.crop_type_name}</div>
-              <div className="text-[var(--text-muted)]"><strong>Estado:</strong> {selectedNode.is_active ? "Activo" : "Inactivo"}</div>
+              <div className="text-[var(--text-muted)]"><strong>Estado:</strong> <span className={selectedNode.is_active ? "text-[var(--status-active)]" : "text-[var(--status-danger)]"}>{selectedNode.is_active ? "Activo" : "Inactivo"}</span></div>
               <div className="text-[var(--text-muted)]"><strong>Frescura:</strong> {freshnessText(selectedNode)}</div>
               {selectedNodeDate && (
                 <div className="text-[var(--text-muted)]">
@@ -651,5 +661,6 @@ export function AdminMapPage() {
         </aside>
       </div>
     </div>
+    </PageTransition>
   );
 }

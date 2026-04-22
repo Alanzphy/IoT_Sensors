@@ -1,7 +1,9 @@
 import { MoreVertical, Plus, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { Link, useParams } from "react-router";
 import { BentoCard } from "../../components/BentoCard";
+import { EmptyState } from "../../components/EmptyState";
+import { PageTransition } from "../../components/PageTransition";
 import { PillButton } from "../../components/PillButton";
 import { useToast } from "../../components/Toast";
 import { api } from "../../services/api";
@@ -25,7 +27,6 @@ type CropType = {
 
 export function IrrigationAreaManagement() {
   const { predioId } = useParams<{ predioId: string }>();
-  const navigate = useNavigate();
   const { showToast } = useToast();
 
   const [areas, setAreas] = useState<IrrigationArea[]>([]);
@@ -99,13 +100,14 @@ export function IrrigationAreaManagement() {
   };
 
   return (
+    <PageTransition>
     <div className="min-h-screen p-4 md:p-6 lg:p-8">
       <div className="mb-6">
-        <div className="flex items-center gap-2 text-sm text-[var(--text-muted)] mb-2 flex-wrap">
-          <Link to="/admin/clientes" className="hover:text-[var(--accent-primary)]">Clientes</Link>
+        <div className="flex items-center gap-2 text-sm text-[var(--text-subtle)] mb-2 flex-wrap">
+          <Link to="/admin/clientes" className="hover:text-[var(--accent-primary)] transition-colors">Clientes</Link>
           <span>/</span>
           {clientId ? (
-            <Link to={`/admin/clientes/${clientId}/predios`} className="hover:text-[var(--accent-primary)]">
+            <Link to={`/admin/clientes/${clientId}/predios`} className="hover:text-[var(--accent-primary)] transition-colors">
               {clientName}
             </Link>
           ) : (
@@ -117,7 +119,7 @@ export function IrrigationAreaManagement() {
           <span>Áreas de Riego</span>
         </div>
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl md:text-3xl text-[var(--text-main)]">Áreas de Riego</h1>
+          <h1 className="text-2xl md:text-3xl font-serif text-[var(--text-title)]">Áreas de Riego</h1>
           <PillButton variant="primary" onClick={() => setShowCreateForm(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Nueva Área
@@ -130,33 +132,45 @@ export function IrrigationAreaManagement() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-[var(--border-strong)]">
-                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Nombre</th>
-                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Cultivo</th>
-                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Tamaño (Ha)</th>
-                <th scope="col" className="text-right py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Acciones</th>
+                <th scope="col" className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-subtle)]">Nombre</th>
+                <th scope="col" className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-subtle)]">Cultivo</th>
+                <th scope="col" className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-subtle)]">Tamaño (Ha)</th>
+                <th scope="col" className="text-right py-3 px-4 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-subtle)]">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={4} className="py-4 text-center">Cargando...</td></tr>
+                <tr><td colSpan={4} className="py-6 text-center text-[var(--text-subtle)]">Cargando...</td></tr>
               ) : areas.map((area) => (
-                <tr key={area.id} className="border-b border-[var(--border-subtle)] last:border-0 hover:bg-[var(--text-main)]/5 transition-colors">
+                <tr key={area.id} className="border-b border-[var(--border-subtle)] last:border-0 hover:bg-[var(--hover-overlay)] transition-colors">
                   <td className="py-3 px-4 text-[var(--text-main)]">{area.name}</td>
-                  <td className="py-3 px-4 text-[var(--text-muted)]">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full bg-[#E5E0D8] text-[var(--text-main)] text-xs">
+                  <td className="py-3 px-4 text-[var(--text-subtle)]">
+                    <span className="inline-flex items-center px-2 py-1 rounded-full bg-[var(--surface-card-secondary)] text-[var(--text-main)] text-xs border border-[var(--border-subtle)]">
                        {area.crop_type?.name || "No asignado"}
                     </span>
                   </td>
-                  <td className="py-3 px-4 text-[var(--text-muted)]">{area.area_size ? `${area.area_size} Ha` : "-"}</td>
+                  <td className="py-3 px-4 text-[var(--text-subtle)]">{area.area_size ? `${area.area_size} Ha` : "-"}</td>
                   <td className="py-3 px-4 flex justify-end gap-2">
-                    <button className="p-2 text-[var(--text-muted)] hover:bg-[#E5E0D8] rounded-full transition-colors">
+                    <button className="p-2 text-[var(--text-subtle)] hover:bg-[var(--hover-overlay)] rounded-full transition-colors">
                       <MoreVertical className="w-4 h-4" />
                     </button>
                   </td>
                 </tr>
               ))}
               {!loading && areas.length === 0 && (
-                <tr><td colSpan={4} className="py-4 text-center text-[var(--text-muted)]">No hay áreas registradas.</td></tr>
+                <tr>
+                  <td colSpan={4} className="py-4 px-4">
+                    <EmptyState
+                      icon={MoreVertical}
+                      title="Sin áreas de riego"
+                      description="Crea la primera área y asígnale un cultivo para comenzar a recibir lecturas."
+                      action={{
+                        label: "Crear primera área",
+                        onClick: () => setShowCreateForm(true),
+                      }}
+                    />
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
@@ -164,43 +178,54 @@ export function IrrigationAreaManagement() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:hidden">
-        {loading && <div className="text-center py-4">Cargando...</div>}
+        {loading && <div className="text-center py-4 text-[var(--text-subtle)]">Cargando...</div>}
         {!loading && areas.map((area) => (
           <BentoCard key={area.id} variant="light" className="p-4">
              <div className="flex justify-between items-start mb-2">
               <h3 className="text-[var(--text-main)] font-medium">{area.name}</h3>
-              <button className="text-[var(--text-muted)]"><MoreVertical className="w-5 h-5"/></button>
+              <button className="text-[var(--text-subtle)]"><MoreVertical className="w-5 h-5"/></button>
             </div>
             <div className="flex items-center gap-2 mt-2">
-               <span className="px-2 py-1 bg-[#E5E0D8] text-[var(--text-main)] text-xs rounded-full">{area.crop_type?.name || "Sin Cultivo"}</span>
-               {area.area_size && <span className="text-sm text-[var(--text-muted)]">{area.area_size} Ha</span>}
+               <span className="px-2 py-1 bg-[var(--surface-card-secondary)] border border-[var(--border-subtle)] text-[var(--text-main)] text-xs rounded-full">{area.crop_type?.name || "Sin Cultivo"}</span>
+               {area.area_size && <span className="text-sm text-[var(--text-subtle)]">{area.area_size} Ha</span>}
             </div>
           </BentoCard>
         ))}
+        {!loading && areas.length === 0 && (
+          <EmptyState
+            icon={MoreVertical}
+            title="Sin áreas de riego"
+            description="Crea la primera área y asígnale un cultivo para comenzar a recibir lecturas."
+            action={{
+              label: "Crear primera área",
+              onClick: () => setShowCreateForm(true),
+            }}
+          />
+        )}
       </div>
 
       {showCreateForm && (
-        <div className="fixed inset-0 bg-[var(--text-main)]/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-[var(--surface-page)]/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <BentoCard variant="light" className="w-full max-w-md">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl text-[var(--text-main)]">Nueva Área de Riego</h2>
-              <button onClick={() => setShowCreateForm(false)} type="button"><XCircle className="w-6 h-6 text-[var(--text-muted)]" /></button>
+              <h2 className="text-xl font-serif text-[var(--text-title)]">Nueva Área de Riego</h2>
+              <button onClick={() => setShowCreateForm(false)} type="button" className="rounded-full p-1 text-[var(--text-subtle)] hover:bg-[var(--hover-overlay)] transition-colors"><XCircle className="w-6 h-6" /></button>
             </div>
             <form className="space-y-4" onSubmit={handleCreate}>
               <div>
-                <label className="block text-sm text-[var(--text-muted)] mb-1">Nombre del Área</label>
-                <input required type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] focus:outline-none" />
+                <label className="block text-sm text-[var(--text-subtle)] mb-1">Nombre del Área</label>
+                <input required type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--surface-panel)] border border-[var(--border-strong)] text-[var(--text-body)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]" />
               </div>
               <div>
-                <label className="block text-sm text-[var(--text-muted)] mb-1">Tipo de Cultivo</label>
-                <select required value={formData.crop_type_id} onChange={e => setFormData({ ...formData, crop_type_id: e.target.value })} className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] focus:outline-none">
+                <label className="block text-sm text-[var(--text-subtle)] mb-1">Tipo de Cultivo</label>
+                <select required value={formData.crop_type_id} onChange={e => setFormData({ ...formData, crop_type_id: e.target.value })} className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--surface-panel)] border border-[var(--border-strong)] text-[var(--text-body)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]">
                   <option value="">Selecciona un cultivo</option>
                   {cropTypes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm text-[var(--text-muted)] mb-1">Tamaño (Hectáreas) - Opcional</label>
-                <input type="number" step="0.01" value={formData.area_size} onChange={e => setFormData({ ...formData, area_size: e.target.value })} className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] focus:outline-none" />
+                <label className="block text-sm text-[var(--text-subtle)] mb-1">Tamaño (Hectáreas) - Opcional</label>
+                <input type="number" step="0.01" value={formData.area_size} onChange={e => setFormData({ ...formData, area_size: e.target.value })} className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--surface-panel)] border border-[var(--border-strong)] text-[var(--text-body)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]" />
               </div>
               <div className="flex gap-3 pt-4">
                 <PillButton variant="outline" className="flex-1 justify-center" onClick={() => setShowCreateForm(false)} type="button">Cancelar</PillButton>
@@ -211,5 +236,6 @@ export function IrrigationAreaManagement() {
         </div>
       )}
     </div>
+    </PageTransition>
   );
 }

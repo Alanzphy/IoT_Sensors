@@ -1,7 +1,9 @@
-import { ChevronRight, Plus, XCircle } from "lucide-react";
+import { ChevronRight, Plus, Warehouse, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { BentoCard } from "../../components/BentoCard";
+import { EmptyState } from "../../components/EmptyState";
+import { PageTransition } from "../../components/PageTransition";
 import { PillButton } from "../../components/PillButton";
 import { useToast } from "../../components/Toast";
 import { api } from "../../services/api";
@@ -65,17 +67,18 @@ export function PropertyManagement() {
   };
 
   return (
+    <PageTransition>
     <div className="min-h-screen p-4 md:p-6 lg:p-8">
       <div className="mb-6">
-        <div className="flex items-center gap-2 text-sm text-[var(--text-muted)] mb-2">
-          <Link to="/admin/clientes" className="hover:text-[var(--accent-primary)]">Clientes</Link>
+        <div className="flex items-center gap-2 text-sm text-[var(--text-subtle)] mb-2">
+          <Link to="/admin/clientes" className="hover:text-[var(--accent-primary)] transition-colors">Clientes</Link>
           <span>/</span>
           <span>{clientName}</span>
           <span>/</span>
           <span>Predios</span>
         </div>
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl md:text-3xl text-[var(--text-main)]">Predios</h1>
+          <h1 className="text-2xl md:text-3xl font-serif text-[var(--text-title)]">Predios</h1>
           <PillButton variant="primary" onClick={() => setShowCreateForm(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Nuevo Predio
@@ -88,18 +91,18 @@ export function PropertyManagement() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-[var(--border-strong)]">
-                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Nombre</th>
-                <th scope="col" className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Ubicación</th>
-                <th scope="col" className="text-right py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Acciones</th>
+                <th scope="col" className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-subtle)]">Nombre</th>
+                <th scope="col" className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-subtle)]">Ubicación</th>
+                <th scope="col" className="text-right py-3 px-4 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-subtle)]">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={3} className="py-4 text-center">Cargando...</td></tr>
+                <tr><td colSpan={3} className="py-6 text-center text-[var(--text-subtle)]">Cargando...</td></tr>
               ) : properties.map((prop) => (
-                <tr key={prop.id} className="border-b border-[var(--border-subtle)] last:border-0 hover:bg-[var(--text-main)]/5 transition-colors">
+                <tr key={prop.id} className="border-b border-[var(--border-subtle)] last:border-0 hover:bg-[var(--hover-overlay)] transition-colors">
                   <td className="py-3 px-4 text-[var(--text-main)]">{prop.name}</td>
-                  <td className="py-3 px-4 text-[var(--text-muted)]">{prop.location || "-"}</td>
+                  <td className="py-3 px-4 text-[var(--text-subtle)]">{prop.location || "-"}</td>
                   <td className="py-3 px-4 flex justify-end gap-2">
                     <Link to={`/admin/predios/${prop.id}/areas`}>
                       <PillButton variant="outline" className="px-3 py-1 text-xs">Áreas de Riego <ChevronRight className="w-3 h-3 ml-1" /></PillButton>
@@ -108,7 +111,19 @@ export function PropertyManagement() {
                 </tr>
               ))}
               {!loading && properties.length === 0 && (
-                <tr><td colSpan={3} className="py-4 text-center text-[var(--text-muted)]">No hay predios registrados.</td></tr>
+                <tr>
+                  <td colSpan={3} className="py-4 px-4">
+                    <EmptyState
+                      icon={Warehouse}
+                      title="Sin predios registrados"
+                      description="Crea el primer predio para organizar áreas de riego por cliente."
+                      action={{
+                        label: "Crear primer predio",
+                        onClick: () => setShowCreateForm(true),
+                      }}
+                    />
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
@@ -116,33 +131,44 @@ export function PropertyManagement() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:hidden">
-        {loading && <div className="text-center py-4">Cargando...</div>}
+        {loading && <div className="text-center py-4 text-[var(--text-subtle)]">Cargando...</div>}
         {!loading && properties.map((prop) => (
           <BentoCard key={prop.id} variant="light" className="p-4">
             <h3 className="text-[var(--text-main)] font-medium mb-1">{prop.name}</h3>
-            <p className="text-sm text-[var(--text-muted)] mb-4">{prop.location || "Sin ubicación"}</p>
+            <p className="text-sm text-[var(--text-subtle)] mb-4">{prop.location || "Sin ubicación"}</p>
             <Link to={`/admin/predios/${prop.id}/areas`}>
                <PillButton variant="outline" className="w-full justify-center">Ver Áreas de Riego <ChevronRight className="w-4 h-4 ml-1" /></PillButton>
             </Link>
           </BentoCard>
         ))}
+        {!loading && properties.length === 0 && (
+          <EmptyState
+            icon={Warehouse}
+            title="Sin predios registrados"
+            description="Crea el primer predio para organizar áreas de riego por cliente."
+            action={{
+              label: "Crear primer predio",
+              onClick: () => setShowCreateForm(true),
+            }}
+          />
+        )}
       </div>
 
       {showCreateForm && (
-        <div className="fixed inset-0 bg-[var(--text-main)]/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-[var(--surface-page)]/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <BentoCard variant="light" className="w-full max-w-md">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl text-[var(--text-main)]">Nuevo Predio</h2>
-              <button onClick={() => setShowCreateForm(false)}><XCircle className="w-6 h-6 text-[var(--text-muted)]" /></button>
+              <h2 className="text-xl font-serif text-[var(--text-title)]">Nuevo Predio</h2>
+              <button onClick={() => setShowCreateForm(false)} type="button" className="rounded-full p-1 text-[var(--text-subtle)] hover:bg-[var(--hover-overlay)] transition-colors"><XCircle className="w-6 h-6" /></button>
             </div>
             <form className="space-y-4" onSubmit={handleCreate}>
               <div>
-                <label className="block text-sm text-[var(--text-muted)] mb-1">Nombre del Predio</label>
-                <input required type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]" />
+                <label className="block text-sm text-[var(--text-subtle)] mb-1">Nombre del Predio</label>
+                <input required type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--surface-panel)] border border-[var(--border-strong)] text-[var(--text-body)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]" />
               </div>
               <div>
-                <label className="block text-sm text-[var(--text-muted)] mb-1">Ubicación (Opcional)</label>
-                <input type="text" value={formData.location} onChange={e => setFormData({ ...formData, location: e.target.value })} className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]" />
+                <label className="block text-sm text-[var(--text-subtle)] mb-1">Ubicación (Opcional)</label>
+                <input type="text" value={formData.location} onChange={e => setFormData({ ...formData, location: e.target.value })} className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--surface-panel)] border border-[var(--border-strong)] text-[var(--text-body)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]" />
               </div>
               <div className="flex gap-3 pt-4">
                 <PillButton variant="outline" className="flex-1 justify-center" onClick={() => setShowCreateForm(false)} type="button">Cancelar</PillButton>
@@ -153,5 +179,6 @@ export function PropertyManagement() {
         </div>
       )}
     </div>
+    </PageTransition>
   );
 }

@@ -1,7 +1,8 @@
 import { jwtDecode } from "jwt-decode";
-import { Eye, EyeOff, Leaf } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
+import { AuthSplitLayout } from "../../components/auth/AuthSplitLayout";
 import { PageTransition } from "../../components/PageTransition";
 import { PillButton } from "../../components/PillButton";
 import { useAuth } from "../../context/AuthContext";
@@ -48,106 +49,84 @@ export function LoginPage() {
 
   return (
     <PageTransition>
-      <div className="min-h-screen bg-[var(--bg-base)] flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="bg-[var(--bg-surface)] rounded-[32px] p-8 md:p-10 border border-[var(--border-subtle)]">
-            {/* Logo */}
-            <div className="flex justify-center mb-8">
-              <div className="w-20 h-20 rounded-full bg-[var(--accent-primary)] flex items-center justify-center">
-                <Leaf className="w-10 h-10 text-[var(--text-inverted)]" />
-              </div>
-            </div>
-
-            <h1 className="text-center mb-2 text-3xl font-serif font-medium tracking-tight text-[var(--text-main)]">
-              Sensores Agrícolas
-            </h1>
-            <p className="text-center text-[var(--text-muted)] mb-8">
-              Sistema de Monitoreo de Riego IoT
-            </p>
-
-            {error && (
-              <div
-                role="alert"
-                aria-live="assertive"
-                className="mb-6 p-4 bg-[#DC2626]/8 text-[#DC2626] rounded-[16px] text-sm text-center border border-[#DC2626]/15"
-              >
-                {error}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-              <div>
-                <label htmlFor="login-email" className="block text-sm font-medium text-[var(--text-main)] mb-2">
-                  Correo Electrónico
-                </label>
-                <input
-                  id="login-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="usuario@ejemplo.mx"
-                  autoComplete="email"
-                  className="w-full px-5 py-3 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] placeholder:text-[var(--text-muted)]/50
-                    focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] focus-visible:ring-offset-1
-                    transition-shadow"
-                  required
-                  disabled={isLoading}
-                  aria-invalid={!!error}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="login-password" className="block text-sm font-medium text-[var(--text-main)] mb-2">
-                  Contraseña
-                </label>
-                <div className="relative">
-                  <input
-                    id="login-password"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    autoComplete="current-password"
-                    className="w-full px-5 py-3 pr-12 rounded-[24px] bg-[var(--bg-base)] border border-[var(--border-strong)] text-[var(--text-main)] placeholder:text-[var(--text-muted)]/50
-                      focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] focus-visible:ring-offset-1
-                      transition-shadow"
-                    required
-                    disabled={isLoading}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors
-                      focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] rounded-full p-0.5"
-                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}                    aria-pressed={showPassword}                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex justify-end">
-                <Link
-                  to="/recuperar-contrasena"
-                  className="text-sm text-[var(--text-muted)] hover:text-[var(--accent-primary)] transition-colors
-                    focus:outline-none focus-visible:underline"
-                >
-                  ¿Olvidé mi contraseña?
-                </Link>
-              </div>
-
-              <PillButton
-                type="submit"
-                variant="primary"
-                className="w-full"
-                disabled={isLoading}
-                loading={isLoading}
-              >
-                {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
-              </PillButton>
-            </form>
+      <AuthSplitLayout
+        heading="Bienvenido de vuelta"
+        description="Ingresa tus credenciales para acceder al panel de monitoreo."
+      >
+        {error && (
+          <div
+            role="alert"
+            aria-live="assertive"
+            className="mb-6 rounded-[16px] border border-[#DC2626]/25 bg-[#DC2626]/10 p-4 text-center text-sm text-[#DC2626]"
+          >
+            {error}
           </div>
-        </div>
-      </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+          <div>
+            <label htmlFor="login-email" className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-subtle)]">
+              Correo Electrónico
+            </label>
+            <input
+              id="login-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="usuario@ejemplo.mx"
+              autoComplete="email"
+              className="w-full rounded-[24px] border border-[var(--border-strong)] bg-[var(--surface-card-primary)] px-5 py-3 text-[var(--text-body)] placeholder:text-[var(--text-subtle)]/70
+                focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-1"
+              required
+              disabled={isLoading}
+              aria-invalid={!!error}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="login-password" className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-subtle)]">
+              Contraseña
+            </label>
+            <div className="relative">
+              <input
+                id="login-password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                autoComplete="current-password"
+                className="w-full rounded-[24px] border border-[var(--border-strong)] bg-[var(--surface-card-primary)] px-5 py-3 pr-12 text-[var(--text-body)] placeholder:text-[var(--text-subtle)]/70
+                  focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-1"
+                required
+                disabled={isLoading}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-1 text-[var(--text-subtle)] transition-colors hover:bg-[var(--hover-overlay)] hover:text-[var(--text-body)]
+                  focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                aria-pressed={showPassword}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <Link
+              to="/recuperar-contrasena"
+              className="text-sm text-[var(--text-subtle)] transition-colors hover:text-[var(--accent-primary)] focus:outline-none focus-visible:underline"
+            >
+              ¿Olvidé mi contraseña?
+            </Link>
+          </div>
+
+          <PillButton type="submit" variant="primary" className="w-full" disabled={isLoading} loading={isLoading}>
+            {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
+          </PillButton>
+        </form>
+      </AuthSplitLayout>
     </PageTransition>
   );
 }

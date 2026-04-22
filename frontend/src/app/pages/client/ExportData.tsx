@@ -66,10 +66,10 @@ export function ExportData() {
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Header */}
           <div>
-            <h1 className="text-2xl md:text-3xl font-serif text-[var(--text-main)] mb-2">
+            <h1 className="text-2xl md:text-3xl font-serif text-[var(--text-title)] mb-2">
               Exportar Datos
             </h1>
-            <p className="text-[var(--text-muted)]">
+            <p className="text-[var(--text-subtle)]">
               Descarga el histórico de tus sensores en diferentes formatos
             </p>
           </div>
@@ -79,9 +79,9 @@ export function ExportData() {
             <div className="space-y-6">
               {/* Date Range */}
               <div>
-                <label className="flex items-center gap-2 text-[var(--text-main)] mb-3">
+                <label className="flex items-center gap-2 mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-subtle)]">
                   <Calendar className="w-5 h-5 text-[var(--accent-primary)]" />
-                  <span className="font-medium">Rango de Fechas</span>
+                  <span>Rango de Fechas</span>
                 </label>
                 <ReadingDateRangeSelector
                   variant="soft"
@@ -103,9 +103,9 @@ export function ExportData() {
 
               {/* Area Selection */}
               <div>
-                <label htmlFor="export-area" className="flex items-center gap-2 text-[var(--text-main)] mb-3">
+                <label htmlFor="export-area" className="flex items-center gap-2 mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-subtle)]">
                   <Filter className="w-5 h-5 text-[var(--accent-primary)]" />
-                  <span className="font-medium">Área de Riego</span>
+                  <span>Área de Riego</span>
                 </label>
                 <select
                   id="export-area"
@@ -114,8 +114,8 @@ export function ExportData() {
                     const area = areas.find(a => a.id.toString() === e.target.value);
                     if (area) setSelectedArea(area);
                   }}
-                  className="w-full px-4 py-2.5 bg-[var(--bg-base)] border border-[var(--border-strong)] rounded-[24px] text-[var(--text-main)]
-                    focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] focus-visible:ring-offset-1 transition-shadow"
+                  className="w-full rounded-[24px] border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] px-4 py-2.5 text-[var(--text-body)]
+                    focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-1"
                 >
                   {!selectedArea && <option value="">Selecciona un área</option>}
                   {areas.map(area => (
@@ -126,7 +126,7 @@ export function ExportData() {
 
               {/* Format Selection */}
               <div>
-                <p className="text-[var(--text-main)] mb-3 font-medium">Formato de Exportación</p>
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-subtle)]">Formato de Exportación</p>
                 <div className="grid grid-cols-3 gap-3">
                   {formatOptions.map(({ id, icon: Icon, label, desc }) => (
                     <button
@@ -136,14 +136,14 @@ export function ExportData() {
                         focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]
                         ${exportFormat === id
                           ? "border-[var(--accent-primary)] bg-[var(--accent-primary)]/8"
-                          : "border-[var(--border-strong)] bg-[var(--bg-base)] hover:border-[var(--accent-primary)]/40"
+                          : "border-[var(--border-subtle)] bg-[var(--surface-card-primary)] hover:border-[var(--accent-primary)]/40 hover:bg-[var(--hover-overlay)]"
                         }`}
                       aria-pressed={exportFormat === id}
                     >
                       <div className="text-center flex flex-col items-center gap-1">
                         <Icon className={`w-7 h-7 ${exportFormat === id ? "text-[var(--accent-primary)]" : "text-[var(--text-muted)]"}`} />
-                        <div className="font-medium text-[var(--text-main)] text-sm">{label}</div>
-                        <div className="text-xs text-[var(--text-muted)]">{desc}</div>
+                        <div className="font-medium text-[var(--text-body)] text-sm">{label}</div>
+                        <div className="text-xs text-[var(--text-subtle)]">{desc}</div>
                       </div>
                     </button>
                   ))}
@@ -167,11 +167,11 @@ export function ExportData() {
           </BentoCard>
 
           {/* Info Card */}
-          <BentoCard className="bg-[var(--accent-primary)]/6 border border-[var(--accent-primary)]/15">
-            <h3 className="text-[var(--text-main)] font-medium mb-2 flex items-center gap-2">
+          <BentoCard className="bg-[var(--status-info-bg)] border border-[var(--status-info)]/20">
+            <h3 className="text-[var(--text-body)] font-medium mb-2 flex items-center gap-2">
               <span>📌</span> Información sobre exportación
             </h3>
-            <ul className="space-y-1 text-sm text-[var(--text-muted)]">
+            <ul className="space-y-1 text-sm text-[var(--text-subtle)]">
               <li>• El archivo incluirá todos los datos del rango seleccionado</li>
               <li>• Los datos se exportan en formato estándar UTC</li>
               <li>• Las lecturas se muestran en sus unidades originales</li>

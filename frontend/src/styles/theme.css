@@ -29,6 +29,10 @@
   --status-warning:   #F59E0B;   /* ámbar warning */
   --status-danger:    #EF4444;   /* rojo error */
   --status-info:      #3B82F6;   /* azul info */
+  --status-active-bg: rgba(34, 197, 94, 0.14);
+  --status-warning-bg: rgba(245, 158, 11, 0.16);
+  --status-danger-bg: rgba(239, 68, 68, 0.14);
+  --status-info-bg: rgba(59, 130, 246, 0.14);
 
   /* --- Light Borders & Shadows --- */
   --border-glass:     rgba(44, 38, 33, 0.06);
@@ -37,9 +41,26 @@
   --shadow-soft:      0 4px 20px rgba(44, 38, 33, 0.02);
 
   /* --- Typography --- */
-  --font-serif:   'Space Grotesk', sans-serif;
+  --font-serif:   'Playfair Display', serif;
   --font-sans:    'Inter', sans-serif;
   --font-mono:    'JetBrains Mono', monospace;
+
+  /* --- Semantic Layer (Light Source of Truth) --- */
+  --surface-page:             var(--bg-base);
+  --surface-panel:            var(--bg-surface);
+  --surface-card-primary:     var(--card-light);
+  --surface-card-secondary:   var(--card-sand);
+  --text-title:               var(--text-main);
+  --text-body:                var(--text-main);
+  --text-subtle:              var(--text-muted);
+  --focus-ring:               var(--accent-primary);
+  --hover-overlay:            rgba(44, 38, 33, 0.05);
+  --pressed-overlay:          rgba(44, 38, 33, 0.1);
+  --disabled-opacity:         0.5;
+  --outline-contrast:         rgba(44, 38, 33, 0.18);
+  --chart-priority-1:         var(--accent-primary);
+  --chart-priority-2:         var(--accent-brown);
+  --chart-priority-3:         var(--card-brown);
 
   /* --- Legacy vars (backward compat) --- */
   --card-light:       #F9F8F4;
@@ -101,82 +122,103 @@
    ============================================================ */
 
 .dark {
-  /* --- Dark Base Surfaces --- */
-  --bg-base:          #0C0C0B;   /* near-black */
-  --bg-surface:       #161614;   /* dark surface */
-  --bg-elevated:      #1E1E1B;   /* elevated */
-  --bg-input:         #1A1A18;   /* inputs */
+  /* --- Dark Base Surfaces (Direction B: Espresso Glass) --- */
+  --bg-base:          #12100E;
+  --bg-surface:       #1A1714;
+  --bg-elevated:      #221D18;
+  --bg-input:         #1E1A16;
 
-  /* --- Dark Agricultural Colors --- */
-  --accent-primary:   #8FAF7A;   /* olive green (ligeramente más brillante) */
-  --accent-gold:      #C4A46D;   /* golden brown (ligeramente más brillante) */
-  --accent-glow:      rgba(143, 175, 122, 0.25);
-  --accent-gold-glow: rgba(196, 164, 109, 0.25);
+  /* --- Dark Agricultural Colors (derived semantically from light system) --- */
+  --accent-primary:   #8CA478;
+  --accent-gold:      #BDA077;
+  --accent-glow:      rgba(140, 164, 120, 0.16);
+  --accent-gold-glow: rgba(189, 160, 119, 0.16);
 
   /* --- Dark Text --- */
-  --text-primary:     #ECEAE5;   /* warm off-white */
-  --text-secondary:   #8A847C;   /* muted warm gray */
-  --text-inverted:    #0C0C0B;   /* near black */
-  --text-on-dark:     #ECEAE5;   /* Siempre claro, para tarjetas oscuras */
+  --text-primary:     #ECE6DE;
+  --text-secondary:   #A79B8D;
+  --text-inverted:    #12100E;
+  --text-on-dark:     #ECE6DE;
 
   /* --- Status Colors --- */
   --status-active:    #4ADE80;
   --status-warning:   #FBBF24;
   --status-danger:    #F87171;
   --status-info:      #60A5FA;
+  --status-active-bg: rgba(74, 222, 128, 0.2);
+  --status-warning-bg: rgba(251, 191, 36, 0.2);
+  --status-danger-bg: rgba(248, 113, 113, 0.2);
+  --status-info-bg: rgba(96, 165, 250, 0.2);
 
   /* --- Dark Borders & Shadows --- */
-  --border-glass:     rgba(255, 255, 255, 0.06);
-  --border-subtle:    rgba(255, 255, 255, 0.04);
-  --border-strong:    rgba(255, 255, 255, 0.12);
-  --shadow-soft:      0 8px 32px rgba(0, 0, 0, 0.4);
+  --border-glass:     rgba(236, 230, 222, 0.08);
+  --border-subtle:    rgba(236, 230, 222, 0.05);
+  --border-strong:    rgba(236, 230, 222, 0.14);
+  --shadow-soft:      0 4px 20px rgba(0, 0, 0, 0.22);
+
+  /* --- Semantic Layer (Dark mapped from light semantics) --- */
+  --surface-page:             var(--bg-base);
+  --surface-panel:            var(--bg-surface);
+  --surface-card-primary:     var(--card-light);
+  --surface-card-secondary:   var(--card-sand);
+  --text-title:               var(--text-main);
+  --text-body:                var(--text-main);
+  --text-subtle:              var(--text-muted);
+  --focus-ring:               var(--accent-primary);
+  --hover-overlay:            rgba(236, 230, 222, 0.06);
+  --pressed-overlay:          rgba(236, 230, 222, 0.1);
+  --disabled-opacity:         0.5;
+  --outline-contrast:         rgba(236, 230, 222, 0.2);
+  --chart-priority-1:         var(--accent-primary);
+  --chart-priority-2:         var(--accent-brown);
+  --chart-priority-3:         var(--card-brown);
 
   /* --- Legacy vars (backward compat for dark mode) --- */
-  --card-light:       #161614;   /* Base dark surface */
-  --card-sand:        #3A3125;   /* Dark muted gold/sand for contrast */
-  --card-dark:        #1E221A;   /* Deep charcoal with olive tint */
-  --card-brown:       #2A1F1A;   /* Deep espresso brown */
+  --card-light:       #1A1714;
+  --card-sand:        #2C241D;
+  --card-dark:        #241D17;
+  --card-brown:       #31261E;
   --accent-green:     #8FAF7A;
-  --accent-brown:     #C4A46D;
-  --text-main:        #ECEAE5;
-  --text-muted:       #8A847C;
-  --progress-track:   rgba(255, 255, 255, 0.08);
+  --accent-brown:     #BDA077;
+  --text-main:        #ECE6DE;
+  --text-muted:       #A79B8D;
+  --progress-track:   rgba(236, 230, 222, 0.16);
 
   /* ── shadcn/ui standard vars (Dark) ── */
-  --background:                   #0C0C0B;
-  --foreground:                   #ECEAE5;
-  --card:                         #161614;
-  --card-foreground:              #ECEAE5;
-  --popover:                      #161614;
-  --popover-foreground:           #ECEAE5;
-  --primary:                      #8FAF7A;
-  --primary-foreground:           #0C0C0B;
-  --secondary:                    #1E1E1B;
-  --secondary-foreground:         #ECEAE5;
-  --muted:                        #1E1E1B;
-  --muted-foreground:             #8A847C;
-  --accent:                       #8FAF7A;
-  --accent-foreground:            #0C0C0B;
+  --background:                   #12100E;
+  --foreground:                   #ECE6DE;
+  --card:                         #1A1714;
+  --card-foreground:              #ECE6DE;
+  --popover:                      #1A1714;
+  --popover-foreground:           #ECE6DE;
+  --primary:                      #8CA478;
+  --primary-foreground:           #12100E;
+  --secondary:                    #241F1A;
+  --secondary-foreground:         #ECE6DE;
+  --muted:                        #241F1A;
+  --muted-foreground:             #A79B8D;
+  --accent:                       #8CA478;
+  --accent-foreground:            #12100E;
   --destructive:                  #F87171;
-  --destructive-foreground:       #0C0C0B;
-  --border:                       rgba(255, 255, 255, 0.06);
-  --input:                        #1A1A18;
-  --input-background:             #1A1A18;
-  --switch-background:            #C4A46D;
-  --ring:                         #8FAF7A;
-  --chart-1:                      #8FAF7A;
-  --chart-2:                      #C4A46D;
-  --chart-3:                      #ECEAE5; /* text-main */
-  --chart-4:                      #8A847C; /* text-muted */
-  --chart-5:                      #2A1F1A; /* card-brown */
-  --sidebar:                      #101010;
-  --sidebar-foreground:           #ECEAE5;
-  --sidebar-primary:              #8FAF7A;
-  --sidebar-primary-foreground:   #0C0C0B;
-  --sidebar-accent:               #1E1E1B;
-  --sidebar-accent-foreground:    #ECEAE5;
-  --sidebar-border:               rgba(255, 255, 255, 0.05);
-  --sidebar-ring:                 #8FAF7A;
+  --destructive-foreground:       #12100E;
+  --border:                       rgba(236, 230, 222, 0.08);
+  --input:                        #1E1A16;
+  --input-background:             #1E1A16;
+  --switch-background:            #BDA077;
+  --ring:                         #8CA478;
+  --chart-1:                      #8CA478;
+  --chart-2:                      #BDA077;
+  --chart-3:                      #ECE6DE;
+  --chart-4:                      #A79B8D;
+  --chart-5:                      #31261E;
+  --sidebar:                      #151210;
+  --sidebar-foreground:           #ECE6DE;
+  --sidebar-primary:              #8CA478;
+  --sidebar-primary-foreground:   #12100E;
+  --sidebar-accent:               #221D18;
+  --sidebar-accent-foreground:    #ECE6DE;
+  --sidebar-border:               rgba(236, 230, 222, 0.07);
+  --sidebar-ring:                 #8CA478;
 }
 
 @theme inline {
@@ -240,7 +282,7 @@
   /* ── Headings: Space Grotesk ── */
   h1, h2, h3, h4 {
     font-family: var(--font-serif);
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: -0.01em;
   }
 
@@ -312,11 +354,10 @@
 }
 
 .dark .glass-card {
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 4px 24px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  background: color-mix(in srgb, var(--bg-surface) 86%, transparent);
+  box-shadow: var(--shadow-soft);
 }
 
 .glass-card-elevated {
@@ -326,11 +367,10 @@
 }
 
 .dark .glass-card-elevated {
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 8px 40px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  background: color-mix(in srgb, var(--bg-elevated) 90%, transparent);
+  box-shadow: var(--shadow-soft);
 }
 
 .glass-sidebar {
@@ -339,8 +379,8 @@
 }
 
 .dark .glass-sidebar {
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 /* ============================================================
@@ -356,12 +396,12 @@
 }
 
 .dark .glow-border-green {
-  border-color: rgba(109, 126, 94, 0.4) !important;
-  box-shadow: 0 0 0 1px rgba(109, 126, 94, 0.15), inset 0 0 20px rgba(109, 126, 94, 0.05);
+  border-color: rgba(140, 164, 120, 0.38) !important;
+  box-shadow: 0 0 0 1px rgba(140, 164, 120, 0.14), inset 0 0 14px rgba(140, 164, 120, 0.04);
 }
 
 .dark .text-glow-green {
-  text-shadow: 0 0 20px rgba(109, 126, 94, 0.6);
+  text-shadow: 0 0 12px rgba(140, 164, 120, 0.36);
 }
 
 /* ── Dot mesh background pattern ── */

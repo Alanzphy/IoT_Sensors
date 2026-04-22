@@ -43,9 +43,9 @@ function getSemaphoreLabel(level: SemaphoreLevel): string {
 }
 
 function getSemaphoreClass(level: SemaphoreLevel): string {
-  if (level === "critical") return "bg-[#F8D2D2] text-[#7F1D1D]";
-  if (level === "warning") return "bg-[#F6E4B8] text-[#6B4B14]";
-  return "bg-[#D8E7D0] text-[#2E5C35]";
+  if (level === "critical") return "bg-[var(--status-danger-bg)] text-[var(--status-danger)]";
+  if (level === "warning") return "bg-[var(--status-warning-bg)] text-[var(--status-warning)]";
+  return "bg-[var(--status-active-bg)] text-[var(--status-active)]";
 }
 
 function SemaphorePill({ level }: { level: SemaphoreLevel }) {
@@ -226,12 +226,12 @@ export function ClientDashboard() {
     <div className="min-h-screen p-4 md:p-6 lg:p-8 overflow-x-hidden">
       {/* Header */}
       <div className="mb-6 md:mb-8 animate-fade-in-up">
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl md:text-3xl text-[var(--text-main)] mb-1">
+            <h1 className="mb-1 text-2xl md:text-3xl text-[var(--text-title)]">
               Hola, {user?.nombre || 'Usuario'}
             </h1>
-            <p className="text-[var(--text-muted)]">
+            <p className="text-[var(--text-subtle)]">
               {new Date().toLocaleDateString("es-MX", {
                 weekday: "long",
                 year: "numeric",
@@ -246,7 +246,7 @@ export function ClientDashboard() {
         <div className="flex flex-wrap gap-3">
           <div className="relative">
             <select
-              className="appearance-none flex items-center gap-2 pl-4 pr-10 py-2 rounded-full bg-[var(--bg-elevated)] text-[var(--text-main)] hover:brightness-95 transition-colors font-medium outline-none cursor-pointer"
+              className="appearance-none cursor-pointer rounded-full border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] py-2 pl-4 pr-10 font-medium text-[var(--text-body)] transition-colors hover:bg-[var(--hover-overlay)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
               value={selectedProperty?.id ?? ""}
               onChange={(e) => {
                 const prop = properties.find(p => p.id === Number(e.target.value));
@@ -259,13 +259,13 @@ export function ClientDashboard() {
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
-            <ChevronDown className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-main)]" />
+            <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-subtle)]" />
           </div>
 
           {(selectedProperty || filteredAreas.length > 0) && (
             <div className="relative">
               <select
-                className="appearance-none flex items-center gap-2 pl-4 pr-10 py-2 rounded-full bg-[var(--bg-elevated)] text-[var(--text-main)] hover:brightness-95 transition-colors font-medium outline-none cursor-pointer"
+                className="appearance-none cursor-pointer rounded-full border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] py-2 pl-4 pr-10 font-medium text-[var(--text-body)] transition-colors hover:bg-[var(--hover-overlay)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
                 value={selectedArea?.id ?? ""}
                 onChange={(e) => {
                   const area = areas.find(a => a.id === Number(e.target.value));
@@ -277,7 +277,14 @@ export function ClientDashboard() {
                   <option key={a.id} value={a.id}>{a.name}</option>
                 ))}
               </select>
-              <ChevronDown className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-main)]" />
+              <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-subtle)]" />
+            </div>
+          )}
+
+          {selectedArea && (
+            <div className="inline-flex items-center rounded-full border border-[var(--status-active)]/35 bg-[var(--status-active-bg)] px-3 py-2 text-xs font-semibold text-[var(--status-active)]">
+              <span className="mr-2 inline-flex h-2 w-2 rounded-full bg-[var(--status-active)] animate-glow-pulse" />
+              En línea
             </div>
           )}
         </div>
