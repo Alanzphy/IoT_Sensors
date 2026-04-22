@@ -9,7 +9,7 @@ import { api } from "../../services/api";
 
 interface IrrigationArea {
   id: number;
-  nombre: string;
+  name: string;
 }
 
 interface NodeData {
@@ -123,7 +123,7 @@ export function NodeManagement() {
 
   const getAreaName = (id: number) => {
     const area = areas.find(a => a.id === id);
-    return area ? area.nombre : "Desconocida";
+    return area ? area.name : "Desconocida";
   };
 
   if (loading && nodes.length === 0) {
@@ -301,7 +301,7 @@ export function NodeManagement() {
                 >
                   <option value="">Seleccione un área</option>
                   {areas.map(a => (
-                    <option key={a.id} value={a.id}>{a.nombre}</option>
+                    <option key={a.id} value={a.id}>{a.name}</option>
                   ))}
                 </select>
               </div>
