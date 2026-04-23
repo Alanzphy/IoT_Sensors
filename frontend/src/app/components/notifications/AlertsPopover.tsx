@@ -40,6 +40,9 @@ export function AlertsPopover({
   // refreshIntervalMs = 30000,
   refreshIntervalMs = 3000,
 }: AlertsPopoverProps) {
+  const fixedBottomRightClassName =
+    "fixed !bottom-4 !right-4 !top-auto !left-auto !z-[60]";
+
   const location = useLocation();
   const isPageVisible = usePageVisibility();
   const isAlertsPage = location.pathname.endsWith("/alertas");
@@ -125,7 +128,7 @@ export function AlertsPopover({
   };
 
   return (
-    <div className={className}>
+    <div className={className + " " + fixedBottomRightClassName}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <button
