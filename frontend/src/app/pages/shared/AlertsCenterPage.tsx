@@ -1,4 +1,4 @@
-import { formatDistanceToNowStrict } from "date-fns";
+import { format, formatDistanceToNowStrict, parseISO, startOfDay, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   AlertTriangle,
@@ -15,6 +15,7 @@ import { useLocation } from "react-router";
 
 import { BentoCard } from "../../components/BentoCard";
 import { PageTransition } from "../../components/PageTransition";
+import { ReadingDateRangeSelector } from "../../components/ReadingDateRangeSelector";
 import { usePageVisibility } from "../../hooks/usePageVisibility";
 import { AlertItem, listAlerts, markAlertRead } from "../../services/alerts";
 
@@ -57,6 +58,11 @@ export function AlertsCenterPage() {
   const [readFilter, setReadFilter] = useState<ReadFilter>("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+
+  const fallbackStartDate = startOfDay(subDays(new Date(), 7));
+  const fallbackEndDate = startOfDay(new Date());
+  const selectedStartDate = startDate ? startOfDay(parseISO(startDate)) : fallbackStartDate;
+  const selectedEndDate = endDate ? startOfDay(parseISO(endDate)) : fallbackEndDate;
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -173,7 +179,7 @@ export function AlertsCenterPage() {
       </div>
 
       <BentoCard variant="light" className="mb-4">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
           <label className="flex flex-col gap-1 text-sm text-[var(--text-subtle)]">
             Severidad
             <select
@@ -223,31 +229,46 @@ export function AlertsCenterPage() {
             </select>
           </label>
 
-          <label className="flex flex-col gap-1 text-sm text-[var(--text-subtle)]">
-            Desde
-            <input
-              type="date"
-              value={startDate}
-              onChange={(event) => {
-                setStartDate(event.target.value);
-                setPage(1);
-              }}
-              className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] px-3 py-2 text-[var(--text-body)]"
-            />
-          </label>
+          <div className="md:col-span-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm text-[var(--text-subtle)]">Rango de fechas</span>
+              {(startDate || endDate) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStartDate("");
+                    setEndDate("");
+                    setPage(1);
+                  }}
+                  className="text-xs font-medium text-[var(--accent-primary)] hover:opacity-80"
+                >
+                  Limpiar
+                </button>
+              )}
+            </div>
 
-          <label className="flex flex-col gap-1 text-sm text-[var(--text-subtle)]">
-            Hasta
-            <input
-              type="date"
-              value={endDate}
-              onChange={(event) => {
-                setEndDate(event.target.value);
+            <ReadingDateRangeSelector
+              variant="soft"
+              startDate={selectedStartDate}
+              endDate={selectedEndDate}
+              onStartDateChange={(nextDate) => {
+                const normalized = startOfDay(nextDate);
+                setStartDate(format(normalized, "yyyy-MM-dd"));
+                if (endDate && normalized > startOfDay(parseISO(endDate))) {
+                  setEndDate(format(normalized, "yyyy-MM-dd"));
+                }
                 setPage(1);
               }}
-              className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] px-3 py-2 text-[var(--text-body)]"
+              onEndDateChange={(nextDate) => {
+                const normalized = startOfDay(nextDate);
+                setEndDate(format(normalized, "yyyy-MM-dd"));
+                if (startDate && normalized < startOfDay(parseISO(startDate))) {
+                  setStartDate(format(normalized, "yyyy-MM-dd"));
+                }
+                setPage(1);
+              }}
             />
-          </label>
+          </div>
         </div>
       </BentoCard>
 
