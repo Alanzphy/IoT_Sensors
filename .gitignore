@@ -25,6 +25,7 @@ wheels/
 
 # Backend
 backend/.venv/
+backend/demo_seed_snapshots/
 
 
 # Frontend build output
@@ -56,4 +57,3 @@ token.txt
 fix_passwords.py
 test.cjs
 test_api.py
-

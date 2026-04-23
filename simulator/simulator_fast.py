@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
 """
-📡 IoT Sensor Simulator — Sistema de Riego Agrícola
-=====================================================
-Simula el envío de lecturas de sensores cada 10 minutos al backend.
-Genera datos matemáticamente coherentes según la hora del día.
+IoT Simulator (fast) with multi-node live mode.
 
-Zero dependencias externas — usa solo la librería estándar de Python.
-
-Uso:
-  python simulator.py --api-key ak_n01_abc123
-  python simulator.py --api-key ak_n01_abc123 --interval 30      # cada 30s (pruebas)
-  python simulator.py --api-key ak_n01_abc123 --backfill 7       # genera 7 días de historial
-  python simulator.py --api-key ak_n01_abc123 --dry-run          # sin enviar
+Features:
+- Multiple API keys (`--api-key` repeatable and `--api-keys-file`)
+- Per-node independent sensor state
+- Backfill mode
+- Demo alert mode with periodic controlled spikes
 """
+
+from __future__ import annotations
 
 import argparse
 import json
@@ -23,24 +20,64 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-
-# ---------------------------------------------------------------------------
-# Configuration
-# ---------------------------------------------------------------------------
+from urllib.parse import urlencode
 
 DEFAULT_BASE_URL = "http://localhost:5050/api/v1"
-DEFAULT_INTERVAL = 2  # 2 seconds (for fast UI testing)
+DEFAULT_INTERVAL = 2
+DEFAULT_MODE = "standard"
+DEFAULT_DEMO_SPIKE_EVERY = 9
+DEFAULT_SEED = 20260423
+DEFAULT_DISPATCH_INTERVAL = 20
+DEFAULT_DISPATCH_LIMIT = 200
+DEFAULT_ADMIN_EMAIL = "admin@sensores.com"
+DEFAULT_ADMIN_PASSWORD = "admin123"
+DEMO_SEED_API_KEYS = [
+    "99189486-8181-4e8c-8c6d-b3da66e6712b",  # Nodo Nogal Norte
+    "c1f5cd79-e760-4a9f-92ea-31ea685a3add",  # Nodo Alfalfa Este
+    "02b21674-0099-4470-a8dd-b4ebd7d8c2b0",  # Nodo Chile Principal
+    "ak_b2727bc1d95e342932612ee5573fdb18",   # Nodo Prueba E2E
+]
+
+
+@dataclass
+class NodeState:
+    rng: random.Random
+    soil_humidity: float
+    accumulated_liters: float
+    flow_base: float
+    temp_offset: float
+    tick: int = 0
+
+
+@dataclass
+class NodeContext:
+    api_key: str
+    label: str
+    state: NodeState
+    sent: int = 0
+    failed: int = 0
 
 
 def get_config():
-    parser = argparse.ArgumentParser(
-        description="📡 IoT Sensor Simulator — Riego Agrícola"
-    )
+    parser = argparse.ArgumentParser(description="IoT Sensor Simulator (fast mode)")
     parser.add_argument(
         "--api-key",
-        default=os.getenv("SIMULATOR_API_KEY", ""),
-        help="API Key del nodo IoT (o env SIMULATOR_API_KEY)",
+        action="append",
+        default=[],
+        help="API Key del nodo IoT (puede repetirse)",
+    )
+    parser.add_argument(
+        "--api-keys-file",
+        default="",
+        help="Archivo con API keys (una por linea; # para comentarios)",
+    )
+    parser.add_argument(
+        "--preset",
+        choices=["none", "seed-demo"],
+        default=os.getenv("SIMULATOR_PRESET", "none"),
+        help="Preset de API keys. 'seed-demo' carga las 4 keys del seed local",
     )
     parser.add_argument(
         "--base-url",
@@ -57,132 +94,282 @@ def get_config():
         "--backfill",
         type=int,
         default=0,
-        help="Generar N días de datos históricos antes de iniciar el loop",
+        help="Generar N dias historicos antes de iniciar loop en vivo",
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Solo imprime el payload sin enviarlo",
+        help="Solo imprime payload sin enviarlo",
+    )
+    parser.add_argument(
+        "--mode",
+        choices=["standard", "demo-alerts"],
+        default=os.getenv("SIMULATOR_MODE", DEFAULT_MODE),
+        help="Modo de generacion: standard o demo-alerts",
+    )
+    parser.add_argument(
+        "--demo-spike-every",
+        type=int,
+        default=int(
+            os.getenv("SIMULATOR_DEMO_SPIKE_EVERY", str(DEFAULT_DEMO_SPIKE_EVERY))
+        ),
+        help=f"Cada cuantas lecturas por nodo se fuerza un pico demo (default: {DEFAULT_DEMO_SPIKE_EVERY})",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=int(os.getenv("SIMULATOR_SEED", str(DEFAULT_SEED))),
+        help=f"Semilla deterministica base (default: {DEFAULT_SEED})",
+    )
+    parser.add_argument(
+        "--dispatch-notifications",
+        action="store_true",
+        help="Despacha notificaciones periodicamente via /alerts/dispatch-notifications",
+    )
+    parser.add_argument(
+        "--dispatch-interval",
+        type=int,
+        default=int(
+            os.getenv(
+                "SIMULATOR_DISPATCH_INTERVAL",
+                str(DEFAULT_DISPATCH_INTERVAL),
+            )
+        ),
+        help=f"Intervalo en segundos para dispatch de notificaciones (default: {DEFAULT_DISPATCH_INTERVAL})",
+    )
+    parser.add_argument(
+        "--dispatch-limit",
+        type=int,
+        default=int(
+            os.getenv("SIMULATOR_DISPATCH_LIMIT", str(DEFAULT_DISPATCH_LIMIT))
+        ),
+        help=f"Limite por ejecucion de dispatch (default: {DEFAULT_DISPATCH_LIMIT})",
+    )
+    parser.add_argument(
+        "--admin-email",
+        default=os.getenv("SIMULATOR_ADMIN_EMAIL", ""),
+        help="Email admin para login automatico de dispatch",
+    )
+    parser.add_argument(
+        "--admin-password",
+        default=os.getenv("SIMULATOR_ADMIN_PASSWORD", ""),
+        help="Password admin para login automatico de dispatch",
+    )
+    parser.add_argument(
+        "--quick-demo",
+        action="store_true",
+        help=(
+            "Modo de demo total: preset seed-demo + demo-alerts + "
+            "dispatch automatico de notificaciones"
+        ),
     )
     return parser.parse_args()
 
 
-# ---------------------------------------------------------------------------
-# Realistic Data Generation
-# ---------------------------------------------------------------------------
+def normalize_api_key(raw_key: str) -> tuple[str, bool]:
+    key = raw_key.strip()
+    marker = "ak_"
+    if marker in key and not key.startswith(marker):
+        return key[key.find(marker):], True
+    return key, False
 
-_state = {
-    "soil_humidity": 35.0,
-    "accumulated_liters": 0.0,
-}
+
+def load_api_keys(args) -> tuple[list[str], int]:
+    keys: list[str] = []
+    normalized_count = 0
+
+    if args.preset == "seed-demo":
+        keys.extend(DEMO_SEED_API_KEYS)
+
+    for item in args.api_key:
+        if item.strip():
+            keys.append(item.strip())
+
+    env_multi = os.getenv("SIMULATOR_API_KEYS", "").strip()
+    if env_multi:
+        keys.extend(k.strip() for k in env_multi.split(",") if k.strip())
+
+    env_single = os.getenv("SIMULATOR_API_KEY", "").strip()
+    if env_single:
+        keys.append(env_single)
+
+    if args.api_keys_file:
+        try:
+            with open(args.api_keys_file, "r", encoding="utf-8") as handle:
+                for raw in handle:
+                    line = raw.strip()
+                    if not line or line.startswith("#"):
+                        continue
+                    if "=" in line:
+                        _, line = line.split("=", 1)
+                        line = line.strip()
+                    keys.append(line)
+        except OSError as exc:
+            print(f"No se pudo leer --api-keys-file: {exc}")
+            sys.exit(1)
+
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for raw in keys:
+        normalized, changed = normalize_api_key(raw)
+        if changed:
+            normalized_count += 1
+        if normalized and normalized not in seen:
+            seen.add(normalized)
+            deduped.append(normalized)
+
+    return deduped, normalized_count
+
+
+def apply_quick_demo_defaults(args) -> None:
+    if not args.quick_demo:
+        return
+
+    if args.preset == "none":
+        args.preset = "seed-demo"
+    if args.mode == DEFAULT_MODE:
+        args.mode = "demo-alerts"
+    if args.demo_spike_every == DEFAULT_DEMO_SPIKE_EVERY:
+        args.demo_spike_every = 6
+    if args.interval == DEFAULT_INTERVAL:
+        args.interval = 2
+
+    args.dispatch_notifications = True
+    if not args.admin_email:
+        args.admin_email = DEFAULT_ADMIN_EMAIL
+    if not args.admin_password:
+        args.admin_password = DEFAULT_ADMIN_PASSWORD
+
+
+def _init_node_state(node_index: int, seed: int) -> NodeState:
+    rng = random.Random(seed + ((node_index + 1) * 1013))
+    return NodeState(
+        rng=rng,
+        soil_humidity=rng.uniform(31.0, 43.5),
+        accumulated_liters=rng.uniform(40.0, 160.0),
+        flow_base=rng.uniform(7.0, 9.2),
+        temp_offset=rng.uniform(-1.3, 1.3),
+    )
+
+
+def _clamp(value: float, low: float, high: float) -> float:
+    return max(low, min(high, value))
 
 
 def _solar_factor(hour: float) -> float:
-    """Returns 0..1 based on solar position. Peak at ~14:00."""
     if hour < 6 or hour > 20:
         return 0.0
     return max(0.0, math.sin(math.pi * (hour - 6) / 14))
 
 
-def _is_irrigation_hour(hour: float) -> bool:
-    """Irrigation runs early morning (5-7 AM) and late afternoon (5-7 PM)."""
-    # Siempre retornamos True para las pruebas en vivo (simulator_fast.py)
-    return True
+def _is_irrigation_hour(hour: float, humidity: float) -> bool:
+    morning = 5.0 <= hour < 7.0
+    evening = 17.0 <= hour < 19.0
+    emergency = humidity < 22.0 and (11.0 <= hour < 12.0)
+    return morning or evening or emergency
 
 
-def generate_reading(timestamp: datetime) -> dict:
-    """
-    Generate a sensor reading coherent with the time of day.
-    
-    - Solar radiation follows a bell curve peaking at 2 PM
-    - Air temp correlates with sun (2 hr lag)
-    - Soil temp is damped vs air temp
-    - Soil humidity decreases with evaporation, increases with irrigation
-    - Irrigation activates at 5-7 AM and 5-7 PM
-    - ETo correlates with temp, wind, radiation
-    """
-    hour = timestamp.hour + timestamp.minute / 60.0
+def _generate_reading(
+    timestamp: datetime,
+    state: NodeState,
+    mode: str,
+    demo_spike_every: int,
+) -> tuple[dict, list[str]]:
+    rng = state.rng
+    state.tick += 1
+
+    hour = timestamp.hour + (timestamp.minute / 60.0)
     solar = _solar_factor(hour)
-    
-    # Mayor ruido o picos esporádicos para tener mayor contraste visual
-    if random.random() < 0.2:
-        noise = random.gauss(0, 5)  # 20% propensión a valor atípico
-    else:
-        noise = random.gauss(0, 1.5)
+    noise = rng.gauss(0.0, 1.0)
 
-    # --- Environmental ---
-    temp_solar = _solar_factor(min(hour + 2, 24))
-    env_temp = round(max(5.0, min(42.0, 12 + 23 * temp_solar + noise * 1.5)), 1)
+    env_temp = _clamp(
+        12.0 + (22.0 * _solar_factor(min(hour + 2, 24))) + (noise * 1.35) + state.temp_offset,
+        6.0,
+        43.0,
+    )
+    env_rh = _clamp(85.0 - (43.0 * solar) + (noise * 2.6), 18.0, 98.0)
+    env_wind = _clamp(4.0 + (11.0 * solar) + abs(noise * 2.4), 0.0, 40.0)
+    env_solar_rad = 0.0
+    if solar > 0:
+        env_solar_rad = _clamp((940.0 * solar) + (noise * 24.0), 0.0, 1100.0)
 
-    env_rh = round(max(20.0, min(98.0, 85 - 45 * solar + noise * 3)), 1)
+    env_eto = _clamp(
+        ((0.0028 * env_solar_rad) + (0.09 * env_temp) + (0.045 * env_wind))
+        * (0.35 + (0.65 * solar))
+        + (noise * 0.24),
+        0.0,
+        11.5,
+    )
 
-    env_wind = round(max(0.0, min(40.0, 5 + 10 * solar + abs(noise) * 3)), 1)
+    soil_temp = _clamp(
+        14.0 + (11.0 * _solar_factor(min(hour + 4, 24))) + (noise * 0.45),
+        7.0,
+        38.0,
+    )
+    soil_cond = _clamp(2.4 + (noise * 0.25), 0.5, 5.0)
 
-    env_solar_rad = round(max(0.0, min(1100.0, 950 * solar + noise * 30)), 1) if solar > 0 else 0.0
+    irrigating = _is_irrigation_hour(hour, state.soil_humidity)
+    evap_loss = 0.08 + (0.17 * solar) + (max(env_temp - 31.0, 0.0) * 0.02)
+    irrig_gain = (1.3 + rng.uniform(0.2, 1.3)) if irrigating else 0.0
 
-    env_eto = round(max(0.0, min(12.0, (0.003 * env_solar_rad + 0.1 * env_temp + 0.05 * env_wind) * solar + noise * 0.3)), 2)
+    state.soil_humidity += irrig_gain - evap_loss + (noise * 0.08)
+    state.soil_humidity = _clamp(state.soil_humidity, 9.0, 67.0)
 
-    # --- Soil ---
-    soil_temp = round(max(8.0, min(38.0, 15 + 12 * _solar_factor(min(hour + 4, 24)) + noise * 0.5)), 1)
+    flow = 0.0
+    if irrigating:
+        flow = _clamp(state.flow_base + rng.uniform(-1.8, 1.8) + (noise * 0.35), 2.8, 14.5)
 
-    soil_cond = round(max(0.5, min(5.0, 2.5 + noise * 0.3)), 2)
+    spike_hints: list[str] = []
+    if mode == "demo-alerts" and demo_spike_every > 0 and state.tick % demo_spike_every == 0:
+        phase = (state.tick // demo_spike_every) % 3
+        if phase == 1:
+            state.soil_humidity = _clamp(rng.uniform(14.0, 20.0), 9.0, 67.0)
+            spike_hints.append("soil.humidity:LOW")
+        elif phase == 2:
+            irrigating = True
+            flow = _clamp(rng.uniform(11.0, 14.5), 2.8, 14.5)
+            spike_hints.append("irrigation.flow_per_minute:HIGH")
+        else:
+            env_eto = _clamp(rng.uniform(6.2, 8.4), 0.0, 11.5)
+            spike_hints.append("environmental.eto:HIGH")
 
-    irrigating = _is_irrigation_hour(hour)
+    state.accumulated_liters += flow * (10.0 / 60.0)
+    soil_wp = _clamp((-0.03 * (60.0 - state.soil_humidity)) + (noise * 0.04), -3.0, -0.1)
 
-    # Para mayor contraste interactivo: la humedad sube y baja como un "random walk"
-    cambio = random.uniform(-3.5, 3.5)
-    if random.random() < 0.15: # 15% de probabilidad de salto atípico hacia abajo o arriba
-        cambio *= 2.5 
-    
-    _state["soil_humidity"] += cambio
-
-    # Rebotes artificiales para no estancarnos en los topes (65 y 10)
-    if _state["soil_humidity"] > 60.0:
-        _state["soil_humidity"] -= random.uniform(4.0, 8.0)
-    elif _state["soil_humidity"] < 20.0:
-        _state["soil_humidity"] += random.uniform(4.0, 8.0)
-
-    _state["soil_humidity"] = max(10.0, min(65.0, _state["soil_humidity"]))
-    soil_hum = round(_state["soil_humidity"], 1)
-
-    soil_wp = round(max(-3.0, min(-0.1, -0.03 * (60 - soil_hum) + noise * 0.05)), 2)
-
-    # --- Irrigation ---
-    # Flujo con variaciones pronunciadas (e.g. 4 a 12 L/min)
-    flow = round(max(0.0, 8.0 + random.uniform(-4, 4) + noise * 0.3), 1) if irrigating else 0.0
-    _state["accumulated_liters"] += flow * (10.0 / 60.0)
-    acc_liters = round(_state["accumulated_liters"], 1)
-
-    return {
+    payload = {
         "timestamp": timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "soil": {
-            "conductivity": soil_cond,
-            "temperature": soil_temp,
-            "humidity": soil_hum,
-            "water_potential": soil_wp,
+            "conductivity": round(soil_cond, 2),
+            "temperature": round(soil_temp, 1),
+            "humidity": round(state.soil_humidity, 1),
+            "water_potential": round(soil_wp, 2),
         },
         "irrigation": {
             "active": irrigating,
-            "accumulated_liters": acc_liters,
-            "flow_per_minute": flow,
+            "accumulated_liters": round(state.accumulated_liters, 1),
+            "flow_per_minute": round(flow, 1),
         },
         "environmental": {
-            "temperature": env_temp,
-            "relative_humidity": env_rh,
-            "wind_speed": env_wind,
-            "solar_radiation": env_solar_rad,
-            "eto": env_eto,
+            "temperature": round(env_temp, 1),
+            "relative_humidity": round(env_rh, 1),
+            "wind_speed": round(env_wind, 1),
+            "solar_radiation": round(env_solar_rad, 1),
+            "eto": round(env_eto, 2),
         },
     }
 
+    probable_breaches = list(spike_hints)
+    if payload["soil"]["humidity"] < 24.0:
+        probable_breaches.append("soil.humidity<24")
+    if payload["irrigation"]["flow_per_minute"] > 10.5:
+        probable_breaches.append("flow>10.5")
+    if payload["environmental"]["eto"] > 5.8:
+        probable_breaches.append("eto>5.8")
 
-# ---------------------------------------------------------------------------
-# API Communication (stdlib only — no requests needed)
-# ---------------------------------------------------------------------------
+    return payload, probable_breaches
 
 
 def send_reading(base_url: str, api_key: str, payload: dict) -> bool:
-    """POST a reading using urllib. Returns True on success."""
     url = f"{base_url}/readings"
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
@@ -198,133 +385,311 @@ def send_reading(base_url: str, api_key: str, payload: dict) -> bool:
         with urllib.request.urlopen(req, timeout=15) as resp:
             if resp.status == 201:
                 return True
-            else:
-                body = resp.read().decode("utf-8", errors="replace")
-                print(f"  ⚠️  HTTP {resp.status}: {body[:200]}")
-                return False
-    except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8", errors="replace")
-        print(f"  ⚠️  HTTP {e.code}: {body[:200]}")
+            body = resp.read().decode("utf-8", errors="replace")
+            print(f"HTTP {resp.status}: {body[:200]}")
+            return False
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        print(f"HTTP {exc.code}: {body[:200]}")
         return False
-    except urllib.error.URLError as e:
-        print(f"  ❌ No se pudo conectar: {e.reason}")
+    except urllib.error.URLError as exc:
+        print(f"No se pudo conectar: {exc.reason}")
         return False
     except TimeoutError:
-        print(f"  ⏰ Timeout al conectar a {url}")
+        print(f"Timeout al conectar a {url}")
         return False
 
 
-def normalize_api_key(raw_key: str) -> tuple[str, bool]:
-    """Trim API key and recover common copy/paste mistakes from dashboards."""
-    key = raw_key.strip()
-    marker = "ak_"
+def _post_json(
+    url: str,
+    payload: dict,
+    *,
+    headers: dict[str, str] | None = None,
+    timeout: int = 20,
+) -> tuple[int, dict]:
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=data, method="POST")
+    req.add_header("Content-Type", "application/json")
+    if headers:
+        for key, value in headers.items():
+            req.add_header(key, value)
 
-    # Accept values accidentally prefixed, e.g. "node-id-ak_xxx".
-    if marker in key and not key.startswith(marker):
-        return key[key.find(marker):], True
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            body = resp.read().decode("utf-8", errors="replace")
+            parsed = json.loads(body) if body else {}
+            return resp.status, parsed
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        try:
+            parsed = json.loads(body) if body else {}
+        except json.JSONDecodeError:
+            parsed = {"detail": body[:300]}
+        return exc.code, parsed
+    except urllib.error.URLError as exc:
+        return 0, {"detail": f"No se pudo conectar: {exc.reason}"}
+    except TimeoutError:
+        return 0, {"detail": "Timeout al conectar"}
 
-    return key, False
+
+def admin_login(base_url: str, email: str, password: str) -> tuple[str | None, str | None]:
+    status, payload = _post_json(
+        f"{base_url}/auth/login",
+        {"email": email, "password": password},
+    )
+    if status == 200 and payload.get("access_token"):
+        return str(payload["access_token"]), None
+    return None, f"login admin fallo (status={status}) detail={payload.get('detail')}"
 
 
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
+def dispatch_notifications(
+    base_url: str,
+    access_token: str,
+    *,
+    limit: int,
+) -> tuple[int, dict]:
+    qs = urlencode({"limit": limit, "only_unread": "true"})
+    return _post_json(
+        f"{base_url}/alerts/dispatch-notifications?{qs}",
+        {},
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
 
 
-def backfill(base_url: str, api_key: str, days: int, dry_run: bool):
-    """Generate historical data for the last N days."""
+def _masked_key(api_key: str) -> str:
+    if len(api_key) <= 16:
+        return api_key
+    return f"{api_key[:8]}...{api_key[-4:]}"
+
+
+def _print_line(
+    *,
+    prefix: str,
+    node_label: str,
+    payload: dict,
+    probable_breaches: list[str],
+) -> None:
+    breach_tag = ", ".join(probable_breaches) if probable_breaches else "none"
+    print(
+        f"{prefix} [{node_label}] {payload['timestamp']} | "
+        f"SoilHum={payload['soil']['humidity']}% | "
+        f"Flow={payload['irrigation']['flow_per_minute']} L/min | "
+        f"ETo={payload['environmental']['eto']} | "
+        f"Breach? {breach_tag}"
+    )
+
+
+def backfill(
+    *,
+    base_url: str,
+    nodes: list[NodeContext],
+    days: int,
+    dry_run: bool,
+    mode: str,
+    demo_spike_every: int,
+) -> None:
     now = datetime.now(timezone.utc)
     start = now - timedelta(days=days)
-    current = start
-    total = 0
-    success = 0
-
     expected = days * 144
-    print(f"\n📜 Backfill: generando {days} días de historial (~{expected} lecturas)...")
-    print(f"   Desde: {start.strftime('%Y-%m-%d %H:%M')} UTC")
-    print(f"   Hasta: {now.strftime('%Y-%m-%d %H:%M')} UTC\n")
 
-    while current < now:
-        payload = generate_reading(current)
-        total += 1
+    print(
+        f"\nBackfill: {days} dias por nodo (~{expected} lecturas por nodo, {len(nodes)} nodos)"
+    )
+    print(f"Desde: {start.strftime('%Y-%m-%d %H:%M')} UTC")
+    print(f"Hasta: {now.strftime('%Y-%m-%d %H:%M')} UTC\n")
 
-        if dry_run:
-            if total <= 3 or total % 144 == 0:
-                print(f"  [DRY] {payload['timestamp']} | "
-                      f"Hum: {payload['soil']['humidity']}% | "
-                      f"Temp: {payload['environmental']['temperature']}°C | "
-                      f"Riego: {'ON' if payload['irrigation']['active'] else 'OFF'}")
-        else:
-            if send_reading(base_url, api_key, payload):
-                success += 1
-            if total % 144 == 0:
-                print(f"  ✅ Día {total // 144}/{days} ({success}/{total} ok)")
-            time.sleep(0.05)  # avoid overwhelming the server
-
-        current += timedelta(minutes=10)
-
-    print(f"\n{'📜 [DRY-RUN] ' if dry_run else '📜 '}Backfill completado: "
-          f"{success if not dry_run else total}/{total} lecturas.\n")
+    for node in nodes:
+        current = start
+        total = 0
+        ok = 0
+        print(f"-> {node.label} ({_masked_key(node.api_key)})")
+        while current < now:
+            payload, probable = _generate_reading(
+                current,
+                node.state,
+                mode,
+                demo_spike_every,
+            )
+            total += 1
+            if dry_run:
+                if total <= 2 or total % 144 == 0:
+                    _print_line(
+                        prefix="  [DRY-BF]",
+                        node_label=node.label,
+                        payload=payload,
+                        probable_breaches=probable,
+                    )
+            else:
+                if send_reading(base_url, node.api_key, payload):
+                    ok += 1
+                if total % 144 == 0:
+                    print(f"  Dia {total // 144}/{days} ({ok}/{total} ok)")
+                time.sleep(0.03)
+            current += timedelta(minutes=10)
+        print(f"  Backfill nodo completo: {ok if not dry_run else total}/{total}\n")
 
 
 def main():
     args = get_config()
-    args.api_key, normalized = normalize_api_key(args.api_key)
+    apply_quick_demo_defaults(args)
+    api_keys, normalized_count = load_api_keys(args)
 
-    if not args.api_key:
-        print("❌ Debes especificar una API Key.")
-        print("   Uso:  python simulator.py --api-key <TU_API_KEY>")
-        print("   O:    export SIMULATOR_API_KEY=<TU_API_KEY>")
-        print("\n   Obtén la API Key creando un nodo desde el panel de Admin.")
+    if not api_keys:
+        print("Debes indicar al menos una API Key.")
+        print("Ejemplos:")
+        print("  python simulator_fast.py --api-key <KEY>")
+        print("  python simulator_fast.py --api-key <KEY1> --api-key <KEY2>")
+        print("  python simulator_fast.py --api-keys-file ./keys.txt")
+        print("Env vars soportadas: SIMULATOR_API_KEY, SIMULATOR_API_KEYS")
         sys.exit(1)
 
-    if normalized:
-        print("⚠️  API Key normalizada automáticamente. Usando el segmento que inicia con 'ak_'.")
+    if normalized_count > 0:
+        print(
+            f"Se normalizaron {normalized_count} API keys automaticamente (segmento desde 'ak_')."
+        )
 
-    key_display = (f"{args.api_key[:12]}...{args.api_key[-4:]}"
-                   if len(args.api_key) > 16 else args.api_key)
+    nodes: list[NodeContext] = []
+    for index, key in enumerate(api_keys):
+        label = f"node-{index + 1:02d}"
+        state = _init_node_state(index, args.seed)
+        nodes.append(NodeContext(api_key=key, label=label, state=state))
 
-    print("=" * 60)
-    print("  📡 Simulador IoT — Sistema de Riego Agrícola")
-    print("=" * 60)
-    print(f"  🔗 Server:    {args.base_url}")
-    print(f"  🔑 API Key:   {key_display}")
-    print(f"  ⏱️  Intervalo: {args.interval}s ({args.interval / 60:.1f} min)")
-    print(f"  🧪 Dry-run:   {'Sí' if args.dry_run else 'No'}")
-    print("=" * 60)
+    print("=" * 72)
+    print("IoT Simulator FAST - Multi Nodo")
+    print("=" * 72)
+    print(f"Server:         {args.base_url}")
+    print(f"Intervalo:      {args.interval}s")
+    print(f"Modo:           {args.mode}")
+    print(f"Demo spike:     cada {args.demo_spike_every} lecturas por nodo")
+    print(f"Dry-run:        {'si' if args.dry_run else 'no'}")
+    print(f"Preset:         {args.preset}")
+    print(f"Quick-demo:     {'si' if args.quick_demo else 'no'}")
+    print(
+        "Dispatch notif: "
+        f"{'si' if args.dispatch_notifications else 'no'}"
+        + (
+            f" (cada {args.dispatch_interval}s)"
+            if args.dispatch_notifications
+            else ""
+        )
+    )
+    print(f"Nodos activos:  {len(nodes)}")
+    for node in nodes:
+        print(f"  - {node.label}: {_masked_key(node.api_key)}")
+    print("=" * 72)
 
     if args.backfill > 0:
-        backfill(args.base_url, args.api_key, args.backfill, args.dry_run)
+        backfill(
+            base_url=args.base_url,
+            nodes=nodes,
+            days=args.backfill,
+            dry_run=args.dry_run,
+            mode=args.mode,
+            demo_spike_every=args.demo_spike_every,
+        )
 
-    print(f"\n🔄 Loop activo cada {args.interval}s (Ctrl+C para detener)\n")
-    sent = 0
-    failed = 0
+    dispatch_token: str | None = None
+    next_dispatch_ts = time.monotonic() + max(3, args.dispatch_interval)
+    if args.dispatch_notifications and args.dry_run:
+        print("Dispatch de notificaciones deshabilitado durante dry-run.")
+    elif args.dispatch_notifications:
+        if not args.admin_email or not args.admin_password:
+            print(
+                "Dispatch de notificaciones activo, pero faltan "
+                "--admin-email/--admin-password."
+            )
+        else:
+            dispatch_token, err = admin_login(
+                args.base_url,
+                args.admin_email,
+                args.admin_password,
+            )
+            if dispatch_token is None:
+                print(f"No se pudo iniciar sesion admin para dispatch: {err}")
+            else:
+                print("Sesion admin para dispatch iniciada.")
 
+    print(f"\nLoop en vivo cada {args.interval}s (Ctrl+C para detener)\n")
     try:
         while True:
             now = datetime.now(timezone.utc)
-            p = generate_reading(now)
+            for node in nodes:
+                payload, probable = _generate_reading(
+                    now,
+                    node.state,
+                    args.mode,
+                    args.demo_spike_every,
+                )
 
-            label = (f"Hum: {p['soil']['humidity']}% ⭐ | "
-                     f"Temp: {p['environmental']['temperature']}°C | "
-                     f"Riego: {'ON 💧' if p['irrigation']['active'] else 'OFF'} | "
-                     f"Flujo: {p['irrigation']['flow_per_minute']} L/min ⭐ | "
-                     f"ETo: {p['environmental']['eto']} ⭐")
+                if args.dry_run:
+                    _print_line(
+                        prefix="[DRY]",
+                        node_label=node.label,
+                        payload=payload,
+                        probable_breaches=probable,
+                    )
+                    continue
 
-            if args.dry_run:
-                print(f"  [DRY] {p['timestamp']} | {label}")
-            else:
-                if send_reading(args.base_url, args.api_key, p):
-                    sent += 1
-                    print(f"  ✅ [{sent}] {p['timestamp']} | {label}")
+                if send_reading(args.base_url, node.api_key, payload):
+                    node.sent += 1
+                    _print_line(
+                        prefix=f"[OK #{node.sent}]",
+                        node_label=node.label,
+                        payload=payload,
+                        probable_breaches=probable,
+                    )
                 else:
-                    failed += 1
-                    print(f"  ❌ [{failed} fails] {p['timestamp']}")
+                    node.failed += 1
+                    _print_line(
+                        prefix=f"[FAIL #{node.failed}]",
+                        node_label=node.label,
+                        payload=payload,
+                        probable_breaches=probable,
+                    )
 
+            if args.dispatch_notifications and not args.dry_run:
+                now_mono = time.monotonic()
+                if now_mono >= next_dispatch_ts:
+                    if dispatch_token is None and args.admin_email and args.admin_password:
+                        dispatch_token, _ = admin_login(
+                            args.base_url,
+                            args.admin_email,
+                            args.admin_password,
+                        )
+
+                    if dispatch_token is not None:
+                        status, payload = dispatch_notifications(
+                            args.base_url,
+                            dispatch_token,
+                            limit=args.dispatch_limit,
+                        )
+                        if status == 200:
+                            print(
+                                "[DISPATCH] pending={pending} processed={processed} "
+                                "emailed={emailed} whatsapp={whatsapp}".format(
+                                    pending=payload.get("pending_alerts", 0),
+                                    processed=payload.get("processed_alerts", 0),
+                                    emailed=payload.get("emailed_alerts", 0),
+                                    whatsapp=payload.get("whatsapp_alerts", 0),
+                                )
+                            )
+                        elif status == 401:
+                            dispatch_token = None
+                            print("[DISPATCH] token expirado/no valido, reintentando login.")
+                        else:
+                            print(
+                                f"[DISPATCH] fallo status={status} detail={payload.get('detail')}"
+                            )
+                    else:
+                        print(
+                            "[DISPATCH] sin token admin, omitiendo ciclo de dispatch."
+                        )
+                    next_dispatch_ts = time.monotonic() + max(3, args.dispatch_interval)
             time.sleep(args.interval)
-
     except KeyboardInterrupt:
-        print(f"\n\n🛑 Simulador detenido. Enviadas: {sent} | Fallidas: {failed}\n")
+        print("\nSimulador detenido.")
+        for node in nodes:
+            print(f"  {node.label}: sent={node.sent} failed={node.failed}")
 
 
 if __name__ == "__main__":

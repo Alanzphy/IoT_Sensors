@@ -118,7 +118,132 @@ python3 simulator.py --api-key 99189486-8181-4e8c-8c6d-b3da66e6712b --interval 3
 # Generar historial de los últimos 7 días de golpe:
 python3 simulator.py --api-key 99189486-8181-4e8c-8c6d-b3da66e6712b --backfill 7
 ```
-La key del ejemplo corresponde al **Nodo Nogal Norte**, vinculado al usuario `cliente@sensores.com`.
+La key del ejemplo corresponde al **Nodo Nogal Norte**, vinculado al usuario `alan2203mx@gmail.com`.
+
+## Demo Rápida (Reproducible)
+
+Si quieres dejar el entorno listo para demo con datos históricos coherentes + umbrales + simulación en vivo, usa este flujo.
+
+### Opción A — Un solo comando (como seed clásico)
+
+Este comando ejecuta:
+1) `app.db.seed` (usuarios/predios/áreas/nodos de prueba)
+2) `app.db.demo_seed run-all` (snapshot + purga + recarga 30 días + umbrales)
+
+```bash
+cd backend
+DEBUG=true uv run python -m app.db.seed_demo
+```
+
+Atajo equivalente desde raíz:
+
+```bash
+make demo-seed
+```
+
+Por defecto carga el dataset demo para `alan2203mx@gmail.com`.
+
+### Opción B — Demo sobre otro cliente local
+
+Si ya tienes otro cliente con áreas y nodos activos, ejecuta:
+
+```bash
+cd backend
+DEBUG=true uv run python -m app.db.seed_demo \
+  --skip-base-seed \
+  --client-email tu_cliente@dominio.com \
+  --days 30 \
+  --seed 20260423
+```
+
+Notas:
+- El script excluye automáticamente áreas sin nodo activo.
+- Solo toca datos dinámicos del cliente objetivo (lecturas/alertas/umbrales).
+- Conserva entidades estáticas y `notification_preferences`.
+
+### Encender simulación en vivo (multi-nodo)
+
+Después de `seed_demo`, puedes disparar lecturas en tiempo real con picos controlados:
+
+```bash
+# Comando recomendado: demo total (nodos + alertas + dispatch de notificaciones)
+cd simulator
+python3 simulator_fast.py --quick-demo
+```
+
+Atajo equivalente desde raíz:
+
+```bash
+make demo-live
+```
+
+`--quick-demo` activa automáticamente:
+- preset de 4 nodos del seed local
+- modo `demo-alerts`
+- despacho periódico de notificaciones (`/alerts/dispatch-notifications`)
+- credenciales admin locales por defecto (`admin@sensores.com` / `admin123`)
+
+```bash
+cd simulator
+python3 simulator_fast.py \
+  --api-key 99189486-8181-4e8c-8c6d-b3da66e6712b \
+  --api-key c1f5cd79-e760-4a9f-92ea-31ea685a3add \
+  --api-key 02b21674-0099-4470-a8dd-b4ebd7d8c2b0 \
+  --api-key ak_b2727bc1d95e342932612ee5573fdb18 \
+  --mode demo-alerts \
+  --demo-spike-every 6 \
+  --interval 2
+```
+
+Con esto se generan lecturas en vivo para los 4 nodos del seed de prueba y se activan breaches de umbral de forma visible en dashboard/alertas.
+
+### Checklist demo completa (rápido)
+
+Para validar **todo** (predios/áreas/nodos + umbrales + alertas + notificaciones):
+
+1. Ejecuta `make demo-seed`.
+2. Inicia backend y frontend.
+3. Ejecuta `simulator_fast.py` con las 4 API keys (comando de arriba).
+4. Abre dashboard/centro de alertas y confirma que aumentan lecturas y alertas.
+5. Para correo/WhatsApp, valida en `backend/.env`:
+   `NOTIFICATIONS_ENABLED=true`, `NOTIFICATIONS_EMAIL_ENABLED=true`, `NOTIFICATIONS_WHATSAPP_ENABLED=true`
+   y credenciales SMTP/WhatsApp válidas.
+6. Si no quieres `--quick-demo`, dispara manualmente el despacho:
+
+```bash
+# 1) Login admin (copia el access_token de la respuesta)
+curl -s http://localhost:5050/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@sensores.com","password":"admin123"}'
+
+# 2) Despachar notificaciones pendientes
+curl -X POST "http://localhost:5050/api/v1/alerts/dispatch-notifications?limit=200&only_unread=true" \
+  -H "Authorization: Bearer TU_ACCESS_TOKEN"
+```
+
+### Misma demo en otra PC (reproducible)
+
+Con el mismo repo y semilla tendrás el mismo dataset demo:
+
+```bash
+# 1) Clonar repo y entrar
+git clone <URL_DEL_REPO>
+cd sensorestest
+
+# 2) Levantar MySQL local
+docker compose up -d mysql
+
+# 3) Backend
+cd backend
+cp .env.example .env
+uv sync
+uv run alembic upgrade head
+
+# 4) Cargar demo completa (seed base + dataset histórico + umbrales)
+DEBUG=true uv run python -m app.db.seed_demo
+```
+
+Luego levantas frontend y corres `simulator_fast.py` igual que en esta máquina.
 
 ### Troubleshooting
 
