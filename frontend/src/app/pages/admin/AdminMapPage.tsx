@@ -434,8 +434,8 @@ export function AdminMapPage() {
         markerElement.title = node.name || `Nodo #${node.id}`;
 
         const popupHtml = `
-          <div style="font-family: ui-sans-serif, system-ui; font-size: 12px; line-height: 1.4;">
-            <div style="font-weight: 700; color: var(--text-main); margin-bottom: 4px;">${node.name || `Nodo #${node.id}`}</div>
+          <div class="iot-map-popup-content">
+            <div class="iot-map-popup-title">${node.name || `Nodo #${node.id}`}</div>
             <div><strong>Cliente:</strong> ${node.client_company_name}</div>
             <div><strong>Predio:</strong> ${node.property_name}</div>
             <div><strong>Área:</strong> ${node.irrigation_area_name}</div>
@@ -446,7 +446,7 @@ export function AdminMapPage() {
 
         const marker = new maplibregl.Marker({ element: markerElement, anchor: "bottom" })
           .setLngLat([node.longitude as number, node.latitude as number])
-          .setPopup(new maplibregl.Popup({ offset: 16 }).setHTML(popupHtml))
+          .setPopup(new maplibregl.Popup({ offset: 16, className: "iot-map-popup" }).setHTML(popupHtml))
           .addTo(map);
 
         markerElement.addEventListener("click", () => setSelectedNode(node));
