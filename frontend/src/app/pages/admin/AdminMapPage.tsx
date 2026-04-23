@@ -10,6 +10,7 @@ import { GeoNode, getGeoNodes } from "../../services/nodes";
 
 const DEFAULT_LIGHT_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 const DEFAULT_DARK_STYLE_URL = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+const MAP_AUTO_REFRESH_MS = 30_000;
 
 interface ClientOption {
   id: number;
@@ -49,6 +50,18 @@ function freshnessText(node: GeoNode): string {
   const hours = Math.floor(node.minutes_since_last_reading / 60);
   const mins = node.minutes_since_last_reading % 60;
   return `Hace ${hours}h ${mins}min`;
+}
+
+function communicationStatusLabel(status: GeoNode["freshness_status"]): string {
+  if (status === "fresh") return "Reportando";
+  if (status === "stale") return "Sin reporte reciente";
+  return "Sin lecturas";
+}
+
+function communicationStatusClass(status: GeoNode["freshness_status"]): string {
+  if (status === "fresh") return "text-[var(--status-active)]";
+  if (status === "stale") return "text-[var(--status-warning)]";
+  return "text-[var(--text-muted)]";
 }
 
 export function AdminMapPage() {
@@ -232,6 +245,17 @@ export function AdminMapPage() {
   }, [fetchNodes]);
 
   useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      if (document.hidden) return;
+      void fetchNodes();
+    }, MAP_AUTO_REFRESH_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [fetchNodes]);
+
+  useEffect(() => {
     if (nodes.length === 0) {
       if (selectedNode !== null) {
         setSelectedNode(null);
@@ -249,14 +273,19 @@ export function AdminMapPage() {
       return;
     }
 
-    const stillExists = nodes.some((node) => node.id === selectedNode.id);
-    if (!stillExists) {
+    const latestSelectedNode = nodes.find((node) => node.id === selectedNode.id) || null;
+    if (!latestSelectedNode) {
       setSelectedNode(preferredByArea ?? nodes[0]);
       return;
     }
 
-    if (preferredByArea && selectedNode.id !== preferredByArea.id) {
+    if (preferredByArea && latestSelectedNode.id !== preferredByArea.id) {
       setSelectedNode(preferredByArea);
+      return;
+    }
+
+    if (latestSelectedNode !== selectedNode) {
+      setSelectedNode(latestSelectedNode);
     }
   }, [nodes, selectedAreaId, selectedNode]);
 
@@ -725,7 +754,18 @@ export function AdminMapPage() {
               <div className="text-[var(--text-muted)]"><strong>Predio:</strong> {selectedNode.property_name}</div>
               <div className="text-[var(--text-muted)]"><strong>Área:</strong> {selectedNode.irrigation_area_name}</div>
               <div className="text-[var(--text-muted)]"><strong>Cultivo:</strong> {selectedNode.crop_type_name}</div>
-              <div className="text-[var(--text-muted)]"><strong>Estado:</strong> <span className={selectedNode.is_active ? "text-[var(--status-active)]" : "text-[var(--status-danger)]"}>{selectedNode.is_active ? "Activo" : "Inactivo"}</span></div>
+              <div className="text-[var(--text-muted)]">
+                <strong>Estado (config):</strong>{" "}
+                <span className={selectedNode.is_active ? "text-[var(--status-active)]" : "text-[var(--status-danger)]"}>
+                  {selectedNode.is_active ? "Activo" : "Inactivo"}
+                </span>
+              </div>
+              <div className="text-[var(--text-muted)]">
+                <strong>Comunicación:</strong>{" "}
+                <span className={communicationStatusClass(selectedNode.freshness_status)}>
+                  {communicationStatusLabel(selectedNode.freshness_status)}
+                </span>
+              </div>
               <div className="text-[var(--text-muted)]"><strong>Frescura:</strong> {freshnessText(selectedNode)}</div>
               {selectedNodeDate && (
                 <div className="text-[var(--text-muted)]">

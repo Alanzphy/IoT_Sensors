@@ -6,8 +6,42 @@ import { BentoCard } from "../../components/BentoCard";
 import { FreshnessIndicator } from "../../components/FreshnessIndicator";
 import { MetricCard } from "../../components/MetricCard";
 import { PageTransition } from "../../components/PageTransition";
+import { PillButton } from "../../components/PillButton";
 import { useToast } from "../../components/Toast";
 import { api } from "../../services/api";
+
+function parseCoordinateInput(
+  value: string,
+  label: string,
+  min: number,
+  max: number
+): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const numericValue = Number(trimmed);
+  if (Number.isNaN(numericValue)) {
+    throw new Error(`${label} debe ser un número válido.`);
+  }
+  if (numericValue < min || numericValue > max) {
+    throw new Error(`${label} debe estar entre ${min} y ${max}.`);
+  }
+  return numericValue;
+}
+
+function getErrorMessage(error: any, fallback: string): string {
+  const errorDetail = error?.response?.data?.detail;
+  if (typeof errorDetail === "string") {
+    return errorDetail;
+  }
+  if (Array.isArray(errorDetail)) {
+    return errorDetail.map((item: any) => item.msg || JSON.stringify(item)).join(", ");
+  }
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  return fallback;
+}
 
 export function NodeDetail() {
   const { nodeId } = useParams();
@@ -19,8 +53,15 @@ export function NodeDetail() {
   const [historicalData, setHistoricalData] = useState<any[]>([]);
 
   const [showApiKey, setShowApiKey] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [savingEdit, setSavingEdit] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editSerialNumber, setEditSerialNumber] = useState("");
+  const [editLat, setEditLat] = useState("");
+  const [editLng, setEditLng] = useState("");
+  const [editIsActive, setEditIsActive] = useState(true);
 
   useEffect(() => {
     const fetchNodeData = async () => {
@@ -105,6 +146,55 @@ export function NodeDetail() {
   const isNodeActive = node.is_active || node.activo;
   const lastUpdateStr = latestReading ? latestReading.timestamp : null;
 
+  const openEditForm = () => {
+    setEditName(node.name || "");
+    setEditSerialNumber(node.serial_number || "");
+    setEditLat(node.latitude === null ? "" : String(node.latitude));
+    setEditLng(node.longitude === null ? "" : String(node.longitude));
+    setEditIsActive(Boolean(node.is_active ?? node.activo));
+    setShowEditForm(true);
+    setError(null);
+  };
+
+  const closeEditForm = () => {
+    setShowEditForm(false);
+    setEditName("");
+    setEditSerialNumber("");
+    setEditLat("");
+    setEditLng("");
+    setEditIsActive(true);
+  };
+
+  const handleUpdateNode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!node) return;
+
+    try {
+      setSavingEdit(true);
+      setError(null);
+
+      const latitude = parseCoordinateInput(editLat, "Latitud", -90, 90);
+      const longitude = parseCoordinateInput(editLng, "Longitud", -180, 180);
+
+      const response = await api.put(`/nodes/${node.id}`, {
+        name: editName.trim() || null,
+        serial_number: editSerialNumber.trim() || null,
+        latitude,
+        longitude,
+        is_active: editIsActive,
+      });
+
+      const updatedNode = response.data.data || response.data;
+      setNode(updatedNode);
+      showToast("Nodo actualizado correctamente", "success");
+      closeEditForm();
+    } catch (err: any) {
+      setError(getErrorMessage(err, "No se pudo actualizar el nodo."));
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   return (
     <PageTransition>
     <div className="min-h-screen p-4 md:p-6 lg:p-8">
@@ -119,13 +209,18 @@ export function NodeDetail() {
             <h1 className="text-2xl md:text-3xl font-serif text-[var(--text-title)] mb-2">{node.name || `Nodo #${node.id}`}</h1>
             <p className="text-[var(--text-subtle)] font-mono">{node.serial_number || '-'}</p>
           </div>
-          <span className={`px-4 py-2 rounded-full text-sm font-medium border ${
-            isNodeActive
-              ? "bg-[var(--status-active-bg)] text-[var(--status-active)] border-[var(--status-active)]/35"
-              : "bg-[var(--status-danger-bg)] text-[var(--status-danger)] border-[var(--status-danger)]/35"
-          }`}>
-            {isNodeActive ? "Activo" : "Inactivo"}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className={`px-4 py-2 rounded-full text-sm font-medium border ${
+              isNodeActive
+                ? "bg-[var(--status-active-bg)] text-[var(--status-active)] border-[var(--status-active)]/35"
+                : "bg-[var(--status-danger-bg)] text-[var(--status-danger)] border-[var(--status-danger)]/35"
+            }`}>
+              {isNodeActive ? "Activo" : "Inactivo"}
+            </span>
+            <PillButton type="button" variant="secondary" onClick={openEditForm}>
+              Editar nodo
+            </PillButton>
+          </div>
         </div>
       </div>
 
@@ -146,7 +241,7 @@ export function NodeDetail() {
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-[var(--text-subtle)]" />
                 <p className="font-mono text-sm text-[var(--text-main)]">
-                  {(node.latitude && node.longitude)
+                  {(node.latitude !== null && node.longitude !== null)
                     ? `${node.latitude}, ${node.longitude}`
                     : 'No configurado'
                   }
@@ -280,6 +375,83 @@ export function NodeDetail() {
           )}
         </div>
       </BentoCard>
+
+      {showEditForm && (
+        <div className="fixed inset-0 bg-[var(--surface-page)]/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <BentoCard variant="light" className="w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-serif text-[var(--text-title)] mb-6">Editar Nodo IoT</h2>
+            <form onSubmit={handleUpdateNode} className="space-y-4">
+              <div>
+                <label className="block text-sm text-[var(--text-subtle)] mb-2">Nombre del Nodo</label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="Ej: Sensor Nogal-01"
+                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--surface-panel)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-[var(--text-subtle)] mb-2">Número de Serie</label>
+                <input
+                  type="text"
+                  value={editSerialNumber}
+                  onChange={(e) => setEditSerialNumber(e.target.value)}
+                  placeholder="SN-2026-001"
+                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--surface-panel)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm text-[var(--text-subtle)] mb-2">Latitud GPS</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={editLat}
+                    onChange={(e) => setEditLat(e.target.value)}
+                    placeholder="28.6329"
+                    className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--surface-panel)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-[var(--text-subtle)] mb-2">Longitud GPS</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={editLng}
+                    onChange={(e) => setEditLng(e.target.value)}
+                    placeholder="-106.0691"
+                    className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--surface-panel)] border border-[var(--border-strong)] text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="inline-flex items-center gap-2 text-sm text-[var(--text-subtle)]">
+                  <input
+                    type="checkbox"
+                    checked={editIsActive}
+                    onChange={(e) => setEditIsActive(e.target.checked)}
+                    className="accent-[var(--accent-primary)]"
+                  />
+                  Nodo activo
+                </label>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <PillButton type="button" variant="secondary" className="flex-1" onClick={closeEditForm}>
+                  Cancelar
+                </PillButton>
+                <PillButton type="submit" variant="primary" className="flex-1" disabled={savingEdit}>
+                  {savingEdit ? "Guardando..." : "Guardar Cambios"}
+                </PillButton>
+              </div>
+            </form>
+          </BentoCard>
+        </div>
+      )}
     </div>
     </PageTransition>
   );
