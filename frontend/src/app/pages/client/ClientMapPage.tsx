@@ -2,10 +2,12 @@ import { MapPin, RefreshCw, TriangleAlert } from "lucide-react";
 import maplibregl, { LngLatBoundsLike, Map as MapLibreMap, Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTheme } from "../../context/ThemeContext";
 import { useSelection } from "../../context/SelectionContext";
 import { GeoNode, getGeoNodes } from "../../services/nodes";
 
-const DEFAULT_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
+const DEFAULT_LIGHT_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
+const DEFAULT_DARK_STYLE_URL = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
 function markerColorByStatus(status: GeoNode["freshness_status"]): string {
   if (status === "fresh") return "var(--accent-primary)";
@@ -26,6 +28,8 @@ function freshnessText(node: GeoNode): string {
 }
 
 export function ClientMapPage() {
+  const { theme } = useTheme();
+
   const {
     properties,
     areas,
@@ -39,10 +43,16 @@ export function ClientMapPage() {
   const [selectedNode, setSelectedNode] = useState<GeoNode | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mapStyleVersion, setMapStyleVersion] = useState(0);
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
+  const mapStyleUrlRef = useRef<string | null>(null);
+
+  const lightMapStyleUrl = import.meta.env.VITE_MAP_STYLE_URL || DEFAULT_LIGHT_STYLE_URL;
+  const darkMapStyleUrl = import.meta.env.VITE_MAP_DARK_STYLE_URL || DEFAULT_DARK_STYLE_URL;
+  const activeMapStyleUrl = theme === "dark" ? darkMapStyleUrl : lightMapStyleUrl;
 
   const filteredAreas = useMemo(() => {
     if (!selectedProperty) return areas;
@@ -109,23 +119,53 @@ export function ClientMapPage() {
 
     mapRef.current = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: import.meta.env.VITE_MAP_STYLE_URL || DEFAULT_STYLE_URL,
+      style: activeMapStyleUrl,
       center: [-106.0691, 28.632],
       zoom: 6,
       attributionControl: true,
     });
+    mapStyleUrlRef.current = activeMapStyleUrl;
+
+    const onStyleLoad = () => {
+      setMapStyleVersion((previous) => previous + 1);
+      mapRef.current?.off("style.load", onStyleLoad);
+    };
+    mapRef.current.on("style.load", onStyleLoad);
+
     mapRef.current.addControl(new maplibregl.NavigationControl(), "top-right");
 
     return () => {
+      mapRef.current?.off("style.load", onStyleLoad);
       markersRef.current.forEach((marker) => marker.remove());
       markersRef.current = [];
       mapRef.current?.remove();
       mapRef.current = null;
+      mapStyleUrlRef.current = null;
     };
-  }, []);
+  }, [activeMapStyleUrl]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (mapStyleUrlRef.current === activeMapStyleUrl) return;
+
+    const onStyleLoad = () => {
+      setMapStyleVersion((previous) => previous + 1);
+      map.off("style.load", onStyleLoad);
+    };
+
+    map.on("style.load", onStyleLoad);
+    map.setStyle(activeMapStyleUrl);
+    mapStyleUrlRef.current = activeMapStyleUrl;
+
+    return () => {
+      map.off("style.load", onStyleLoad);
+    };
+  }, [activeMapStyleUrl]);
 
   useEffect(() => {
     if (!mapRef.current) return;
+    if (!mapRef.current.isStyleLoaded()) return;
 
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
@@ -177,7 +217,7 @@ export function ClientMapPage() {
         duration: 700,
       });
     }
-  }, [nodesWithCoordinates]);
+  }, [mapStyleVersion, nodesWithCoordinates]);
 
   const selectedNodeDate = selectedNode?.last_reading_timestamp
     ? new Date(selectedNode.last_reading_timestamp)

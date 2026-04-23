@@ -4,10 +4,12 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PageTransition } from "../../components/PageTransition";
 import { PillButton } from "../../components/PillButton";
+import { useTheme } from "../../context/ThemeContext";
 import { api } from "../../services/api";
 import { GeoNode, getGeoNodes } from "../../services/nodes";
 
-const DEFAULT_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
+const DEFAULT_LIGHT_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
+const DEFAULT_DARK_STYLE_URL = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
 interface ClientOption {
   id: number;
@@ -50,6 +52,8 @@ function freshnessText(node: GeoNode): string {
 }
 
 export function AdminMapPage() {
+  const { theme } = useTheme();
+
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [properties, setProperties] = useState<PropertyOption[]>([]);
   const [areas, setAreas] = useState<AreaOption[]>([]);
@@ -67,10 +71,17 @@ export function AdminMapPage() {
   const [visibleFresh, setVisibleFresh] = useState(true);
   const [visibleStale, setVisibleStale] = useState(true);
   const [visibleNoData, setVisibleNoData] = useState(true);
+  const [mapStyleVersion, setMapStyleVersion] = useState(0);
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
+  const mapStyleUrlRef = useRef<string | null>(null);
+
+  const runtimeEnv = (import.meta as unknown as { env?: Record<string, string | undefined> }).env;
+  const lightMapStyleUrl = runtimeEnv?.VITE_MAP_STYLE_URL || DEFAULT_LIGHT_STYLE_URL;
+  const darkMapStyleUrl = runtimeEnv?.VITE_MAP_DARK_STYLE_URL || DEFAULT_DARK_STYLE_URL;
+  const activeMapStyleUrl = theme === "dark" ? darkMapStyleUrl : lightMapStyleUrl;
 
   const removeClusterLayers = useCallback(() => {
     if (!mapRef.current) return;
@@ -228,30 +239,57 @@ export function AdminMapPage() {
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
-    const runtimeEnv = (import.meta as unknown as { env?: Record<string, string | undefined> }).env;
-
     mapRef.current = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: runtimeEnv?.VITE_MAP_STYLE_URL || DEFAULT_STYLE_URL,
+      style: activeMapStyleUrl,
       center: [-106.0691, 28.632],
       zoom: 5,
     });
+    mapStyleUrlRef.current = activeMapStyleUrl;
+
+    const onStyleLoad = () => {
+      setMapStyleVersion((previous) => previous + 1);
+      mapRef.current?.off("style.load", onStyleLoad);
+    };
+    mapRef.current.on("style.load", onStyleLoad);
 
     mapRef.current.addControl(new maplibregl.NavigationControl(), "top-right");
 
     return () => {
+      mapRef.current?.off("style.load", onStyleLoad);
       markersRef.current.forEach((marker) => marker.remove());
       markersRef.current = [];
       removeClusterLayers();
       mapRef.current?.remove();
       mapRef.current = null;
+      mapStyleUrlRef.current = null;
     };
-  }, [removeClusterLayers]);
+  }, [activeMapStyleUrl, removeClusterLayers]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (mapStyleUrlRef.current === activeMapStyleUrl) return;
+
+    const onStyleLoad = () => {
+      setMapStyleVersion((previous) => previous + 1);
+      map.off("style.load", onStyleLoad);
+    };
+
+    map.on("style.load", onStyleLoad);
+    map.setStyle(activeMapStyleUrl);
+    mapStyleUrlRef.current = activeMapStyleUrl;
+
+    return () => {
+      map.off("style.load", onStyleLoad);
+    };
+  }, [activeMapStyleUrl]);
 
   useEffect(() => {
     if (!mapRef.current) return;
 
     const map = mapRef.current;
+    if (!map.isStyleLoaded()) return;
 
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
@@ -449,7 +487,7 @@ export function AdminMapPage() {
       removeClusterLayers();
       map.getCanvas().style.cursor = "";
     };
-  }, [filteredNodesWithCoordinates, nodes, removeClusterLayers, viewMode]);
+  }, [filteredNodesWithCoordinates, mapStyleVersion, nodes, removeClusterLayers, viewMode]);
 
   const selectedNodeDate = selectedNode?.last_reading_timestamp
     ? new Date(selectedNode.last_reading_timestamp)
