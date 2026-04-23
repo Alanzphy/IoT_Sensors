@@ -5,7 +5,7 @@ from email.message import EmailMessage
 from urllib import error, request
 
 from fastapi import HTTPException, status
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -236,11 +236,6 @@ def _send_whatsapp_notification(
         return False
 
 
-def _target_channel_for_severity(severity: str) -> str:
-    # Business rule: critical alerts use WhatsApp, other severities use email.
-    return "whatsapp" if severity == "critical" else "email"
-
-
 def dispatch_pending_notifications(
     db: Session,
     *,
@@ -280,19 +275,9 @@ def dispatch_pending_notifications(
 
     pending_by_channel_conditions = []
     if email_enabled:
-        pending_by_channel_conditions.append(
-            and_(
-                Alert.severidad != "critical",
-                Alert.notificada_email.is_(False),
-            )
-        )
+        pending_by_channel_conditions.append(Alert.notificada_email.is_(False))
     if whatsapp_enabled:
-        pending_by_channel_conditions.append(
-            and_(
-                Alert.severidad == "critical",
-                Alert.notificada_whatsapp.is_(False),
-            )
-        )
+        pending_by_channel_conditions.append(Alert.notificada_whatsapp.is_(False))
 
     conditions.append(or_(*pending_by_channel_conditions))
 
@@ -348,23 +333,17 @@ def dispatch_pending_notifications(
         )
 
         attempted_any = False
-        target_channel = _target_channel_for_severity(alert.severidad)
-        channel_allowed = _is_notification_channel_allowed(
-            db,
-            cache=preference_cache,
-            client_id=client_id,
-            irrigation_area_id=alert.area_riego_id,
-            alert_type=alert.tipo,
-            severity=alert.severidad,
-            channel=target_channel,
-        )
-
-        if not channel_allowed:
-            skipped_alerts += 1
-            continue
-
-        if target_channel == "email" and email_enabled and not alert.notificada_email:
-            if recipient_email:
+        if email_enabled and not alert.notificada_email:
+            email_allowed = _is_notification_channel_allowed(
+                db,
+                cache=preference_cache,
+                client_id=client_id,
+                irrigation_area_id=alert.area_riego_id,
+                alert_type=alert.tipo,
+                severity=alert.severidad,
+                channel="email",
+            )
+            if email_allowed and recipient_email:
                 attempted_any = True
                 email_sent = _send_email_notification(
                     recipient_email=recipient_email,
@@ -378,12 +357,17 @@ def dispatch_pending_notifications(
                 else:
                     email_failures += 1
 
-        if (
-            target_channel == "whatsapp"
-            and whatsapp_enabled
-            and not alert.notificada_whatsapp
-        ):
-            if recipient_phone:
+        if whatsapp_enabled and not alert.notificada_whatsapp:
+            whatsapp_allowed = _is_notification_channel_allowed(
+                db,
+                cache=preference_cache,
+                client_id=client_id,
+                irrigation_area_id=alert.area_riego_id,
+                alert_type=alert.tipo,
+                severity=alert.severidad,
+                channel="whatsapp",
+            )
+            if whatsapp_allowed and recipient_phone:
                 attempted_any = True
                 whatsapp_sent = _send_whatsapp_notification(
                     recipient_phone=recipient_phone,

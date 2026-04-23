@@ -263,7 +263,7 @@ class TestNotificationPreferencesDispatch:
         assert calls["email"] == 0
         assert calls["whatsapp"] == 0
 
-    def test_preference_disabled_for_target_channel_skips_dispatch(
+    def test_preference_disabled_for_one_channel_still_dispatches_other_channel(
         self,
         client,
         admin_headers,
@@ -333,6 +333,62 @@ class TestNotificationPreferencesDispatch:
         assert dispatch.status_code == 200
         data = dispatch.json()
         assert data["emailed_alerts"] == 0
-        assert data["whatsapp_alerts"] == 0
+        assert data["whatsapp_alerts"] == 1
         assert calls["email"] == 0
-        assert calls["whatsapp"] == 0
+        assert calls["whatsapp"] == 1
+
+    def test_default_preferences_dispatches_both_channels(
+        self,
+        client,
+        admin_headers,
+        node_headers,
+        sample_irrigation_area,
+        monkeypatch,
+    ):
+        monkeypatch.setattr(settings, "NOTIFICATIONS_ENABLED", True)
+        monkeypatch.setattr(settings, "NOTIFICATIONS_EMAIL_ENABLED", True)
+        monkeypatch.setattr(settings, "NOTIFICATIONS_WHATSAPP_ENABLED", True)
+
+        calls = {"email": 0, "whatsapp": 0}
+
+        def _fake_email(**_kwargs):
+            calls["email"] += 1
+            return True
+
+        def _fake_whatsapp(**_kwargs):
+            calls["whatsapp"] += 1
+            return True
+
+        monkeypatch.setattr(alert_service, "_send_email_notification", _fake_email)
+        monkeypatch.setattr(
+            alert_service, "_send_whatsapp_notification", _fake_whatsapp
+        )
+
+        self._create_threshold(
+            client, admin_headers, sample_irrigation_area.id, severity="warning"
+        )
+
+        ingest = client.post(
+            "/api/v1/readings",
+            headers=node_headers,
+            json={
+                **SENSOR_PAYLOAD,
+                "timestamp": "2026-04-03T12:00:00Z",
+                "soil": {
+                    **SENSOR_PAYLOAD["soil"],
+                    "humidity": 33.0,
+                },
+            },
+        )
+        assert ingest.status_code == 201
+
+        dispatch = client.post(
+            "/api/v1/alerts/dispatch-notifications?only_unread=true&limit=20",
+            headers=admin_headers,
+        )
+        assert dispatch.status_code == 200
+        data = dispatch.json()
+        assert data["emailed_alerts"] == 1
+        assert data["whatsapp_alerts"] == 1
+        assert calls["email"] == 1
+        assert calls["whatsapp"] == 1
