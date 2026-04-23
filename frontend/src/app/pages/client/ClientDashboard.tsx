@@ -18,6 +18,7 @@ import { useSelection } from "../../context/SelectionContext";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { usePageVisibility } from "../../hooks/usePageVisibility";
 import { api } from "../../services/api";
+import { parseBackendTimestamp } from "../../utils/datetime";
 
 type PriorityKey = "soil.humidity" | "irrigation.flow_per_minute" | "environmental.eto";
 type SemaphoreLevel = "optimal" | "warning" | "critical";
@@ -35,6 +36,17 @@ const defaultSemaphore: Record<PriorityKey, SemaphoreLevel> = {
 
 // Intervalo de auto-refresco del dashboard: 3000ms (3s) para propósitos de prueba de tiempo real (originalmente 30000ms - 30s)
 const DASHBOARD_REFRESH_MS = 3000;
+const FRESH_MINUTES_THRESHOLD = 20;
+
+type ConnectionState = "online" | "warning" | "offline" | "no_data";
+
+function getConnectionState(lastUpdate: Date | null): ConnectionState {
+  if (!lastUpdate) return "no_data";
+  const minutesAgo = Math.max(0, Math.floor((Date.now() - lastUpdate.getTime()) / (1000 * 60)));
+  if (minutesAgo < FRESH_MINUTES_THRESHOLD) return "online";
+  if (minutesAgo < 120) return "warning";
+  return "offline";
+}
 
 function getSemaphoreLabel(level: SemaphoreLevel): string {
   if (level === "critical") return "Crítico";
@@ -87,13 +99,14 @@ export function ClientDashboard() {
     relativeHumidity: 0 as number | '-',
     windSpeed: 0 as number | '-',
     solarRadiation: 0 as number | '-',
-    lastUpdate: new Date(),
+    lastUpdate: null as Date | null,
   });
 
   const [historicalData, setHistoricalData] = useState<any[]>([]);
   const hasFetchedInitialRef = useRef(false);
   const [prioritySemaphore, setPrioritySemaphore] = useState<Record<PriorityKey, SemaphoreLevel>>(defaultSemaphore);
   const [loading, setLoading] = useState(false);
+  const connectionState = getConnectionState(currentReadings.lastUpdate);
 
   useEffect(() => {
     if (selectedProperty && filteredAreas.length > 0 && !selectedArea) {
@@ -149,7 +162,7 @@ export function ClientDashboard() {
               relativeHumidity: latestData.environmental?.relative_humidity ?? '-',
               windSpeed: latestData.environmental?.wind_speed ?? '-',
               solarRadiation: latestData.environmental?.solar_radiation ?? '-',
-              lastUpdate: new Date(latestData.timestamp + (latestData.timestamp.endsWith("Z") ? "" : "Z")),
+              lastUpdate: parseBackendTimestamp(latestData.timestamp),
             });
           } else {
             setCurrentReadings({
@@ -157,7 +170,7 @@ export function ClientDashboard() {
               irrigationActive: false, irrigationElapsedTime: "N/A",
               soilConductivity: '-', soilTemp: '-', waterPotential: '-',
               airTemp: '-', relativeHumidity: '-', windSpeed: '-', solarRadiation: '-',
-              lastUpdate: new Date(),
+              lastUpdate: null,
             });
           }
         }
@@ -165,14 +178,17 @@ export function ClientDashboard() {
         if (isMounted && histRes.data?.data) {
           const rawItems = histRes.data.data;
           const chartData = rawItems.reverse().map((item: any) => {
-            const t = new Date(item.timestamp + (item.timestamp.endsWith("Z") ? "" : "Z"));
+            const t = parseBackendTimestamp(item.timestamp);
+            if (!t) {
+              return null;
+            }
             return {
               time: t.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
               fullTime: t,
               soilHumidity: item.soil?.humidity ?? 0,
               waterFlow: item.irrigation?.flow_per_minute ?? 0,
             };
-          });
+          }).filter(Boolean);
           setHistoricalData(chartData);
         }
 
@@ -282,10 +298,32 @@ export function ClientDashboard() {
           )}
 
           {selectedArea && (
-            <div className="inline-flex items-center rounded-full border border-[var(--status-active)]/35 bg-[var(--status-active-bg)] px-3 py-2 text-xs font-semibold text-[var(--status-active)]">
-              <span className="mr-2 inline-flex h-2 w-2 rounded-full bg-[var(--status-active)] animate-glow-pulse" />
-              En línea
-            </div>
+            <>
+              {connectionState === "online" && (
+                <div className="inline-flex items-center rounded-full border border-[var(--status-active)]/35 bg-[var(--status-active-bg)] px-3 py-2 text-xs font-semibold text-[var(--status-active)]">
+                  <span className="mr-2 inline-flex h-2 w-2 rounded-full bg-[var(--status-active)] animate-glow-pulse" />
+                  En línea
+                </div>
+              )}
+              {connectionState === "warning" && (
+                <div className="inline-flex items-center rounded-full border border-[var(--status-warning)]/35 bg-[var(--status-warning-bg)] px-3 py-2 text-xs font-semibold text-[var(--status-warning)]">
+                  <span className="mr-2 inline-flex h-2 w-2 rounded-full bg-[var(--status-warning)]" />
+                  Sin reporte reciente
+                </div>
+              )}
+              {connectionState === "offline" && (
+                <div className="inline-flex items-center rounded-full border border-[var(--status-danger)]/35 bg-[var(--status-danger-bg)] px-3 py-2 text-xs font-semibold text-[var(--status-danger)]">
+                  <span className="mr-2 inline-flex h-2 w-2 rounded-full bg-[var(--status-danger)]" />
+                  Sin conexión
+                </div>
+              )}
+              {connectionState === "no_data" && (
+                <div className="inline-flex items-center rounded-full border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] px-3 py-2 text-xs font-semibold text-[var(--text-subtle)]">
+                  <span className="mr-2 inline-flex h-2 w-2 rounded-full bg-[var(--text-muted)]" />
+                  Sin lecturas
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -548,7 +586,9 @@ function DesktopDashboard({
               </AreaChart>
             </ResponsiveContainer>
           </div>
-          <FreshnessIndicator lastUpdate={currentReadings.lastUpdate} />
+          {currentReadings.lastUpdate && (
+            <FreshnessIndicator lastUpdate={currentReadings.lastUpdate} />
+          )}
         </BentoCard>
       </div>
 

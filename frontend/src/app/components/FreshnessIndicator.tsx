@@ -5,6 +5,8 @@ interface FreshnessIndicatorProps {
   variant?: "light" | "dark";
 }
 
+const FRESH_MINUTES_THRESHOLD = 20;
+
 function getTimeText(minutesAgo: number): string {
   if (minutesAgo < 1) return "hace un momento";
   if (minutesAgo < 60) return `hace ${minutesAgo} min`;
@@ -28,7 +30,7 @@ export function FreshnessIndicator({ lastUpdate, variant = "light" }: FreshnessI
   let dotColor: string;
   let statusLabel: string;
 
-  if (minutesAgo < 30) {
+  if (minutesAgo < FRESH_MINUTES_THRESHOLD) {
     dotColor = "var(--status-active)";
     statusLabel = "En línea";
   } else if (minutesAgo < 120) {
@@ -40,7 +42,7 @@ export function FreshnessIndicator({ lastUpdate, variant = "light" }: FreshnessI
   }
 
   const textColor = variant === "dark" ? "text-[var(--text-on-dark)]/70" : "text-[var(--text-muted)]";
-  const isPulsing = minutesAgo < 30;
+  const isPulsing = minutesAgo < FRESH_MINUTES_THRESHOLD;
 
   return (
     <div

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "../../context/ThemeContext";
 import { useSelection } from "../../context/SelectionContext";
 import { GeoNode, getGeoNodes } from "../../services/nodes";
+import { parseBackendTimestamp } from "../../utils/datetime";
 
 const DEFAULT_LIGHT_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 const DEFAULT_DARK_STYLE_URL = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
@@ -313,9 +314,7 @@ export function ClientMapPage() {
     });
   }, [selectedNode?.id]);
 
-  const selectedNodeDate = selectedNode?.last_reading_timestamp
-    ? new Date(selectedNode.last_reading_timestamp)
-    : null;
+  const selectedNodeDate = parseBackendTimestamp(selectedNode?.last_reading_timestamp ?? null);
 
   return (
     <div className="min-h-screen p-4 md:p-6 lg:p-8">

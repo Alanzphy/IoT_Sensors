@@ -353,6 +353,26 @@ export function HistoricalData() {
     setIrrigationSeries((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const soilEnvTempDomain = useMemo<[number, number]>(() => {
+    const values = chartData
+      .flatMap((point) => [point.soilTemp, point.airTemp])
+      .filter((value) => Number.isFinite(value));
+
+    if (values.length === 0) {
+      return [0, 40];
+    }
+
+    const minValue = Math.min(...values);
+    const maxValue = Math.max(...values);
+    const span = maxValue - minValue;
+    const padding = span === 0 ? Math.max(1, Math.abs(maxValue) * 0.05) : Math.max(0.5, span * 0.1);
+
+    const domainMin = Number((minValue - padding).toFixed(1));
+    const domainMax = Number((maxValue + padding).toFixed(1));
+
+    return [domainMin, domainMax];
+  }, [chartData]);
+
   const showSoilEnvPercentAxis = soilEnvSeries.soilHumidity || soilEnvSeries.relativeHumidity;
   const showSoilEnvTempAxis = soilEnvSeries.soilTemp || soilEnvSeries.airTemp;
   const showIrrigationFlowAxis = irrigationSeries.waterFlow;
@@ -545,6 +565,7 @@ export function HistoricalData() {
                       />
                       {showSoilEnvPercentAxis && (
                         <YAxis
+                          key="soil-env-axis-percent"
                           yAxisId="percent"
                           domain={[0, 100]}
                           tickFormatter={(v) => `${v}%`}
@@ -554,9 +575,10 @@ export function HistoricalData() {
                       )}
                       {showSoilEnvTempAxis && (
                         <YAxis
+                          key="soil-env-axis-temp"
                           yAxisId="temp"
                           orientation="right"
-                          domain={["dataMin - 2", "dataMax + 2"]}
+                          domain={soilEnvTempDomain}
                           tickFormatter={(v) => `${v}°C`}
                           stroke="var(--chart-4)"
                           style={{ fontSize: '12px' }}
@@ -577,16 +599,16 @@ export function HistoricalData() {
                       />
                       <Legend wrapperStyle={{ color: "var(--text-body)" }} />
                       {soilEnvSeries.soilHumidity && (
-                        <Line yAxisId="percent" type="monotone" dataKey="soilHumidity" name="Humedad suelo (%)" stroke="var(--accent-primary)" strokeWidth={2.5} dot={false} />
+                        <Line key="soil-env-line-soil-humidity" animationId={1101} yAxisId="percent" type="monotone" dataKey="soilHumidity" name="Humedad suelo (%)" stroke="var(--accent-primary)" strokeWidth={2.5} dot={false} />
                       )}
                       {soilEnvSeries.relativeHumidity && (
-                        <Line yAxisId="percent" type="monotone" dataKey="relativeHumidity" name="H. Relativa (%)" stroke="var(--accent-gold)" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                        <Line key="soil-env-line-relative-humidity" animationId={1102} yAxisId="percent" type="monotone" dataKey="relativeHumidity" name="H. Relativa (%)" stroke="var(--accent-gold)" strokeWidth={2} strokeDasharray="5 5" dot={false} />
                       )}
                       {soilEnvSeries.soilTemp && (
-                        <Line yAxisId="temp" type="monotone" dataKey="soilTemp" name="Temp. suelo (°C)" stroke="var(--chart-4)" strokeWidth={2.2} dot={false} />
+                        <Line key="soil-env-line-soil-temp" animationId={1103} yAxisId="temp" type="monotone" dataKey="soilTemp" name="Temp. suelo (°C)" stroke="var(--chart-4)" strokeWidth={2.2} dot={false} />
                       )}
                       {soilEnvSeries.airTemp && (
-                        <Line yAxisId="temp" type="monotone" dataKey="airTemp" name="Temp. aire (°C)" stroke="var(--chart-3)" strokeWidth={2} dot={false} />
+                        <Line key="soil-env-line-air-temp" animationId={1104} yAxisId="temp" type="monotone" dataKey="airTemp" name="Temp. aire (°C)" stroke="var(--chart-3)" strokeWidth={2} dot={false} />
                       )}
                     </LineChart>
                   </ResponsiveContainer>
@@ -642,6 +664,7 @@ export function HistoricalData() {
                       />
                       {showIrrigationFlowAxis && (
                         <YAxis
+                          key="irrigation-axis-flow"
                           yAxisId="flow"
                           domain={[0, "dataMax + 2"]}
                           tickFormatter={(v) => `${v} L/min`}
@@ -651,6 +674,7 @@ export function HistoricalData() {
                       )}
                       {showIrrigationEtoAxis && (
                         <YAxis
+                          key="irrigation-axis-eto"
                           yAxisId="eto"
                           orientation="right"
                           domain={[0, "dataMax + 1"]}
@@ -674,10 +698,10 @@ export function HistoricalData() {
                       />
                       <Legend wrapperStyle={{ color: "var(--text-body)" }} />
                       {irrigationSeries.waterFlow && (
-                        <Line yAxisId="flow" type="monotone" dataKey="waterFlow" name="Flujo agua (L/min)" stroke="var(--accent-gold)" strokeWidth={2.5} dot={false} />
+                        <Line key="irrigation-line-water-flow" animationId={2101} yAxisId="flow" type="monotone" dataKey="waterFlow" name="Flujo agua (L/min)" stroke="var(--accent-gold)" strokeWidth={2.5} dot={false} />
                       )}
                       {irrigationSeries.eto && (
-                        <Line yAxisId="eto" type="monotone" dataKey="eto" name="E.T.O. (mm/día)" stroke="var(--accent-primary)" strokeWidth={2.2} dot={false} />
+                        <Line key="irrigation-line-eto" animationId={2102} yAxisId="eto" type="monotone" dataKey="eto" name="E.T.O. (mm/día)" stroke="var(--accent-primary)" strokeWidth={2.2} dot={false} />
                       )}
                     </LineChart>
                   </ResponsiveContainer>

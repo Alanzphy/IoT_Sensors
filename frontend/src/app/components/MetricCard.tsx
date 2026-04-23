@@ -9,7 +9,7 @@ interface MetricCardProps {
   icon?: ReactNode;
   variant?: "light" | "sand" | "dark" | "brown";
   subtitle?: string;
-  lastUpdate?: Date;
+  lastUpdate?: Date | null;
   children?: ReactNode;
   priority?: boolean;
 }

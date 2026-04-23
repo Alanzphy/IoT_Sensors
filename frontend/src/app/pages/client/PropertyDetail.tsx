@@ -6,6 +6,7 @@ import { PageTransition } from "../../components/PageTransition";
 import { cropIcons } from "../../components/icons/CropIcons";
 import { useSelection } from "../../context/SelectionContext";
 import { api } from "../../services/api";
+import { parseBackendTimestamp } from "../../utils/datetime";
 
 function AreaCard({ area }: { area: any }) {
   const [humidity, setHumidity] = useState<number | null>(null);
@@ -14,11 +15,11 @@ function AreaCard({ area }: { area: any }) {
   useEffect(() => {
     api.get(`/readings/?irrigation_area_id=${area.id}&per_page=1`)
       .then(res => {
-        const data = res.data;
-        if (data.items && data.items.length > 0) {
-          const reading = data.items[0];
+        const data = res.data?.data || [];
+        if (data.length > 0) {
+          const reading = data[0];
           setHumidity(reading.soil?.humidity ?? null);
-          setLastReading(new Date(reading.timestamp));
+          setLastReading(parseBackendTimestamp(reading.timestamp));
         }
       })
       .catch(err => {

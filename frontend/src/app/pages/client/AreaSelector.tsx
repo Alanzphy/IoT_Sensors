@@ -9,6 +9,7 @@ import { SkeletonCard } from "../../components/SkeletonCard";
 import { cropIcons } from "../../components/icons/CropIcons";
 import { IrrigationArea, useSelection } from "../../context/SelectionContext";
 import { api } from "../../services/api";
+import { parseBackendTimestamp } from "../../utils/datetime";
 
 function AreaCard({
   area,
@@ -31,9 +32,7 @@ function AreaCard({
           if (res.data.soil?.humidity !== undefined && res.data.soil.humidity !== null) {
             setHumidity(res.data.soil.humidity);
           }
-          if (res.data.timestamp) {
-            setLastUpdate(new Date(res.data.timestamp));
-          }
+          setLastUpdate(parseBackendTimestamp(res.data.timestamp));
         }
       } catch (err) {
         console.error("Error fetching latest reading for area", area.id, err);

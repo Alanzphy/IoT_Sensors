@@ -7,6 +7,7 @@ import { PillButton } from "../../components/PillButton";
 import { useTheme } from "../../context/ThemeContext";
 import { api } from "../../services/api";
 import { GeoNode, getGeoNodes } from "../../services/nodes";
+import { parseBackendTimestamp } from "../../utils/datetime";
 
 const DEFAULT_LIGHT_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 const DEFAULT_DARK_STYLE_URL = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
@@ -582,9 +583,7 @@ export function AdminMapPage() {
     });
   }, [selectedNode?.id]);
 
-  const selectedNodeDate = selectedNode?.last_reading_timestamp
-    ? new Date(selectedNode.last_reading_timestamp)
-    : null;
+  const selectedNodeDate = parseBackendTimestamp(selectedNode?.last_reading_timestamp ?? null);
 
   return (
     <PageTransition>
