@@ -196,6 +196,18 @@ def send_reading(base_url: str, api_key: str, payload: dict) -> bool:
         return False
 
 
+def normalize_api_key(raw_key: str) -> tuple[str, bool]:
+    """Trim API key and recover common copy/paste mistakes from dashboards."""
+    key = raw_key.strip()
+    marker = "ak_"
+
+    # Accept values accidentally prefixed, e.g. "node-id-ak_xxx".
+    if marker in key and not key.startswith(marker):
+        return key[key.find(marker):], True
+
+    return key, False
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -239,6 +251,7 @@ def backfill(base_url: str, api_key: str, days: int, dry_run: bool):
 
 def main():
     args = get_config()
+    args.api_key, normalized = normalize_api_key(args.api_key)
 
     if not args.api_key:
         print("❌ Debes especificar una API Key.")
@@ -246,6 +259,9 @@ def main():
         print("   O:    export SIMULATOR_API_KEY=<TU_API_KEY>")
         print("\n   Obtén la API Key creando un nodo desde el panel de Admin.")
         sys.exit(1)
+
+    if normalized:
+        print("⚠️  API Key normalizada automáticamente. Usando el segmento que inicia con 'ak_'.")
 
     key_display = (f"{args.api_key[:12]}...{args.api_key[-4:]}"
                    if len(args.api_key) > 16 else args.api_key)
