@@ -19,9 +19,9 @@ export function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
+    const fetchDashboardData = async (isInitialLoad = false) => {
       try {
-        setLoading(true);
+        if (isInitialLoad) setLoading(true);
 
         // Parallel requests for all counts
         const [clientsRes, propsRes, nodesRes, readingsRes] = await Promise.all([
@@ -40,23 +40,44 @@ export function AdminDashboard() {
         const activeNodes = nodesData.filter((n: any) => n.is_active || n.activo).length;
         const inactiveNodes = nodesData.filter((n: any) => !(n.is_active || n.activo));
 
-        setStats({
+        const nextStats = {
           clients: totalClients,
           properties: totalProps,
           nodesTotal: totalNodes,
           nodesActive: activeNodes,
           readingsToday: totalReadings
+        };
+
+        setStats((prev) => {
+          if (
+            prev.clients === nextStats.clients
+            && prev.properties === nextStats.properties
+            && prev.nodesTotal === nextStats.nodesTotal
+            && prev.nodesActive === nextStats.nodesActive
+            && prev.readingsToday === nextStats.readingsToday
+          ) {
+            return prev;
+          }
+          return nextStats;
         });
 
-        setOfflineNodes(inactiveNodes);
+        setOfflineNodes((prev) => {
+          if (
+            prev.length === inactiveNodes.length
+            && prev.every((node, index) => node.id === inactiveNodes[index]?.id)
+          ) {
+            return prev;
+          }
+          return inactiveNodes;
+        });
       } catch (error) {
         console.error("Error fetching dashboard stats:", error);
       } finally {
-        setLoading(false);
+        if (isInitialLoad) setLoading(false);
       }
     };
 
-    fetchDashboardData();
+    fetchDashboardData(true);
 
     // Intervalo para testing en tiempo real
     const intervalId = setInterval(() => {
