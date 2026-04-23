@@ -49,6 +49,7 @@ export function ClientMapPage() {
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
   const mapStyleUrlRef = useRef<string | null>(null);
+  const fetchRequestSeqRef = useRef(0);
 
   const lightMapStyleUrl = import.meta.env.VITE_MAP_STYLE_URL || DEFAULT_LIGHT_STYLE_URL;
   const darkMapStyleUrl = import.meta.env.VITE_MAP_DARK_STYLE_URL || DEFAULT_DARK_STYLE_URL;
@@ -82,6 +83,7 @@ export function ClientMapPage() {
   }, [nodes]);
 
   const fetchNodes = useCallback(async () => {
+    const requestSeq = ++fetchRequestSeqRef.current;
     try {
       setLoading(true);
       setError(null);
@@ -91,11 +93,14 @@ export function ClientMapPage() {
         property_id: selectedProperty?.id,
         irrigation_area_id: selectedArea?.id,
       });
+      if (requestSeq !== fetchRequestSeqRef.current) return;
       setNodes(response.data);
     } catch (err) {
+      if (requestSeq !== fetchRequestSeqRef.current) return;
       console.error("Error fetching geo nodes", err);
       setError("No se pudo cargar la capa geoespacial. Intenta nuevamente.");
     } finally {
+      if (requestSeq !== fetchRequestSeqRef.current) return;
       setLoading(false);
     }
   }, [selectedProperty?.id, selectedArea?.id]);
@@ -105,14 +110,32 @@ export function ClientMapPage() {
   }, [fetchNodes]);
 
   useEffect(() => {
-    if (!selectedNode && nodes.length > 0) {
-      setSelectedNode(nodes[0]);
+    if (nodes.length === 0) {
+      if (selectedNode !== null) {
+        setSelectedNode(null);
+      }
       return;
     }
-    if (selectedNode && !nodes.some((node) => node.id === selectedNode.id)) {
-      setSelectedNode(nodes.length > 0 ? nodes[0] : null);
+
+    const preferredByArea = selectedArea
+      ? nodes.find((node) => node.irrigation_area_id === selectedArea.id) || null
+      : null;
+
+    if (!selectedNode) {
+      setSelectedNode(preferredByArea ?? nodes[0]);
+      return;
     }
-  }, [nodes, selectedNode]);
+
+    const stillExists = nodes.some((node) => node.id === selectedNode.id);
+    if (!stillExists) {
+      setSelectedNode(preferredByArea ?? nodes[0]);
+      return;
+    }
+
+    if (preferredByArea && selectedNode.id !== preferredByArea.id) {
+      setSelectedNode(preferredByArea);
+    }
+  }, [nodes, selectedArea?.id, selectedNode]);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
@@ -164,8 +187,26 @@ export function ClientMapPage() {
   }, [activeMapStyleUrl]);
 
   useEffect(() => {
-    if (!mapRef.current) return;
-    if (!mapRef.current.isStyleLoaded()) return;
+    const map = mapRef.current;
+    if (!map) return;
+    if (!map.isStyleLoaded()) {
+      let cancelled = false;
+      const retryRender = () => {
+        if (!cancelled) {
+          setMapStyleVersion((previous) => previous + 1);
+        }
+      };
+      const onStyleLoad = () => {
+        retryRender();
+      };
+      map.once("style.load", onStyleLoad);
+      const retryTimer = window.setTimeout(retryRender, 250);
+      return () => {
+        cancelled = true;
+        window.clearTimeout(retryTimer);
+        map.off("style.load", onStyleLoad);
+      };
+    }
 
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
@@ -190,7 +231,7 @@ export function ClientMapPage() {
       const marker = new maplibregl.Marker({ element: markerElement, anchor: "bottom" })
         .setLngLat([node.longitude as number, node.latitude as number])
         .setPopup(new maplibregl.Popup({ offset: 16, className: "iot-map-popup" }).setHTML(popupHtml))
-        .addTo(mapRef.current);
+        .addTo(map);
 
       markerElement.addEventListener("click", () => setSelectedNode(node));
       markersRef.current.push(marker);
@@ -198,7 +239,7 @@ export function ClientMapPage() {
 
     if (nodesWithCoordinates.length === 1) {
       const oneNode = nodesWithCoordinates[0];
-      mapRef.current.flyTo({
+      map.flyTo({
         center: [oneNode.longitude as number, oneNode.latitude as number],
         zoom: 12,
         essential: true,
@@ -211,13 +252,37 @@ export function ClientMapPage() {
       nodesWithCoordinates.forEach((node) => {
         bounds.extend([node.longitude as number, node.latitude as number]);
       });
-      mapRef.current.fitBounds(bounds as LngLatBoundsLike, {
+      map.fitBounds(bounds as LngLatBoundsLike, {
         padding: 60,
         maxZoom: 13,
         duration: 700,
       });
     }
   }, [mapStyleVersion, nodesWithCoordinates]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const immediateResize = window.setTimeout(() => map.resize(), 0);
+    const delayedResize = window.setTimeout(() => map.resize(), 250);
+    return () => {
+      window.clearTimeout(immediateResize);
+      window.clearTimeout(delayedResize);
+    };
+  }, [loading, mapStyleVersion]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !selectedNode) return;
+    if (selectedNode.latitude === null || selectedNode.longitude === null) return;
+
+    map.flyTo({
+      center: [selectedNode.longitude, selectedNode.latitude],
+      zoom: 13,
+      essential: true,
+      duration: 700,
+    });
+  }, [selectedNode?.id]);
 
   const selectedNodeDate = selectedNode?.last_reading_timestamp
     ? new Date(selectedNode.last_reading_timestamp)

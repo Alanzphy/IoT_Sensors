@@ -77,6 +77,7 @@ export function AdminMapPage() {
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
   const mapStyleUrlRef = useRef<string | null>(null);
+  const fetchRequestSeqRef = useRef(0);
 
   const runtimeEnv = (import.meta as unknown as { env?: Record<string, string | undefined> }).env;
   const lightMapStyleUrl = runtimeEnv?.VITE_MAP_STYLE_URL || DEFAULT_LIGHT_STYLE_URL;
@@ -165,6 +166,7 @@ export function AdminMapPage() {
   }, []);
 
   const fetchNodes = useCallback(async () => {
+    const requestSeq = ++fetchRequestSeqRef.current;
     try {
       setLoadingNodes(true);
       setError(null);
@@ -177,12 +179,15 @@ export function AdminMapPage() {
         irrigation_area_id: selectedAreaId ?? undefined,
       });
 
+      if (requestSeq !== fetchRequestSeqRef.current) return;
       setNodes(response.data);
     } catch (err) {
+      if (requestSeq !== fetchRequestSeqRef.current) return;
       console.error("Error fetching admin geo nodes", err);
       setError("No se pudo cargar la capa geoespacial para administración.");
       setNodes([]);
     } finally {
+      if (requestSeq !== fetchRequestSeqRef.current) return;
       setLoadingNodes(false);
     }
   }, [selectedClientId, selectedPropertyId, selectedAreaId]);
@@ -227,14 +232,33 @@ export function AdminMapPage() {
   }, [fetchNodes]);
 
   useEffect(() => {
-    if (!selectedNode && nodes.length > 0) {
-      setSelectedNode(nodes[0]);
+    if (nodes.length === 0) {
+      if (selectedNode !== null) {
+        setSelectedNode(null);
+      }
       return;
     }
-    if (selectedNode && !nodes.some((node) => node.id === selectedNode.id)) {
-      setSelectedNode(nodes.length > 0 ? nodes[0] : null);
+
+    const preferredByArea =
+      selectedAreaId !== null
+        ? nodes.find((node) => node.irrigation_area_id === selectedAreaId) || null
+        : null;
+
+    if (!selectedNode) {
+      setSelectedNode(preferredByArea ?? nodes[0]);
+      return;
     }
-  }, [nodes, selectedNode]);
+
+    const stillExists = nodes.some((node) => node.id === selectedNode.id);
+    if (!stillExists) {
+      setSelectedNode(preferredByArea ?? nodes[0]);
+      return;
+    }
+
+    if (preferredByArea && selectedNode.id !== preferredByArea.id) {
+      setSelectedNode(preferredByArea);
+    }
+  }, [nodes, selectedAreaId, selectedNode]);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
@@ -286,10 +310,26 @@ export function AdminMapPage() {
   }, [activeMapStyleUrl]);
 
   useEffect(() => {
-    if (!mapRef.current) return;
-
     const map = mapRef.current;
-    if (!map.isStyleLoaded()) return;
+    if (!map) return;
+    if (!map.isStyleLoaded()) {
+      let cancelled = false;
+      const retryRender = () => {
+        if (!cancelled) {
+          setMapStyleVersion((previous) => previous + 1);
+        }
+      };
+      const onStyleLoad = () => {
+        retryRender();
+      };
+      map.once("style.load", onStyleLoad);
+      const retryTimer = window.setTimeout(retryRender, 250);
+      return () => {
+        cancelled = true;
+        window.clearTimeout(retryTimer);
+        map.off("style.load", onStyleLoad);
+      };
+    }
 
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
@@ -488,6 +528,30 @@ export function AdminMapPage() {
       map.getCanvas().style.cursor = "";
     };
   }, [filteredNodesWithCoordinates, mapStyleVersion, nodes, removeClusterLayers, viewMode]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const immediateResize = window.setTimeout(() => map.resize(), 0);
+    const delayedResize = window.setTimeout(() => map.resize(), 250);
+    return () => {
+      window.clearTimeout(immediateResize);
+      window.clearTimeout(delayedResize);
+    };
+  }, [loadingNodes, mapStyleVersion]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !selectedNode) return;
+    if (selectedNode.latitude === null || selectedNode.longitude === null) return;
+
+    map.flyTo({
+      center: [selectedNode.longitude, selectedNode.latitude],
+      zoom: 13,
+      essential: true,
+      duration: 700,
+    });
+  }, [selectedNode?.id]);
 
   const selectedNodeDate = selectedNode?.last_reading_timestamp
     ? new Date(selectedNode.last_reading_timestamp)
