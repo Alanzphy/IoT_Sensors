@@ -11,7 +11,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation } from "react-router";
+import { Link, useLocation } from "react-router";
 
 import { BentoCard } from "../../components/BentoCard";
 import { PageTransition } from "../../components/PageTransition";
@@ -63,6 +63,7 @@ export function AlertsCenterPage() {
   const fallbackEndDate = startOfDay(new Date());
   const selectedStartDate = startDate ? startOfDay(parseISO(startDate)) : fallbackStartDate;
   const selectedEndDate = endDate ? startOfDay(parseISO(endDate)) : fallbackEndDate;
+  const alertDetailBasePath = isAdmin ? "/admin/alertas" : "/cliente/alertas";
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -372,9 +373,15 @@ export function AlertsCenterPage() {
                         <AlertTriangle className="h-3.5 w-3.5" />
                         {item.parameter}
                       </span>
-                    )}
-                  </div>
-                </article>
+                      )}
+                    </div>
+                    <Link
+                      to={`${alertDetailBasePath}/${item.id}`}
+                      className="mt-3 inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] px-3 py-1.5 text-xs font-semibold text-[var(--accent-primary)] hover:bg-[var(--hover-overlay)]"
+                    >
+                      Ver recomendación
+                    </Link>
+                  </article>
               );
             })}
           </div>

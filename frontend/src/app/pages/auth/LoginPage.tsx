@@ -1,7 +1,7 @@
 import { jwtDecode } from "jwt-decode";
 import { Eye, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { AuthSplitLayout } from "../../components/auth/AuthSplitLayout";
 import { PageTransition } from "../../components/PageTransition";
 import { PillButton } from "../../components/PillButton";
@@ -10,7 +10,9 @@ import { api } from "../../services/api";
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, isAuthenticated, user } = useAuth();
+  const nextPath = searchParams.get("next");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,9 +23,9 @@ export function LoginPage() {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated && user) {
-      navigate(user.rol === "admin" ? "/admin" : "/cliente");
+      navigate(resolvePostLoginPath(user.rol, nextPath));
     }
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, user, navigate, nextPath]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +40,7 @@ export function LoginPage() {
 
       // Decode locally to navigate immediately without waiting for context refresh cycle
       const decoded: any = jwtDecode(access_token);
-      navigate(decoded.rol === "admin" ? "/admin" : "/cliente");
+      navigate(resolvePostLoginPath(decoded.rol, nextPath));
 
     } catch (err: any) {
       setError(err.response?.data?.detail || "Credenciales inválidas. Intenta de nuevo.");
@@ -129,4 +131,18 @@ export function LoginPage() {
       </AuthSplitLayout>
     </PageTransition>
   );
+}
+
+function resolvePostLoginPath(role: "admin" | "cliente", nextPath: string | null) {
+  const defaultPath = role === "admin" ? "/admin" : "/cliente";
+  if (!nextPath || !nextPath.startsWith("/") || nextPath.startsWith("//")) {
+    return defaultPath;
+  }
+  if (role === "admin" && nextPath.startsWith("/admin")) {
+    return nextPath;
+  }
+  if (role === "cliente" && nextPath.startsWith("/cliente")) {
+    return nextPath;
+  }
+  return defaultPath;
 }

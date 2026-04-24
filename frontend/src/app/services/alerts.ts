@@ -49,6 +49,11 @@ export async function listAlerts(
   return response.data;
 }
 
+export async function getAlert(alertId: number): Promise<AlertItem> {
+  const response = await api.get<AlertItem>(`/alerts/${alertId}`);
+  return response.data;
+}
+
 export async function markAlertRead(alertId: number, read = true): Promise<AlertItem> {
   const response = await api.patch<AlertItem>(`/alerts/${alertId}/read`, { read });
   return response.data;

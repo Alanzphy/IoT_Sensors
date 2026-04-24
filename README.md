@@ -286,8 +286,12 @@ Variables requeridas/recomendadas:
 - `NOTIFICATIONS_ENABLED` (`true`/`false`)
 - `NOTIFICATIONS_EMAIL_ENABLED` (`true`/`false`)
 - `NOTIFICATIONS_WHATSAPP_ENABLED` (`true`/`false`)
+- `FRONTEND_PUBLIC_URL` (URL usada en links de WhatsApp; local con túnel, producción con dominio real)
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`
-- `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`
+- `WHATSAPP_PROVIDER` (`meta` o `twilio`)
+- `WHATSAPP_MESSAGE_MODE` (`text` para pruebas con conversación abierta; `template` para producción fuera de la ventana de 24h)
+- Meta Cloud API: `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_TEMPLATE_NAME`, `WHATSAPP_TEMPLATE_LANGUAGE_CODE`
+- Twilio: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_CONTENT_SID`, y `TWILIO_WHATSAPP_FROM` o `TWILIO_MESSAGING_SERVICE_SID`
 - `NOTIFICATION_DISPATCH_INTERVAL_SECONDS` (recomendado: `300`)
 - `NOTIFICATION_DISPATCH_LIMIT` (default: `200`)
 - `NOTIFICATION_DISPATCH_ONLY_UNREAD` (`true`/`false`)
@@ -295,7 +299,34 @@ Variables requeridas/recomendadas:
 La implementación actual es **backend directo** (sin n8n):
 
 - Email: SMTP (compatible con Gmail SMTP usando app password).
-- WhatsApp: Cloud API oficial de Meta.
+- WhatsApp: proveedor intercambiable (`meta` o `twilio`) usando templates aprobados.
+
+#### WhatsApp con link a recomendación
+
+Las alertas que tengan WhatsApp habilitado en preferencias envían un template corto aprobado con un link a la vista de detalle de alerta:
+
+- Cliente: `/cliente/alertas/:alertId`
+- Admin: `/admin/alertas/:alertId`
+
+Para pruebas locales desde un celular, no uses `localhost` en `FRONTEND_PUBLIC_URL`. Levanta el frontend con Vite y expón ese puerto con un túnel HTTPS:
+
+```bash
+cd frontend
+VITE_API_BASE_URL=/api/v1 npm run dev -- --host 0.0.0.0
+
+# En otra terminal, ejemplo con ngrok:
+ngrok http 5173
+```
+
+Después configura en `backend/.env`:
+
+```bash
+FRONTEND_PUBLIC_URL=https://tu-tunnel.ngrok-free.app
+WHATSAPP_PROVIDER=twilio
+WHATSAPP_MESSAGE_MODE=text
+```
+
+En Dokploy cambia `FRONTEND_PUBLIC_URL` al dominio real, por ejemplo `https://sensores.tudominio.com`. El frontend usa `/api/v1`, así que el mismo patrón funciona con el proxy local de Vite, Nginx en Docker y Traefik en Dokploy.
 
 ## Política de Documentación (Trabajo por Hitos)
 

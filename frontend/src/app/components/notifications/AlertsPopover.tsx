@@ -63,6 +63,7 @@ export function AlertsPopover({
   const alertsPagePath = location.pathname.startsWith("/admin")
     ? "/admin/alertas"
     : "/cliente/alertas";
+  const alertDetailBasePath = alertsPagePath;
 
   const loadAlerts = useCallback(async () => {
     if (loadingRef.current) return;
@@ -258,6 +259,13 @@ export function AlertsPopover({
                           </span>
                         )}
                       </div>
+                      <Link
+                        to={`${alertDetailBasePath}/${item.id}`}
+                        onClick={() => setOpen(false)}
+                        className="mt-3 inline-flex items-center gap-2 rounded-full border border-[var(--border-strong)] bg-[var(--bg-elevated)] px-3 py-1.5 text-xs font-semibold text-[var(--accent-primary)] hover:bg-[var(--bg-surface)]"
+                      >
+                        Ver recomendación
+                      </Link>
                     </article>
                   );
                 })}

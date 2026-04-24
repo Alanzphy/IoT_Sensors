@@ -1,9 +1,10 @@
-import { Navigate, Outlet } from "react-router";
+import { Navigate, Outlet, useLocation } from "react-router";
 import { Leaf } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 export function ProtectedRoute({ allowedRole }: { allowedRole?: "admin" | "cliente" }) {
   const { user, isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -31,7 +32,8 @@ export function ProtectedRoute({ allowedRole }: { allowedRole?: "admin" | "clien
   }
 
   if (!isAuthenticated || !user) {
-    return <Navigate to="/" replace />;
+    const next = `${location.pathname}${location.search}${location.hash}`;
+    return <Navigate to={`/?next=${encodeURIComponent(next)}`} replace />;
   }
 
   if (allowedRole && user.rol !== allowedRole) {

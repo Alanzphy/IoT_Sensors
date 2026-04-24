@@ -372,7 +372,7 @@ Componentes activos a la fecha:
 - Tablas activas en base de datos: `umbrales`, `alertas`, `audit_log`, `preferencias_notificacion`.
 - Endpoints activos: `/api/v1/thresholds`, `/api/v1/alerts`, `/api/v1/alerts/unread-count`, `/api/v1/alerts/scan-inactivity`, `/api/v1/alerts/dispatch-notifications`, `/api/v1/notification-preferences`, `/api/v1/clients/me/notification-settings`, `/api/v1/audit-logs`, `/api/v1/readings/priority-status`.
 - Endpoint activo para despacho: `/api/v1/alerts/dispatch-notifications` (Admin).
-- Política de despacho activa por severidad: `info`/`warning` por email y `critical` por WhatsApp.
+- Política de despacho activa por preferencias configurables de cliente/área/tipo/severidad/canal.
 - Evaluación de umbrales durante la ingesta de `POST /api/v1/readings`.
 - Escaneo periódico de inactividad con `inactivity_scheduler` en Docker Compose.
 - Despacho periódico opcional de notificaciones con `notification_scheduler` en Docker Compose.

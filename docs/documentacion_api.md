@@ -1347,10 +1347,8 @@ Ejecuta un lote de envío de notificaciones de alertas pendientes, usando integr
 **Notas operativas:**
 
 - Si `NOTIFICATIONS_ENABLED=false`, el endpoint responde `200` con contadores en `0` (no-op seguro).
-- En la implementación actual, el canal objetivo se decide por severidad:
-  - `info` y `warning` -> email (`notified_email`).
-  - `critical` -> WhatsApp (`notified_whatsapp`).
-- El endpoint marca el campo del canal objetivo cuando el envío es exitoso.
+- En la implementación actual, los canales objetivo se deciden por configuración global y preferencias por cliente/área/tipo/severidad/canal.
+- El endpoint marca el campo de cada canal (`notified_email`, `notified_whatsapp`) cuando el envío es exitoso.
 - Se recomienda invocarlo de forma periódica mediante scheduler interno en Docker Compose (`notification_scheduler`).
 
 ---
