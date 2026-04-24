@@ -11,7 +11,7 @@
 #     Las labels de Traefik están configuradas para rutear:
 #       /api/*   → backend:5050
 #       /*       → frontend:80
-#   - Local: Usa los ports mapeados directamente.
+#   - Local: Usa los ports mapeados en localhost.
 #
 # Uso local:
 #   docker compose up -d --build
@@ -35,7 +35,7 @@ services:
       MYSQL_CHARACTER_SET_SERVER: utf8mb4
       MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
     ports:
-      - "3306:3306"
+      - "${MYSQL_PORT_BIND:-127.0.0.1:3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
@@ -61,6 +61,7 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-rootpass}
       - DB_NAME=${DB_NAME:-sensores_riego}
       - FRONTEND_PUBLIC_URL=${FRONTEND_PUBLIC_URL:-http://localhost:3000}
+      - PASSWORD_RESET_URL_BASE=${PASSWORD_RESET_URL_BASE:-http://localhost:3000/restablecer-contrasena}
       - SECRET_KEY=${SECRET_KEY:-dev-only-change-me-in-production-abc123xyz}
       - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
       - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
@@ -93,7 +94,7 @@ services:
       - TWILIO_STATUS_CALLBACK_URL=${TWILIO_STATUS_CALLBACK_URL:-}
       - TWILIO_API_BASE_URL=${TWILIO_API_BASE_URL:-https://api.twilio.com}
     ports:
-      - "5050:5050"
+      - "${BACKEND_PORT_BIND:-127.0.0.1:5050}:5050"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5050/health')"]
       interval: 15s
@@ -159,7 +160,7 @@ services:
       backend:
         condition: service_healthy
     ports:
-      - "3000:80"
+      - "${FRONTEND_PORT_BIND:-127.0.0.1:3000}:80"
     labels:
       # --- Traefik (Dokploy) ---
       - "traefik.enable=true"
