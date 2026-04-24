@@ -1,3 +1,4 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -59,9 +60,23 @@ class Settings(BaseSettings):
     WHATSAPP_ACCESS_TOKEN: str = ""
     WHATSAPP_HTTP_TIMEOUT_SECONDS: int = 15
 
+    @field_validator("DEBUG", mode="before")
+    @classmethod
+    def parse_debug(cls, value: object) -> object:
+        if not isinstance(value, str):
+            return value
+
+        normalized = value.strip().lower()
+        if normalized in {"release", "prod", "production", "false", "0", "no", "off"}:
+            return False
+        if normalized in {"debug", "dev", "development", "local", "true", "1", "yes", "on"}:
+            return True
+        return value
+
     model_config = {
         "env_file": ".env",
         "case_sensitive": True,
+        "extra": "ignore",
     }
 
 
