@@ -1,8 +1,6 @@
-import json
 import smtplib
 from datetime import UTC, date, datetime, timedelta
 from email.message import EmailMessage
-from urllib import error, request
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, or_, select
@@ -17,6 +15,7 @@ from app.models.notification_preference import NotificationPreference
 from app.models.property import Property
 from app.models.reading import Reading
 from app.models.user import User
+from app.services.whatsapp import WhatsAppAlertContext, send_whatsapp_alert
 
 
 def _build_email_subject(alert: Alert) -> str:
@@ -54,6 +53,11 @@ def _build_notification_message(
         ]
     )
     return "\n".join(lines)
+
+
+def _build_alert_recommendation_url(alert: Alert) -> str:
+    base_url = settings.FRONTEND_PUBLIC_URL.rstrip("/")
+    return f"{base_url}/cliente/alertas/{alert.id}"
 
 
 def _normalize_phone_number(raw_phone: str | None) -> str | None:
@@ -211,29 +215,22 @@ def _send_whatsapp_notification(
     *,
     recipient_phone: str,
     message: str,
+    alert: Alert,
+    area_name: str,
+    property_name: str,
+    node_name: str,
 ) -> bool:
-    if not settings.WHATSAPP_PHONE_NUMBER_ID or not settings.WHATSAPP_ACCESS_TOKEN:
-        return False
-
-    api_base = settings.WHATSAPP_API_BASE_URL.rstrip("/")
-    url = f"{api_base}/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages"
-    payload = {
-        "messaging_product": "whatsapp",
-        "to": recipient_phone,
-        "type": "text",
-        "text": {"preview_url": False, "body": message},
-    }
-    body = json.dumps(payload).encode("utf-8")
-
-    req = request.Request(url=url, data=body, method="POST")
-    req.add_header("Content-Type", "application/json")
-    req.add_header("Authorization", f"Bearer {settings.WHATSAPP_ACCESS_TOKEN}")
-
-    try:
-        with request.urlopen(req, timeout=settings.WHATSAPP_HTTP_TIMEOUT_SECONDS):
-            return True
-    except (error.HTTPError, error.URLError, TimeoutError):
-        return False
+    return send_whatsapp_alert(
+        WhatsAppAlertContext(
+            alert=alert,
+            recipient_phone=recipient_phone,
+            property_name=property_name,
+            area_name=area_name,
+            node_name=node_name,
+            recommendation_url=_build_alert_recommendation_url(alert),
+            message=message,
+        )
+    )
 
 
 def dispatch_pending_notifications(
@@ -372,6 +369,10 @@ def dispatch_pending_notifications(
                 whatsapp_sent = _send_whatsapp_notification(
                     recipient_phone=recipient_phone,
                     message=message,
+                    alert=alert,
+                    area_name=area_name,
+                    property_name=property_name,
+                    node_name=node_name,
                 )
                 if whatsapp_sent:
                     alert.notificada_whatsapp = True

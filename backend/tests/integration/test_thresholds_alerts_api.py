@@ -760,7 +760,7 @@ class TestAlertNotificationDispatchApi:
         )
         assert resp.status_code == 403
 
-    def test_warning_dispatches_email_only(
+    def test_warning_dispatches_enabled_channels(
         self,
         client,
         admin_headers,
@@ -820,11 +820,11 @@ class TestAlertNotificationDispatchApi:
         assert dispatch.status_code == 200
         data = dispatch.json()
         assert data["emailed_alerts"] == 1
-        assert data["whatsapp_alerts"] == 0
+        assert data["whatsapp_alerts"] == 1
         assert data["email_failures"] == 0
         assert data["whatsapp_failures"] == 0
         assert calls["email"] == 1
-        assert calls["whatsapp"] == 0
+        assert calls["whatsapp"] == 1
 
         list_resp = client.get(
             f"/api/v1/alerts?irrigation_area_id={sample_irrigation_area.id}",
@@ -834,9 +834,9 @@ class TestAlertNotificationDispatchApi:
         alert = list_resp.json()["data"][0]
         assert alert["severity"] == "warning"
         assert alert["notified_email"] is True
-        assert alert["notified_whatsapp"] is False
+        assert alert["notified_whatsapp"] is True
 
-    def test_critical_dispatches_whatsapp_only(
+    def test_critical_dispatches_enabled_channels(
         self,
         client,
         admin_headers,
@@ -895,11 +895,11 @@ class TestAlertNotificationDispatchApi:
         )
         assert dispatch.status_code == 200
         data = dispatch.json()
-        assert data["emailed_alerts"] == 0
+        assert data["emailed_alerts"] == 1
         assert data["whatsapp_alerts"] == 1
         assert data["email_failures"] == 0
         assert data["whatsapp_failures"] == 0
-        assert calls["email"] == 0
+        assert calls["email"] == 1
         assert calls["whatsapp"] == 1
 
         list_resp = client.get(
@@ -909,5 +909,5 @@ class TestAlertNotificationDispatchApi:
         assert list_resp.status_code == 200
         alert = list_resp.json()["data"][0]
         assert alert["severity"] == "critical"
-        assert alert["notified_email"] is False
+        assert alert["notified_email"] is True
         assert alert["notified_whatsapp"] is True

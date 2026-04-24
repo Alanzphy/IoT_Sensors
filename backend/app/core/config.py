@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "Sistema IoT Riego Agrícola"
     DEBUG: bool = False
     API_V1_PREFIX: str = "/api/v1"
+    FRONTEND_PUBLIC_URL: str = "http://localhost:5173"
 
     # --- Database ---
     DB_HOST: str = "localhost"
@@ -55,10 +56,23 @@ class Settings(BaseSettings):
 
     # WhatsApp (Cloud API)
     NOTIFICATIONS_WHATSAPP_ENABLED: bool = False
+    WHATSAPP_PROVIDER: str = "meta"
+    WHATSAPP_MESSAGE_MODE: str = "text"
     WHATSAPP_API_BASE_URL: str = "https://graph.facebook.com/v20.0"
     WHATSAPP_PHONE_NUMBER_ID: str = ""
     WHATSAPP_ACCESS_TOKEN: str = ""
     WHATSAPP_HTTP_TIMEOUT_SECONDS: int = 15
+    WHATSAPP_TEMPLATE_NAME: str = "alerta_riego_critica_v1"
+    WHATSAPP_TEMPLATE_LANGUAGE_CODE: str = "es_MX"
+
+    # WhatsApp (Twilio Content API)
+    TWILIO_ACCOUNT_SID: str = ""
+    TWILIO_AUTH_TOKEN: str = ""
+    TWILIO_WHATSAPP_FROM: str = ""
+    TWILIO_MESSAGING_SERVICE_SID: str = ""
+    TWILIO_CONTENT_SID: str = ""
+    TWILIO_STATUS_CALLBACK_URL: str = ""
+    TWILIO_API_BASE_URL: str = "https://api.twilio.com"
 
     @field_validator("DEBUG", mode="before")
     @classmethod
