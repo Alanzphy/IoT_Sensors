@@ -46,6 +46,7 @@ export function AlertsPopover({
   const location = useLocation();
   const isPageVisible = usePageVisibility();
   const isAlertsPage = location.pathname.endsWith("/alertas");
+  const hasLoadedRef = useRef(false);
   const loadingRef = useRef(false);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -66,7 +67,7 @@ export function AlertsPopover({
   const loadAlerts = useCallback(async () => {
     if (loadingRef.current) return;
     loadingRef.current = true;
-    if (alerts.length === 0) setLoading(true);
+    if (!hasLoadedRef.current) setLoading(true);
     setErrorMessage(null);
 
     try {
@@ -77,6 +78,7 @@ export function AlertsPopover({
 
       setAlerts(alertsPage.data ?? []);
       setUnreadCount(unreadCountValue);
+      hasLoadedRef.current = true;
     } catch (error) {
       console.error("Failed to load alerts", error);
       setErrorMessage("No fue posible cargar alertas");
@@ -91,7 +93,13 @@ export function AlertsPopover({
 
     loadAlerts();
 
+    const intervalId = window.setInterval(() => {
+      loadAlerts();
+    }, refreshIntervalMs);
 
+    return () => {
+      window.clearInterval(intervalId);
+    };
   }, [refreshIntervalMs, loadAlerts, isPageVisible, isAlertsPage]);
 
   const handleMarkRead = async (alertId: number) => {
