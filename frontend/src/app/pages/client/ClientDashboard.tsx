@@ -39,6 +39,7 @@ const DASHBOARD_REFRESH_MS = 3000;
 const FRESH_MINUTES_THRESHOLD = 20;
 
 type ConnectionState = "online" | "warning" | "offline" | "no_data";
+type IrrigationDisplayState = "active" | "inactive" | "stale" | "no_data";
 
 function getConnectionState(lastUpdate: Date | null): ConnectionState {
   if (!lastUpdate) return "no_data";
@@ -46,6 +47,45 @@ function getConnectionState(lastUpdate: Date | null): ConnectionState {
   if (minutesAgo < FRESH_MINUTES_THRESHOLD) return "online";
   if (minutesAgo < 120) return "warning";
   return "offline";
+}
+
+function formatElapsedSince(lastUpdate: Date | null): string {
+  if (!lastUpdate) return "Sin datos";
+
+  const minutesAgo = Math.max(0, Math.floor((Date.now() - lastUpdate.getTime()) / (1000 * 60)));
+  if (minutesAgo < 1) return "Ahora";
+  if (minutesAgo < 60) return `Hace ${minutesAgo} min`;
+
+  const hours = Math.floor(minutesAgo / 60);
+  const minutes = minutesAgo % 60;
+  if (hours < 24) {
+    return minutes > 0 ? `Hace ${hours} h ${minutes} min` : `Hace ${hours} h`;
+  }
+
+  const days = Math.floor(hours / 24);
+  return days === 1 ? "Hace 1 dia" : `Hace ${days} dias`;
+}
+
+function getIrrigationDisplayState(
+  irrigationActive: boolean,
+  connectionState: ConnectionState,
+): IrrigationDisplayState {
+  if (connectionState === "no_data") return "no_data";
+  if (connectionState !== "online") return "stale";
+  return irrigationActive ? "active" : "inactive";
+}
+
+function getIrrigationStatusLabel(state: IrrigationDisplayState): string {
+  if (state === "active") return "ACTIVO";
+  if (state === "inactive") return "INACTIVO";
+  if (state === "no_data") return "SIN DATOS";
+  return "SIN COMUNICACION";
+}
+
+function getIrrigationStatusClass(state: IrrigationDisplayState): string {
+  if (state === "active") return "text-[var(--accent-primary)]";
+  if (state === "stale") return "text-[var(--status-warning)]";
+  return "text-[var(--text-muted)]";
 }
 
 function getSemaphoreLabel(level: SemaphoreLevel): string {
@@ -154,7 +194,7 @@ export function ClientDashboard() {
               accumulatedWater: latestData.irrigation?.accumulated_liters ?? '-',
               eto: latestData.environmental?.eto ?? '-',
               irrigationActive: latestData.irrigation?.active ?? false,
-              irrigationElapsedTime: latestData.irrigation?.active ? "Activo" : "N/A",
+              irrigationElapsedTime: formatElapsedSince(parseBackendTimestamp(latestData.timestamp)),
               soilConductivity: latestData.soil?.conductivity ?? '-',
               soilTemp: latestData.soil?.temperature ?? '-',
               waterPotential: latestData.soil?.water_potential ?? '-',
@@ -336,12 +376,14 @@ export function ClientDashboard() {
           historicalData={historicalData}
           currentReadings={currentReadings}
           prioritySemaphore={prioritySemaphore}
+          connectionState={connectionState}
         />
       ) : (
         <DesktopDashboard
           historicalData={historicalData}
           currentReadings={currentReadings}
           prioritySemaphore={prioritySemaphore}
+          connectionState={connectionState}
         />
       )}
     </div>
@@ -352,11 +394,21 @@ function DesktopDashboard({
   historicalData,
   currentReadings,
   prioritySemaphore,
+  connectionState,
 }: {
   historicalData: any[];
   currentReadings: any;
   prioritySemaphore: Record<PriorityKey, SemaphoreLevel>;
+  connectionState: ConnectionState;
 }) {
+  const irrigationDisplayState = getIrrigationDisplayState(
+    currentReadings.irrigationActive,
+    connectionState,
+  );
+  const irrigationStatusLabel = getIrrigationStatusLabel(irrigationDisplayState);
+  const irrigationStatusClass = getIrrigationStatusClass(irrigationDisplayState);
+  const isIrrigationLiveActive = irrigationDisplayState === "active";
+
   return (
     <div className="grid grid-cols-12 gap-6">
       {/* Priority Data - Dark Cards (Row 1) */}
@@ -471,7 +523,7 @@ function DesktopDashboard({
           <div className="flex items-start justify-between mb-4">
             <h3 className="text-lg text-[var(--text-main)]">Estado del Riego</h3>
             <div className="relative flex items-center justify-center w-4 h-4">
-              {currentReadings.irrigationActive && (
+              {isIrrigationLiveActive && (
                 <span
                   className="absolute inline-flex w-full h-full rounded-full bg-[var(--accent-primary)] opacity-50"
                   style={{ animation: "rippleExpand 2s ease-out infinite" }}
@@ -479,7 +531,7 @@ function DesktopDashboard({
               )}
               <span
                 className={`relative block w-2.5 h-2.5 rounded-full transition-colors duration-500 ${
-                  currentReadings.irrigationActive ? 'bg-[var(--accent-primary)]' : 'bg-[var(--text-muted)]'
+                  isIrrigationLiveActive ? 'bg-[var(--accent-primary)]' : 'bg-[var(--text-muted)]'
                 }`}
               />
             </div>
@@ -487,8 +539,8 @@ function DesktopDashboard({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-[var(--text-muted)]">Estado</span>
-              <span className={`font-bold ${currentReadings.irrigationActive ? 'text-[var(--accent-primary)]' : 'text-[var(--text-muted)]'}`}>
-                {currentReadings.irrigationActive ? 'ACTIVO' : 'INACTIVO'}
+              <span className={`font-bold ${irrigationStatusClass}`}>
+                {irrigationStatusLabel}
               </span>
             </div>
             <div className="flex items-center justify-between">
@@ -663,11 +715,21 @@ function MobileDashboard({
   historicalData,
   currentReadings,
   prioritySemaphore,
+  connectionState,
 }: {
   historicalData: any[];
   currentReadings: any;
   prioritySemaphore: Record<PriorityKey, SemaphoreLevel>;
+  connectionState: ConnectionState;
 }) {
+  const irrigationDisplayState = getIrrigationDisplayState(
+    currentReadings.irrigationActive,
+    connectionState,
+  );
+  const irrigationStatusLabel = getIrrigationStatusLabel(irrigationDisplayState);
+  const irrigationStatusClass = getIrrigationStatusClass(irrigationDisplayState);
+  const isIrrigationLiveActive = irrigationDisplayState === "active";
+
   return (
     <div className="space-y-4">
       <BentoCard variant="light">
@@ -767,13 +829,13 @@ function MobileDashboard({
       <BentoCard variant="sand">
         <div className="flex items-start justify-between mb-4">
           <h3 className="text-lg text-[var(--text-main)]">Estado del Riego</h3>
-          <div className={`w-3 h-3 rounded-full ${currentReadings.irrigationActive ? 'bg-[var(--accent-primary)] animate-pulse' : 'bg-[var(--text-muted)]'}`} />
+          <div className={`w-3 h-3 rounded-full ${isIrrigationLiveActive ? 'bg-[var(--accent-primary)] animate-pulse' : 'bg-[var(--text-muted)]'}`} />
         </div>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-[var(--text-muted)]">Estado</span>
-            <span className={`font-bold ${currentReadings.irrigationActive ? 'text-[var(--accent-primary)]' : 'text-[var(--text-muted)]'}`}>
-              {currentReadings.irrigationActive ? 'ACTIVO' : 'INACTIVO'}
+            <span className={`font-bold ${irrigationStatusClass}`}>
+              {irrigationStatusLabel}
             </span>
           </div>
           <div className="flex items-center justify-between">
