@@ -33,6 +33,11 @@ DEFAULT_DISPATCH_INTERVAL = 20
 DEFAULT_DISPATCH_LIMIT = 200
 DEFAULT_ADMIN_EMAIL = "admin@sensores.com"
 DEFAULT_ADMIN_PASSWORD = "admin123"
+DEFAULT_HTTP_USER_AGENT = (
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 "
+    "SensoresIoT-Simulator/1.0"
+)
 DEFAULT_AI_WEEKLY_REPORT_INTERVAL = 90
 DEFAULT_AI_WEEKLY_REPORT_DAYS = 7
 DEFAULT_AI_WEEKLY_REPORT_INITIAL_DELAY = 35
@@ -454,6 +459,8 @@ def send_reading(base_url: str, api_key: str, payload: dict) -> bool:
         headers={
             "X-API-Key": api_key,
             "Content-Type": "application/json",
+            "Accept": "application/json, text/plain, */*",
+            "User-Agent": DEFAULT_HTTP_USER_AGENT,
         },
         method="POST",
     )
@@ -486,6 +493,8 @@ def _post_json(
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(url, data=data, method="POST")
     req.add_header("Content-Type", "application/json")
+    req.add_header("Accept", "application/json, text/plain, */*")
+    req.add_header("User-Agent", DEFAULT_HTTP_USER_AGENT)
     if headers:
         for key, value in headers.items():
             req.add_header(key, value)

@@ -1,5 +1,6 @@
 import base64
 import json
+import logging
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
@@ -7,6 +8,8 @@ from urllib import error, parse, request
 
 from app.core.config import settings
 from app.models.alert import Alert
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -74,6 +77,9 @@ def build_alert_text_message(context: WhatsAppAlertContext) -> str:
 
 def _send_meta_text_message(*, recipient_phone: str, message: str) -> bool:
     if not settings.WHATSAPP_PHONE_NUMBER_ID or not settings.WHATSAPP_ACCESS_TOKEN:
+        logger.warning(
+            "WhatsApp Meta text skipped: missing phone_number_id/access_token"
+        )
         return False
 
     api_base = settings.WHATSAPP_API_BASE_URL.rstrip("/")
@@ -96,7 +102,27 @@ def _send_meta_text_message(*, recipient_phone: str, message: str) -> bool:
     try:
         with request.urlopen(req, timeout=settings.WHATSAPP_HTTP_TIMEOUT_SECONDS) as resp:
             return 200 <= resp.status < 300
-    except (error.HTTPError, error.URLError, TimeoutError):
+    except error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="ignore")
+        logger.warning(
+            "WhatsApp Meta text failed: status=%s, to=%s, detail=%s",
+            exc.code,
+            _clean_phone(recipient_phone),
+            detail[:500],
+        )
+        return False
+    except error.URLError as exc:
+        logger.warning(
+            "WhatsApp Meta text URL error: to=%s, reason=%s",
+            _clean_phone(recipient_phone),
+            exc.reason,
+        )
+        return False
+    except TimeoutError:
+        logger.warning(
+            "WhatsApp Meta text timeout: to=%s",
+            _clean_phone(recipient_phone),
+        )
         return False
 
 
@@ -109,6 +135,9 @@ def _send_meta_text(context: WhatsAppAlertContext) -> bool:
 
 def _send_meta_template(context: WhatsAppAlertContext) -> bool:
     if not settings.WHATSAPP_PHONE_NUMBER_ID or not settings.WHATSAPP_ACCESS_TOKEN:
+        logger.warning(
+            "WhatsApp Meta template skipped: missing phone_number_id/access_token"
+        )
         return False
 
     api_base = settings.WHATSAPP_API_BASE_URL.rstrip("/")
@@ -141,21 +170,46 @@ def _send_meta_template(context: WhatsAppAlertContext) -> bool:
     try:
         with request.urlopen(req, timeout=settings.WHATSAPP_HTTP_TIMEOUT_SECONDS) as resp:
             return 200 <= resp.status < 300
-    except (error.HTTPError, error.URLError, TimeoutError):
+    except error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="ignore")
+        logger.warning(
+            "WhatsApp Meta template failed: status=%s, to=%s, template=%s, detail=%s",
+            exc.code,
+            _clean_phone(context.recipient_phone),
+            settings.WHATSAPP_TEMPLATE_NAME,
+            detail[:500],
+        )
+        return False
+    except error.URLError as exc:
+        logger.warning(
+            "WhatsApp Meta template URL error: to=%s, reason=%s",
+            _clean_phone(context.recipient_phone),
+            exc.reason,
+        )
+        return False
+    except TimeoutError:
+        logger.warning(
+            "WhatsApp Meta template timeout: to=%s",
+            _clean_phone(context.recipient_phone),
+        )
         return False
 
 
 def _send_twilio_template(context: WhatsAppAlertContext) -> bool:
     if not settings.TWILIO_ACCOUNT_SID or not settings.TWILIO_AUTH_TOKEN:
+        logger.warning("WhatsApp Twilio template skipped: missing SID/token")
         return False
     if not settings.TWILIO_CONTENT_SID:
+        logger.warning("WhatsApp Twilio template skipped: missing content_sid")
         return False
 
     to_address = _format_twilio_whatsapp_address(context.recipient_phone)
     from_address = _format_twilio_from(settings.TWILIO_WHATSAPP_FROM)
     if not to_address:
+        logger.warning("WhatsApp Twilio template skipped: invalid recipient phone")
         return False
     if not from_address and not settings.TWILIO_MESSAGING_SERVICE_SID:
+        logger.warning("WhatsApp Twilio template skipped: missing from/service sid")
         return False
 
     url = (
@@ -185,19 +239,39 @@ def _send_twilio_template(context: WhatsAppAlertContext) -> bool:
     try:
         with request.urlopen(req, timeout=settings.WHATSAPP_HTTP_TIMEOUT_SECONDS) as resp:
             return 200 <= resp.status < 300
-    except (error.HTTPError, error.URLError, TimeoutError):
+    except error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="ignore")
+        logger.warning(
+            "WhatsApp Twilio template failed: status=%s, to=%s, detail=%s",
+            exc.code,
+            to_address,
+            detail[:500],
+        )
+        return False
+    except error.URLError as exc:
+        logger.warning(
+            "WhatsApp Twilio template URL error: to=%s, reason=%s",
+            to_address,
+            exc.reason,
+        )
+        return False
+    except TimeoutError:
+        logger.warning("WhatsApp Twilio template timeout: to=%s", to_address)
         return False
 
 
 def _send_twilio_text_message(*, recipient_phone: str, message: str) -> bool:
     if not settings.TWILIO_ACCOUNT_SID or not settings.TWILIO_AUTH_TOKEN:
+        logger.warning("WhatsApp Twilio text skipped: missing SID/token")
         return False
 
     to_address = _format_twilio_whatsapp_address(recipient_phone)
     from_address = _format_twilio_from(settings.TWILIO_WHATSAPP_FROM)
     if not to_address:
+        logger.warning("WhatsApp Twilio text skipped: invalid recipient phone")
         return False
     if not from_address and not settings.TWILIO_MESSAGING_SERVICE_SID:
+        logger.warning("WhatsApp Twilio text skipped: missing from/service sid")
         return False
 
     url = (
@@ -226,7 +300,24 @@ def _send_twilio_text_message(*, recipient_phone: str, message: str) -> bool:
     try:
         with request.urlopen(req, timeout=settings.WHATSAPP_HTTP_TIMEOUT_SECONDS) as resp:
             return 200 <= resp.status < 300
-    except (error.HTTPError, error.URLError, TimeoutError):
+    except error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="ignore")
+        logger.warning(
+            "WhatsApp Twilio text failed: status=%s, to=%s, detail=%s",
+            exc.code,
+            to_address,
+            detail[:500],
+        )
+        return False
+    except error.URLError as exc:
+        logger.warning(
+            "WhatsApp Twilio text URL error: to=%s, reason=%s",
+            to_address,
+            exc.reason,
+        )
+        return False
+    except TimeoutError:
+        logger.warning("WhatsApp Twilio text timeout: to=%s", to_address)
         return False
 
 

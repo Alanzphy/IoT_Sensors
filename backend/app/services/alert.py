@@ -1,5 +1,6 @@
 import smtplib
 import json
+import logging
 from datetime import UTC, date, datetime, timedelta
 from email.message import EmailMessage
 from urllib import error, request
@@ -21,6 +22,8 @@ from app.models.reading import Reading
 from app.models.threshold import Threshold
 from app.models.user import User
 from app.services.whatsapp import WhatsAppAlertContext, send_whatsapp_alert
+
+logger = logging.getLogger(__name__)
 
 
 def _build_email_subject(alert: Alert) -> str:
@@ -725,6 +728,10 @@ def _send_email_notification(
     from_email = settings.SMTP_FROM_EMAIL or settings.SMTP_USERNAME
 
     if not settings.SMTP_HOST or not from_email:
+        logger.warning(
+            "Email notification skipped: missing SMTP_HOST or from_email (to=%s)",
+            recipient_email,
+        )
         return False
 
     msg = EmailMessage()
@@ -758,7 +765,16 @@ def _send_email_notification(
                 smtp.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
             smtp.send_message(msg)
         return True
-    except Exception:
+    except Exception as exc:
+        logger.warning(
+            "Email notification failed: to=%s, host=%s, port=%s, tls=%s, ssl=%s, error=%s",
+            recipient_email,
+            settings.SMTP_HOST,
+            settings.SMTP_PORT,
+            settings.SMTP_USE_TLS,
+            settings.SMTP_USE_SSL,
+            exc,
+        )
         return False
 
 
