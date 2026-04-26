@@ -175,7 +175,7 @@ def get_config():
         "--quick-demo",
         action="store_true",
         help=(
-            "Modo de demo total: preset seed-demo + demo-alerts + "
+            "Modo de demo total: preset partner-socio + demo-alerts + "
             "dispatch automatico de notificaciones"
         ),
     )
@@ -310,7 +310,7 @@ def apply_quick_demo_defaults(args) -> None:
         return
 
     if args.preset == "none":
-        args.preset = "seed-demo"
+        args.preset = "partner-socio"
     if args.mode == DEFAULT_MODE:
         args.mode = "demo-alerts"
     if args.demo_spike_every == DEFAULT_DEMO_SPIKE_EVERY:

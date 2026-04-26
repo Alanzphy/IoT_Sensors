@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import datetime
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -26,6 +27,11 @@ DEFAULT_ADMIN_EMAIL = "admin@sensores.com"
 DEFAULT_ADMIN_PASSWORD = "admin123"
 TARGET_CLIENT_EMAIL = "alan2203mx@gmail.com"
 DEMO_PREFIX = "DEMO - "
+DEFAULT_HTTP_USER_AGENT = (
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 "
+    "SensoresIoT-SetupPartner/1.0"
+)
 
 LEGACY_DEMO_PROPERTY_NAME = "Rancho Norte"
 DEMO_PROPERTY_NAME = f"{DEMO_PREFIX}Rancho Norte"
@@ -36,6 +42,8 @@ LEGACY_DEMO_NODE_NAMES = {
     "Nodo Chile Principal",
     "Nodo Prueba E2E",
 }
+DEFAULT_SOURCE_DEMO_AREA_NAME = f"{DEMO_PREFIX}Nogal Norte"
+LEGACY_SOURCE_DEMO_AREA_NAME = "Nogal Norte"
 
 
 @dataclass(frozen=True)
@@ -79,12 +87,18 @@ def _prefix_demo(name: str) -> str:
 
 
 class ApiClient:
-    def __init__(self, base_url: str, token: str | None = None):
+    def __init__(
+        self,
+        base_url: str,
+        token: str | None = None,
+        user_agent: str = DEFAULT_HTTP_USER_AGENT,
+    ):
         self.base_url = base_url.rstrip("/")
         self.token = token
+        self.user_agent = user_agent
 
     def with_token(self, token: str) -> "ApiClient":
-        return ApiClient(self.base_url, token)
+        return ApiClient(self.base_url, token, self.user_agent)
 
     def _request(
         self,
@@ -93,6 +107,7 @@ class ApiClient:
         *,
         params: dict[str, Any] | None = None,
         payload: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
     ) -> tuple[int, dict[str, Any]]:
         query = ""
         if params:
@@ -104,8 +119,12 @@ class ApiClient:
         req = urllib.request.Request(url=url, data=data, method=method.upper())
         req.add_header("Content-Type", "application/json")
         req.add_header("Accept", "application/json, text/plain, */*")
+        req.add_header("User-Agent", self.user_agent)
         if self.token:
             req.add_header("Authorization", f"Bearer {self.token}")
+        if headers:
+            for key, value in headers.items():
+                req.add_header(key, value)
 
         try:
             with urllib.request.urlopen(req, timeout=30) as resp:
@@ -124,14 +143,26 @@ class ApiClient:
         except TimeoutError:
             return 0, {"detail": "Timeout al conectar"}
 
-    def get(self, path: str, *, params: dict[str, Any] | None = None) -> dict[str, Any]:
-        status, payload = self._request("GET", path, params=params)
+    def get(
+        self,
+        path: str,
+        *,
+        params: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        status, payload = self._request("GET", path, params=params, headers=headers)
         if status != 200:
             raise RuntimeError(f"GET {path} fallo (HTTP {status}): {payload}")
         return payload
 
-    def post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
-        status, parsed = self._request("POST", path, payload=payload)
+    def post(
+        self,
+        path: str,
+        payload: dict[str, Any],
+        *,
+        headers: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        status, parsed = self._request("POST", path, payload=payload, headers=headers)
         if status not in (200, 201):
             raise RuntimeError(f"POST {path} fallo (HTTP {status}): {parsed}")
         return parsed
@@ -159,8 +190,8 @@ class ApiClient:
         return items
 
 
-def _login(base_url: str, email: str, password: str) -> str:
-    public_client = ApiClient(base_url)
+def _login(base_url: str, email: str, password: str, *, user_agent: str) -> str:
+    public_client = ApiClient(base_url, user_agent=user_agent)
     payload = public_client.post("/auth/login", {"email": email, "password": password})
     token = payload.get("access_token")
     if not isinstance(token, str) or not token:
@@ -349,6 +380,220 @@ def _collect_partner_node_summaries(
     return out
 
 
+def _parse_iso_datetime(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    candidate = value.strip()
+    if not candidate:
+        return None
+    if candidate.endswith("Z"):
+        candidate = candidate[:-1] + "+00:00"
+    try:
+        return datetime.fromisoformat(candidate)
+    except ValueError:
+        return None
+
+
+def _find_property_by_name(
+    client: ApiClient, *, client_id: int, name: str
+) -> dict[str, Any] | None:
+    properties = client.list_all("/properties", params={"client_id": client_id})
+    return next((item for item in properties if item.get("name") == name), None)
+
+
+def _find_area_by_name(
+    client: ApiClient, *, property_id: int, name: str
+) -> dict[str, Any] | None:
+    areas = client.list_all("/irrigation-areas", params={"property_id": property_id})
+    return next((item for item in areas if item.get("name") == name), None)
+
+
+def _resolve_source_demo_area(
+    client: ApiClient,
+    *,
+    client_id: int,
+    source_area_name: str,
+) -> dict[str, Any]:
+    demo_property = _find_property_by_name(client, client_id=client_id, name=DEMO_PROPERTY_NAME)
+    if not demo_property:
+        demo_property = _find_property_by_name(
+            client, client_id=client_id, name=LEGACY_DEMO_PROPERTY_NAME
+        )
+    if not demo_property:
+        raise RuntimeError(
+            f"No se encontro predio demo '{DEMO_PROPERTY_NAME}' ni '{LEGACY_DEMO_PROPERTY_NAME}'"
+        )
+
+    property_id = int(demo_property["id"])
+    source_area = _find_area_by_name(client, property_id=property_id, name=source_area_name)
+    if not source_area:
+        source_area = _find_area_by_name(
+            client,
+            property_id=property_id,
+            name=(
+                LEGACY_SOURCE_DEMO_AREA_NAME
+                if source_area_name == DEFAULT_SOURCE_DEMO_AREA_NAME
+                else DEFAULT_SOURCE_DEMO_AREA_NAME
+            ),
+        )
+
+    if not source_area:
+        areas = client.list_all("/irrigation-areas", params={"property_id": property_id})
+        if not areas:
+            raise RuntimeError(f"El predio demo '{demo_property.get('name')}' no tiene areas")
+        source_area = areas[0]
+        print(
+            f"[warn] No encontre area fuente '{source_area_name}', "
+            f"usando '{source_area.get('name')}'"
+        )
+    return source_area
+
+
+def _clone_recent_readings(
+    client: ApiClient,
+    *,
+    source_area_id: int,
+    target_area_id: int,
+    target_node_api_key: str,
+) -> tuple[int, int]:
+    latest_target = client.get(
+        "/readings/latest",
+        params={"irrigation_area_id": target_area_id},
+    )
+    latest_target_ts = _parse_iso_datetime(latest_target.get("timestamp"))
+    copied = 0
+    skipped = 0
+    page = 1
+
+    while True:
+        payload = client.get(
+            "/readings",
+            params={
+                "irrigation_area_id": source_area_id,
+                "page": page,
+                "per_page": 200,
+            },
+        )
+        rows = payload.get("data") or []
+        if not rows:
+            break
+
+        for row in rows:
+            ts = _parse_iso_datetime(row.get("timestamp"))
+            if latest_target_ts and ts and ts <= latest_target_ts:
+                return copied, skipped
+
+            reading_payload = {
+                "timestamp": row.get("timestamp"),
+                "soil": row.get("soil") or {},
+                "irrigation": row.get("irrigation") or {},
+                "environmental": row.get("environmental") or {},
+            }
+            try:
+                client.post(
+                    "/readings",
+                    reading_payload,
+                    headers={"X-API-Key": target_node_api_key},
+                )
+                copied += 1
+            except RuntimeError:
+                skipped += 1
+        page += 1
+
+    return copied, skipped
+
+
+def _clone_thresholds(
+    client: ApiClient, *, source_area_id: int, target_area_id: int
+) -> tuple[int, int]:
+    source_thresholds = client.list_all(
+        "/thresholds",
+        params={"irrigation_area_id": source_area_id, "active": "true"},
+    )
+    target_thresholds = client.list_all(
+        "/thresholds",
+        params={"irrigation_area_id": target_area_id, "active": "true"},
+    )
+    target_by_parameter = {item.get("parameter"): item for item in target_thresholds}
+    created = 0
+    updated = 0
+
+    for threshold in source_thresholds:
+        parameter = threshold.get("parameter")
+        if not parameter:
+            continue
+        payload = {
+            "irrigation_area_id": target_area_id,
+            "parameter": parameter,
+            "min_value": threshold.get("min_value"),
+            "max_value": threshold.get("max_value"),
+            "severity": threshold.get("severity") or "warning",
+            "active": bool(threshold.get("active", True)),
+        }
+        current = target_by_parameter.get(parameter)
+        if current:
+            same = (
+                current.get("min_value") == payload["min_value"]
+                and current.get("max_value") == payload["max_value"]
+                and current.get("severity") == payload["severity"]
+                and bool(current.get("active")) == payload["active"]
+            )
+            if not same:
+                client.put(f"/thresholds/{current['id']}", payload)
+                updated += 1
+        else:
+            client.post("/thresholds", payload)
+            created += 1
+
+    return created, updated
+
+
+def _clone_notification_preferences_if_possible(
+    admin_client: ApiClient,
+    *,
+    client_user_email: str,
+    client_user_password: str | None,
+    source_area_id: int,
+    target_area_ids: list[int],
+) -> tuple[int, int]:
+    if not client_user_password:
+        print(
+            "[warn] No se clonan preferencias de notificacion (falta --client-password)."
+        )
+        return 0, 0
+
+    client_token = _login(
+        admin_client.base_url,
+        client_user_email,
+        client_user_password,
+        user_agent=admin_client.user_agent,
+    )
+    client_api = admin_client.with_token(client_token)
+
+    source_prefs = admin_client.list_all(
+        "/notification-preferences",
+        params={"irrigation_area_id": source_area_id},
+    )
+    if not source_prefs:
+        return 0, 0
+
+    items: list[dict[str, Any]] = []
+    for target_area_id in target_area_ids:
+        for pref in source_prefs:
+            items.append(
+                {
+                    "irrigation_area_id": target_area_id,
+                    "alert_type": pref.get("alert_type"),
+                    "severity": pref.get("severity"),
+                    "channel": pref.get("channel"),
+                    "enabled": bool(pref.get("enabled")),
+                }
+            )
+
+    result = client_api.put("/notification-preferences/bulk", {"items": items})
+    return int(result.get("created") or 0), int(result.get("updated") or 0)
+
+
 def _write_keys_file(path: str, partner_nodes: list[dict[str, Any]]) -> None:
     lines = ["# API keys productivas socio formador", ""]
     for node in sorted(partner_nodes, key=lambda x: str(x.get("name") or "")):
@@ -361,8 +606,13 @@ def _write_keys_file(path: str, partner_nodes: list[dict[str, Any]]) -> None:
 
 
 def run(args: argparse.Namespace) -> int:
-    token = _login(args.base_url, args.admin_email, args.admin_password)
-    api = ApiClient(args.base_url, token)
+    token = _login(
+        args.base_url,
+        args.admin_email,
+        args.admin_password,
+        user_agent=args.user_agent,
+    )
+    api = ApiClient(args.base_url, token, args.user_agent)
 
     client_id = _find_client_id_by_email(api, TARGET_CLIENT_EMAIL)
     crop_type_id = _find_crop_type_id(api, "Nogal")
@@ -372,6 +622,9 @@ def run(args: argparse.Namespace) -> int:
 
     _ensure_demo_property_prefixed(api, client_id=client_id)
     _rename_legacy_demo_entities(api, client_id=client_id)
+
+    target_area_ids: list[int] = []
+    target_nodes: list[dict[str, Any]] = []
 
     for site in PARTNER_SITES:
         prop = _upsert_property(
@@ -394,9 +647,69 @@ def run(args: argparse.Namespace) -> int:
             latitude=site.latitude,
             longitude=site.longitude,
         )
+        target_area_ids.append(int(area["id"]))
+        target_nodes.append(node)
         print(
             f"[ok] {site.property_name} -> {site.area_name} -> {site.node_name} "
             f"(node_id={node.get('id')}, api_key={node.get('api_key')})"
+        )
+
+    if args.clone_demo_data:
+        source_area = _resolve_source_demo_area(
+            api,
+            client_id=client_id,
+            source_area_name=args.source_demo_area_name,
+        )
+        source_area_id = int(source_area["id"])
+        print(
+            f"\n[migrate] Clonando datos desde area demo '{source_area.get('name')}' "
+            f"(area_id={source_area_id})"
+        )
+
+        readings_total_copied = 0
+        readings_total_skipped = 0
+        thresholds_total_created = 0
+        thresholds_total_updated = 0
+
+        for node, area_id in zip(target_nodes, target_area_ids, strict=True):
+            api_key = str(node.get("api_key") or "")
+            if not api_key:
+                raise RuntimeError(f"Nodo destino sin api_key (area_id={area_id})")
+            copied, skipped = _clone_recent_readings(
+                api,
+                source_area_id=source_area_id,
+                target_area_id=area_id,
+                target_node_api_key=api_key,
+            )
+            created, updated = _clone_thresholds(
+                api,
+                source_area_id=source_area_id,
+                target_area_id=area_id,
+            )
+            readings_total_copied += copied
+            readings_total_skipped += skipped
+            thresholds_total_created += created
+            thresholds_total_updated += updated
+            print(
+                f"[migrate] area_id={area_id}: readings_copied={copied}, "
+                f"readings_skipped={skipped}, thresholds_created={created}, thresholds_updated={updated}"
+            )
+
+        prefs_created, prefs_updated = _clone_notification_preferences_if_possible(
+            api,
+            client_user_email=TARGET_CLIENT_EMAIL,
+            client_user_password=args.client_password,
+            source_area_id=source_area_id,
+            target_area_ids=target_area_ids,
+        )
+        print(
+            "[migrate] resumen: "
+            f"readings_copied={readings_total_copied}, "
+            f"readings_skipped={readings_total_skipped}, "
+            f"thresholds_created={thresholds_total_created}, "
+            f"thresholds_updated={thresholds_total_updated}, "
+            f"notification_preferences_created={prefs_created}, "
+            f"notification_preferences_updated={prefs_updated}"
         )
 
     partner_nodes = _collect_partner_node_summaries(api, client_id=client_id)
@@ -437,6 +750,36 @@ def parse_args() -> argparse.Namespace:
         "--write-keys-file",
         default="",
         help="Ruta opcional para guardar API keys productivas y usar en simulator_fast",
+    )
+    parser.add_argument(
+        "--user-agent",
+        default=DEFAULT_HTTP_USER_AGENT,
+        help="User-Agent HTTP para evitar bloqueos de WAF/Cloudflare",
+    )
+    parser.add_argument(
+        "--clone-demo-data",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help=(
+            "Clona lecturas+umbrales del area demo fuente hacia Granja/Campus "
+            "(default: enabled)"
+        ),
+    )
+    parser.add_argument(
+        "--client-password",
+        default="",
+        help=(
+            "Password del cliente alan2203mx@gmail.com para clonar tambien "
+            "notification-preferences (opcional)"
+        ),
+    )
+    parser.add_argument(
+        "--source-demo-area-name",
+        default=DEFAULT_SOURCE_DEMO_AREA_NAME,
+        help=(
+            "Nombre del area demo fuente para clonar lecturas/umbrales "
+            f"(default: {DEFAULT_SOURCE_DEMO_AREA_NAME})"
+        ),
     )
     return parser.parse_args()
 

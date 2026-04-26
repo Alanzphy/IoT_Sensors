@@ -1,4 +1,4 @@
-.PHONY: help openapi-sync demo-seed demo-seed-dry demo-live
+.PHONY: help openapi-sync demo-seed demo-seed-dry demo-live demo-live-partner-vps
 
 help:
 	@echo "Targets disponibles:"
@@ -6,6 +6,7 @@ help:
 	@echo "  make demo-seed      Ejecuta seed_demo real para cuenta demo por defecto"
 	@echo "  make demo-seed-dry  Ejecuta seed_demo en dry-run"
 	@echo "  make demo-live      Ejecuta simulator_fast en --quick-demo"
+	@echo "  make demo-live-partner-vps  Ejecuta simulador productivo socio (VPS)"
 
 openapi-sync:
 	./scripts/sync_openapi.sh
@@ -18,3 +19,6 @@ demo-seed-dry:
 
 demo-live:
 	cd simulator && python3 simulator_fast.py --quick-demo
+
+demo-live-partner-vps:
+	cd simulator && ./run_partner_vps.sh

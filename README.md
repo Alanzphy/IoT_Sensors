@@ -127,6 +127,8 @@ Se incluye un script idempotente para crear estructura real del socio en el clie
 - Predio `Granja Hogar` + area `Area Granja Hogar` + `Nodo Granja Hogar`
 - Predio `Campus Reforestado` + area `Area Campus Reforestado` + `Nodo Campus Reforestado`
 - Renombra estructura legado a `DEMO - ...` (sin cambios de esquema)
+- Clona lecturas y umbrales desde el area demo fuente (`DEMO - Nogal Norte` por default)
+- Opcional: clona preferencias de notificacion si pasas password del cliente
 
 Ejemplo local:
 
@@ -145,7 +147,18 @@ python3 scripts/setup_partner_locations.py \
   --base-url https://sensores.alanrz.bond/api/v1 \
   --admin-email admin@sensores.com \
   --admin-password TU_PASSWORD \
+  --client-password PASSWORD_CLIENTE_ALAN \
   --write-keys-file simulator/keys_partner_vps.txt
+```
+
+Si quieres tomar otra area demo como fuente de datos:
+
+```bash
+python3 scripts/setup_partner_locations.py \
+  --base-url https://sensores.alanrz.bond/api/v1 \
+  --admin-email admin@sensores.com \
+  --admin-password TU_PASSWORD \
+  --source-demo-area-name "DEMO - Alfalfa Este"
 ```
 
 Luego puedes usar esas keys en el simulador:

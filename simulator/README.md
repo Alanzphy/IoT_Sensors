@@ -83,6 +83,21 @@ python simulator_fast.py \
   --admin-password admin123
 ```
 
+### 4. Launcher rápido VPS (partner)
+
+Para no copiar el comando largo cada vez:
+
+```bash
+cd simulator
+SIM_ADMIN_PASSWORD='TU_PASSWORD_ADMIN' ./run_partner_vps.sh
+```
+
+Atajo desde la raíz del repo:
+
+```bash
+SIM_ADMIN_PASSWORD='TU_PASSWORD_ADMIN' make demo-live-partner-vps
+```
+
 ### Variables de entorno (alternativa a CLI)
 ```bash
 export SIMULATOR_API_KEY=ak_n01_xxxxxx
