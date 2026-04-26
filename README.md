@@ -264,6 +264,11 @@ El proyecto está diseñado para desplegarse ágilmente en un VPS utilizando **D
 4. **Desplegar:** Haz clic en "Deploy". Dokploy leerá el `docker-compose.yml`, construirá las imágenes optimizadas (multi-stage para React), levantará la base de datos MySQL, ejecutará las migraciones de Alembic y finalmente encenderá la API de FastAPI.
 5. **SSL Automático:** Traefik detectará las etiquetas de enrutamiento y generará automáticamente los certificados SSL (Let's Encrypt), enrutando `/api/*` al backend y todo el resto al dashboard React.
 
+Guía operativa paso a paso:
+
+- [`docs/dokploy_despliegue.md`](docs/dokploy_despliegue.md)
+- Smoke check post-deploy: `./scripts/dokploy_smoke_check.sh <tu-dominio>`
+
 ### Scheduler De Inactividad (Producción)
 
 El compose incluye el servicio `inactivity_scheduler`, que ejecuta de forma periódica el endpoint `POST /api/v1/alerts/scan-inactivity` para generar alertas por nodos inactivos.
@@ -417,4 +422,5 @@ CLIENT_OWN_AREA_ID="2" \
 | [`docs/openapi.yaml`](docs/openapi.yaml) | Spec técnico OpenAPI 3.1 |
 | [`docs/documentacion_base_de_datos.md`](docs/documentacion_base_de_datos.md) | Modelo de datos, tablas, relaciones |
 | [`docs/design_system.md`](docs/design_system.md) | Design system del frontend |
+| [`docs/dokploy_despliegue.md`](docs/dokploy_despliegue.md) | Checklist operativo de deploy en Dokploy |
 | [`docs/srs/`](docs/srs/) | Especificación de Requisitos de Software |
