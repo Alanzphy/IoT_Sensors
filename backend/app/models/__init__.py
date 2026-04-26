@@ -12,6 +12,7 @@ from app.models.threshold import Threshold
 from app.models.alert import Alert
 from app.models.audit_log import AuditLog
 from app.models.notification_preference import NotificationPreference
+from app.models.ai_report import AIReport
 
 __all__ = [
     "User",
@@ -28,4 +29,5 @@ __all__ = [
     "Alert",
     "AuditLog",
     "NotificationPreference",
+    "AIReport",
 ]

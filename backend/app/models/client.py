@@ -7,6 +7,7 @@ from app.db.session import Base
 from app.models.base import SoftDeleteMixin, TimestampMixin
 
 if TYPE_CHECKING:
+    from app.models.ai_report import AIReport
     from app.models.notification_preference import NotificationPreference
     from app.models.property import Property
     from app.models.user import User
@@ -41,6 +42,9 @@ class Client(Base, TimestampMixin, SoftDeleteMixin):
     )
     notification_preferences: Mapped[list["NotificationPreference"]] = relationship(
         "NotificationPreference", back_populates="client"
+    )
+    ai_reports: Mapped[list["AIReport"]] = relationship(
+        "AIReport", back_populates="client"
     )
 
     __table_args__ = (Index("idx_clientes_usuario_id", "usuario_id"),)

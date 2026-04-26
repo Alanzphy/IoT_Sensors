@@ -72,7 +72,7 @@ def build_alert_text_message(context: WhatsAppAlertContext) -> str:
     )
 
 
-def _send_meta_text(context: WhatsAppAlertContext) -> bool:
+def _send_meta_text_message(*, recipient_phone: str, message: str) -> bool:
     if not settings.WHATSAPP_PHONE_NUMBER_ID or not settings.WHATSAPP_ACCESS_TOKEN:
         return False
 
@@ -80,11 +80,11 @@ def _send_meta_text(context: WhatsAppAlertContext) -> bool:
     url = f"{api_base}/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages"
     payload = {
         "messaging_product": "whatsapp",
-        "to": _clean_phone(context.recipient_phone),
+        "to": _clean_phone(recipient_phone),
         "type": "text",
         "text": {
             "preview_url": False,
-            "body": build_alert_text_message(context),
+            "body": message,
         },
     }
     body = json.dumps(payload).encode("utf-8")
@@ -98,6 +98,13 @@ def _send_meta_text(context: WhatsAppAlertContext) -> bool:
             return 200 <= resp.status < 300
     except (error.HTTPError, error.URLError, TimeoutError):
         return False
+
+
+def _send_meta_text(context: WhatsAppAlertContext) -> bool:
+    return _send_meta_text_message(
+        recipient_phone=context.recipient_phone,
+        message=build_alert_text_message(context),
+    )
 
 
 def _send_meta_template(context: WhatsAppAlertContext) -> bool:
@@ -182,11 +189,11 @@ def _send_twilio_template(context: WhatsAppAlertContext) -> bool:
         return False
 
 
-def _send_twilio_text(context: WhatsAppAlertContext) -> bool:
+def _send_twilio_text_message(*, recipient_phone: str, message: str) -> bool:
     if not settings.TWILIO_ACCOUNT_SID or not settings.TWILIO_AUTH_TOKEN:
         return False
 
-    to_address = _format_twilio_whatsapp_address(context.recipient_phone)
+    to_address = _format_twilio_whatsapp_address(recipient_phone)
     from_address = _format_twilio_from(settings.TWILIO_WHATSAPP_FROM)
     if not to_address:
         return False
@@ -199,7 +206,7 @@ def _send_twilio_text(context: WhatsAppAlertContext) -> bool:
     )
     form_data = {
         "To": to_address,
-        "Body": build_alert_text_message(context),
+        "Body": message,
     }
     if settings.TWILIO_MESSAGING_SERVICE_SID:
         form_data["MessagingServiceSid"] = settings.TWILIO_MESSAGING_SERVICE_SID
@@ -221,6 +228,28 @@ def _send_twilio_text(context: WhatsAppAlertContext) -> bool:
             return 200 <= resp.status < 300
     except (error.HTTPError, error.URLError, TimeoutError):
         return False
+
+
+def _send_twilio_text(context: WhatsAppAlertContext) -> bool:
+    return _send_twilio_text_message(
+        recipient_phone=context.recipient_phone,
+        message=build_alert_text_message(context),
+    )
+
+
+def send_whatsapp_text_message(*, recipient_phone: str, message: str) -> bool:
+    provider = settings.WHATSAPP_PROVIDER.strip().lower()
+    if provider == "twilio":
+        return _send_twilio_text_message(
+            recipient_phone=recipient_phone,
+            message=message,
+        )
+    if provider == "meta":
+        return _send_meta_text_message(
+            recipient_phone=recipient_phone,
+            message=message,
+        )
+    return False
 
 
 def send_whatsapp_alert(context: WhatsAppAlertContext) -> bool:

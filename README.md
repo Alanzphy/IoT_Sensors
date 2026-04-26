@@ -333,6 +333,39 @@ WHATSAPP_MESSAGE_MODE=text
 
 En Dokploy cambia `FRONTEND_PUBLIC_URL` al dominio real, por ejemplo `https://sensores.tudominio.com`. El frontend usa `/api/v1`, así que el mismo patrón funciona con el proxy local de Vite, Nginx en Docker y Traefik en Dokploy.
 
+### Scheduler De Reportes IA (Producción)
+
+El compose incluye `ai_report_scheduler`, que ejecuta `POST /api/v1/ai-reports/generate` una vez por día en horario UTC configurable.
+
+Endpoints backend:
+
+- `GET /api/v1/ai-reports`
+- `GET /api/v1/ai-reports/{id}`
+- `POST /api/v1/ai-reports/generate` (solo admin/scheduler)
+
+Variables requeridas/recomendadas:
+
+- `AI_REPORTS_ENABLED` (`true`/`false`)
+- `AI_REPORTS_DEFAULT_NOTIFY` (`true`/`false`)
+- `AI_REPORTS_SCHEDULER_ENABLED` (`true`/`false`)
+- `AI_REPORTS_SCHEDULER_POLL_SECONDS` (default: `60`)
+- `AI_REPORTS_SCHEDULE_HOUR_UTC` (default: `2`)
+- `AI_REPORTS_SCHEDULE_MINUTE_UTC` (default: `0`)
+- `AI_REPORTS_HTTP_TIMEOUT_SECONDS` (default: `30`)
+
+Integración Azure OpenAI (opcional):
+
+- `AZURE_OPENAI_ENABLED` (`true`/`false`)
+- `AZURE_OPENAI_ENDPOINT`
+- `AZURE_OPENAI_API_KEY`
+- `AZURE_OPENAI_API_VERSION`
+- `AZURE_OPENAI_DEPLOYMENT`
+- `AZURE_OPENAI_TEMPERATURE`
+- `AZURE_OPENAI_MAX_TOKENS`
+- `AZURE_OPENAI_TIMEOUT_SECONDS`
+
+Si `AZURE_OPENAI_ENABLED=false`, el backend usa un fallback determinístico para resumen/hallazgos/recomendación y mantiene el flujo operativo en local y producción.
+
 ## Política de Documentación (Trabajo por Hitos)
 
 Para evitar pérdida de contexto y desfase entre implementación y docs, este repositorio usa una estrategia híbrida:

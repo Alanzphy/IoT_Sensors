@@ -74,6 +74,25 @@ class Settings(BaseSettings):
     TWILIO_STATUS_CALLBACK_URL: str = ""
     TWILIO_API_BASE_URL: str = "https://api.twilio.com"
 
+    # --- AI Reports ---
+    AI_REPORTS_ENABLED: bool = False
+    AI_REPORTS_DEFAULT_NOTIFY: bool = True
+    AI_REPORTS_SCHEDULER_ENABLED: bool = False
+    AI_REPORTS_SCHEDULER_POLL_SECONDS: int = 60
+    AI_REPORTS_SCHEDULE_HOUR_UTC: int = 2
+    AI_REPORTS_SCHEDULE_MINUTE_UTC: int = 0
+    AI_REPORTS_HTTP_TIMEOUT_SECONDS: int = 30
+
+    # --- Azure OpenAI ---
+    AZURE_OPENAI_ENABLED: bool = False
+    AZURE_OPENAI_ENDPOINT: str = ""
+    AZURE_OPENAI_API_KEY: str = ""
+    AZURE_OPENAI_API_VERSION: str = "2024-10-21"
+    AZURE_OPENAI_DEPLOYMENT: str = ""
+    AZURE_OPENAI_TEMPERATURE: float = 0.2
+    AZURE_OPENAI_MAX_TOKENS: int = 900
+    AZURE_OPENAI_TIMEOUT_SECONDS: int = 30
+
     @field_validator("DEBUG", mode="before")
     @classmethod
     def parse_debug(cls, value: object) -> object:

@@ -56,6 +56,11 @@ from app.schemas.notification_preference import (
     NotificationPreferenceResponse,
     NotificationPreferenceUpsertItem,
 )
+from app.schemas.ai_report import (
+    AIReportGenerateRequest,
+    AIReportGenerateResponse,
+    AIReportResponse,
+)
 from app.schemas.user import UserCreate, UserResponse, UserUpdate
 
 __all__ = [
@@ -117,4 +122,7 @@ __all__ = [
     "NotificationPreferenceUpsertItem",
     "NotificationPreferenceBulkUpsertRequest",
     "NotificationPreferenceBulkUpsertResponse",
+    "AIReportResponse",
+    "AIReportGenerateRequest",
+    "AIReportGenerateResponse",
 ]

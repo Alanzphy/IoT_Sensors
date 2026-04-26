@@ -1,4 +1,5 @@
 from app.services import (
+    ai_report,
     alert,
     audit_log,
     client,
@@ -16,6 +17,7 @@ from app.services import (
 
 __all__ = [
     "user",
+    "ai_report",
     "alert",
     "audit_log",
     "client",

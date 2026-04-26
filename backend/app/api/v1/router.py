@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
+    ai_reports,
     alerts,
     audit_logs,
     auth,
@@ -50,4 +51,9 @@ api_v1_router.include_router(
     audit_logs.router,
     prefix="/audit-logs",
     tags=["Audit Logs"],
+)
+api_v1_router.include_router(
+    ai_reports.router,
+    prefix="/ai-reports",
+    tags=["AI Reports"],
 )

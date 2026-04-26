@@ -5,7 +5,11 @@ from urllib import parse
 
 from app.core.config import settings
 from app.models.alert import Alert
-from app.services.whatsapp import WhatsAppAlertContext, send_whatsapp_alert
+from app.services.whatsapp import (
+    WhatsAppAlertContext,
+    send_whatsapp_alert,
+    send_whatsapp_text_message,
+)
 
 
 class _FakeResponse:
@@ -152,3 +156,57 @@ def test_twilio_provider_sends_text_body(monkeypatch):
     assert "ContentSid" not in body
     assert "Alerta de monitoreo de riego" in body["Body"][0]
     assert "https://demo.example.com/cliente/alertas/123" in body["Body"][0]
+
+
+def test_send_whatsapp_text_message_meta(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(settings, "WHATSAPP_PROVIDER", "meta")
+    monkeypatch.setattr(settings, "WHATSAPP_PHONE_NUMBER_ID", "123456")
+    monkeypatch.setattr(settings, "WHATSAPP_ACCESS_TOKEN", "token")
+
+    def fake_urlopen(req, timeout):
+        captured["body"] = json.loads(req.data.decode("utf-8"))
+        captured["authorization"] = req.headers["Authorization"]
+        return _FakeResponse()
+
+    monkeypatch.setattr("app.services.whatsapp.request.urlopen", fake_urlopen)
+
+    assert (
+        send_whatsapp_text_message(
+            recipient_phone="+52 614 123 4567",
+            message="Reporte IA listo",
+        )
+        is True
+    )
+    body = captured["body"]
+    assert body["type"] == "text"
+    assert body["to"] == "526141234567"
+    assert body["text"]["body"] == "Reporte IA listo"
+
+
+def test_send_whatsapp_text_message_twilio(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(settings, "WHATSAPP_PROVIDER", "twilio")
+    monkeypatch.setattr(settings, "TWILIO_ACCOUNT_SID", "AC123")
+    monkeypatch.setattr(settings, "TWILIO_AUTH_TOKEN", "secret")
+    monkeypatch.setattr(settings, "TWILIO_WHATSAPP_FROM", "+15551234567")
+    monkeypatch.setattr(settings, "TWILIO_MESSAGING_SERVICE_SID", "")
+
+    def fake_urlopen(req, timeout):
+        captured["body"] = parse.parse_qs(req.data.decode("utf-8"))
+        captured["authorization"] = req.headers["Authorization"]
+        return _FakeResponse()
+
+    monkeypatch.setattr("app.services.whatsapp.request.urlopen", fake_urlopen)
+
+    assert (
+        send_whatsapp_text_message(
+            recipient_phone="+52 614 123 4567",
+            message="Reporte IA listo",
+        )
+        is True
+    )
+    body = captured["body"]
+    assert body["To"] == ["whatsapp:+526141234567"]
+    assert body["From"] == ["whatsapp:+15551234567"]
+    assert body["Body"] == ["Reporte IA listo"]

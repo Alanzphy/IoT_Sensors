@@ -44,6 +44,9 @@ class IrrigationArea(Base, TimestampMixin, SoftDeleteMixin):
     notification_preferences: Mapped[list["NotificationPreference"]] = relationship(
         "NotificationPreference", back_populates="irrigation_area"
     )
+    ai_reports: Mapped[list["AIReport"]] = relationship(
+        "AIReport", back_populates="irrigation_area"
+    )
 
     __table_args__ = (
         Index("idx_areas_riego_predio_id", "predio_id"),

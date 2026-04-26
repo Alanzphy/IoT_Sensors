@@ -23,6 +23,8 @@ import { ProfilePage } from "./pages/client/ProfilePage";
 import { PropertyDetail } from "./pages/client/PropertyDetail";
 import { AlertDetailPage } from "./pages/shared/AlertDetailPage";
 import { AlertsCenterPage } from "./pages/shared/AlertsCenterPage";
+import { AIReportDetailPage } from "./pages/shared/AIReportDetailPage";
+import { AIReportsPage } from "./pages/shared/AIReportsPage";
 
 // Admin pages
 import { AdminDashboard } from "./pages/admin/AdminDashboard";
@@ -112,6 +114,14 @@ export const router = createBrowserRouter([
                 Component: AlertDetailPage,
               },
               {
+                path: "reportes-ia",
+                Component: AIReportsPage,
+              },
+              {
+                path: "reportes-ia/:reportId",
+                Component: AIReportDetailPage,
+              },
+              {
                 path: "notificaciones",
                 Component: NotificationPreferencesPage,
               },
@@ -185,6 +195,14 @@ export const router = createBrowserRouter([
               {
                 path: "alertas/:alertId",
                 Component: AlertDetailPage,
+              },
+              {
+                path: "reportes-ia",
+                Component: AIReportsPage,
+              },
+              {
+                path: "reportes-ia/:reportId",
+                Component: AIReportDetailPage,
               },
               {
                 path: "umbrales",
