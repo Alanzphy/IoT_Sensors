@@ -42,10 +42,14 @@ DEFAULT_AI_WEEKLY_REPORT_INTERVAL = 90
 DEFAULT_AI_WEEKLY_REPORT_DAYS = 7
 DEFAULT_AI_WEEKLY_REPORT_INITIAL_DELAY = 35
 DEMO_SEED_API_KEYS = [
-    "99189486-8181-4e8c-8c6d-b3da66e6712b",  # Nodo Nogal Norte
-    "c1f5cd79-e760-4a9f-92ea-31ea685a3add",  # Nodo Alfalfa Este
-    "02b21674-0099-4470-a8dd-b4ebd7d8c2b0",  # Nodo Chile Principal
-    "ak_b2727bc1d95e342932612ee5573fdb18",   # Nodo Prueba E2E
+    "99189486-8181-4e8c-8c6d-b3da66e6712b",  # Nodo DEMO - Nogal Norte
+    "c1f5cd79-e760-4a9f-92ea-31ea685a3add",  # Nodo DEMO - Alfalfa Este
+    "02b21674-0099-4470-a8dd-b4ebd7d8c2b0",  # Nodo DEMO - Chile Principal
+    "ak_b2727bc1d95e342932612ee5573fdb18",   # Nodo DEMO - Prueba E2E
+]
+PARTNER_SOCIO_API_KEYS = [
+    "ak_partner_granja_hogar_001",         # Nodo Granja Hogar
+    "ak_partner_campus_reforestado_001",   # Nodo Campus Reforestado
 ]
 
 
@@ -83,9 +87,13 @@ def get_config():
     )
     parser.add_argument(
         "--preset",
-        choices=["none", "seed-demo"],
+        choices=["none", "seed-demo", "partner-socio"],
         default=os.getenv("SIMULATOR_PRESET", "none"),
-        help="Preset de API keys. 'seed-demo' carga las 4 keys del seed local",
+        help=(
+            "Preset de API keys. "
+            "'seed-demo' carga 4 keys demo, "
+            "'partner-socio' carga 2 keys productivas del socio local."
+        ),
     )
     parser.add_argument(
         "--base-url",
@@ -254,6 +262,8 @@ def load_api_keys(args) -> tuple[list[str], int]:
 
     if args.preset == "seed-demo":
         keys.extend(DEMO_SEED_API_KEYS)
+    elif args.preset == "partner-socio":
+        keys.extend(PARTNER_SOCIO_API_KEYS)
 
     for item in args.api_key:
         if item.strip():

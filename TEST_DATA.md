@@ -13,7 +13,7 @@ Tiene acceso a todas las pantallas, configuraciones de nodos, clientes, predios 
 Tienen acceso únicamente a ver sus propios predios, áreas de riego y dashboards.
 
 **1. Juan Perez (Recomendado para pruebas)**
-Este usuario ya tiene asignado el predio "Rancho Norte" y el área "Nogal Norte" con un nodo activo recibiendo datos.
+Este usuario tiene estructuras demo y productivas del socio formador.
 - **Login:** `alan2203mx@gmail.com`
 - **Password:** `123`
 
@@ -28,11 +28,21 @@ Usuario cliente inicial, actualmente sin predios asignados. El dashboard aparece
 
 Estas API Keys se utilizan para enviar datos desde el simulador haciéndose pasar por los sensores físicos.
 
-| ID | Nombre Nodo | Área Asignada (Predio) | API Key |
-|----|-------------|------------------------|---------|
-| 1 | Nodo Prueba E2E | Área 2 | `ak_b2727bc1d95e342932612ee5573fdb18` |
-| 2 | Nodo Nogal Norte | Nogal Norte (Rancho Norte) | `99189486-8181-4e8c-8c6d-b3da66e6712b` |
-| 3 | Nodo Alfalfa Este | Alfalfa Este | `c1f5cd79-e760-4a9f-92ea-31ea685a3add` |
-| 4 | Nodo Chile Principal | Chile Principal | `02b21674-0099-4470-a8dd-b4ebd7d8c2b0` |
+### Productivo socio (sin fallback)
 
-> **Nota para el Simulador:** Puedes usar cualquiera de estas keys, pero te sugerimos la del **Nodo Nogal Norte** (`99189486-8181-4e8c-8c6d-b3da66e6712b`), ya que este nodo pertenece al cliente `alan2203mx@gmail.com` y podrás ver los datos fluyendo en vivo en su dashboard de prueba.
+| Nombre Nodo | Área Asignada (Predio) | API Key |
+|-------------|------------------------|---------|
+| Nodo Granja Hogar | Area Granja Hogar (Granja Hogar) | `ak_partner_granja_hogar_001` |
+| Nodo Campus Reforestado | Area Campus Reforestado (Campus Reforestado) | `ak_partner_campus_reforestado_001` |
+
+### Demo legado (marcado con prefijo `DEMO -`)
+
+| Nombre Nodo | Área Asignada (Predio) | API Key |
+|-------------|------------------------|---------|
+| Nodo DEMO - Prueba E2E | DEMO - Área 2 (DEMO - Rancho Norte) | `ak_b2727bc1d95e342932612ee5573fdb18` |
+| Nodo DEMO - Nogal Norte | DEMO - Nogal Norte (DEMO - Rancho Norte) | `99189486-8181-4e8c-8c6d-b3da66e6712b` |
+| Nodo DEMO - Alfalfa Este | DEMO - Alfalfa Este (DEMO - Rancho Norte) | `c1f5cd79-e760-4a9f-92ea-31ea685a3add` |
+| Nodo DEMO - Chile Principal | DEMO - Chile Principal (DEMO - Rancho Norte) | `02b21674-0099-4470-a8dd-b4ebd7d8c2b0` |
+
+> **Nota para el simulador:** Para demo ejecutiva del socio, usa primero las API keys productivas (`ak_partner_*`).  
+> Si quieres estrés multi-nodo y alertas históricas, usa también las keys demo.

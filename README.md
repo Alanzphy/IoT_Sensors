@@ -110,15 +110,50 @@ cd simulator
 # El script usa librerías estándar, no requiere un venv
 
 # Uso básico (una lectura cada 10 minutos, comportamiento real):
-python3 simulator.py --api-key 99189486-8181-4e8c-8c6d-b3da66e6712b
+python3 simulator.py --api-key ak_partner_granja_hogar_001
 
 # Para pruebas rápidas — enviar cada 30 segundos:
-python3 simulator.py --api-key 99189486-8181-4e8c-8c6d-b3da66e6712b --interval 30
+python3 simulator.py --api-key ak_partner_granja_hogar_001 --interval 30
 
 # Generar historial de los últimos 7 días de golpe:
-python3 simulator.py --api-key 99189486-8181-4e8c-8c6d-b3da66e6712b --backfill 7
+python3 simulator.py --api-key ak_partner_granja_hogar_001 --backfill 7
 ```
-La key del ejemplo corresponde al **Nodo Nogal Norte**, vinculado al usuario `alan2203mx@gmail.com`.
+La key del ejemplo corresponde al **Nodo Granja Hogar**, vinculado al usuario `alan2203mx@gmail.com`.
+
+### Modelado formal de ubicaciones del socio (sin fallback)
+
+Se incluye un script idempotente para crear estructura real del socio en el cliente `alan2203mx@gmail.com`:
+
+- Predio `Granja Hogar` + area `Area Granja Hogar` + `Nodo Granja Hogar`
+- Predio `Campus Reforestado` + area `Area Campus Reforestado` + `Nodo Campus Reforestado`
+- Renombra estructura legado a `DEMO - ...` (sin cambios de esquema)
+
+Ejemplo local:
+
+```bash
+python3 scripts/setup_partner_locations.py \
+  --base-url http://localhost:5050/api/v1 \
+  --admin-email admin@sensores.com \
+  --admin-password admin123 \
+  --write-keys-file simulator/keys_partner_local.txt
+```
+
+Ejemplo VPS:
+
+```bash
+python3 scripts/setup_partner_locations.py \
+  --base-url https://sensores.alanrz.bond/api/v1 \
+  --admin-email admin@sensores.com \
+  --admin-password TU_PASSWORD \
+  --write-keys-file simulator/keys_partner_vps.txt
+```
+
+Luego puedes usar esas keys en el simulador:
+
+```bash
+cd simulator
+python3 simulator_fast.py --api-keys-file ./keys_partner_local.txt --mode demo-alerts --interval 2
+```
 
 ## Demo Rápida (Reproducible)
 
@@ -187,16 +222,20 @@ make demo-live
 ```bash
 cd simulator
 python3 simulator_fast.py \
-  --api-key 99189486-8181-4e8c-8c6d-b3da66e6712b \
-  --api-key c1f5cd79-e760-4a9f-92ea-31ea685a3add \
-  --api-key 02b21674-0099-4470-a8dd-b4ebd7d8c2b0 \
-  --api-key ak_b2727bc1d95e342932612ee5573fdb18 \
+  --preset seed-demo \
   --mode demo-alerts \
   --demo-spike-every 6 \
   --interval 2
 ```
 
-Con esto se generan lecturas en vivo para los 4 nodos del seed de prueba y se activan breaches de umbral de forma visible en dashboard/alertas.
+Con esto se generan lecturas en vivo para los 4 nodos demo del seed de prueba y se activan breaches de umbral de forma visible en dashboard/alertas.
+
+Para demo ejecutiva de ubicaciones productivas del socio:
+
+```bash
+cd simulator
+python3 simulator_fast.py --preset partner-socio --mode demo-alerts --interval 2
+```
 
 ### Trigger demo para Reporte IA semanal
 

@@ -43,13 +43,12 @@ python simulator_fast.py --quick-demo
 
 # 2 nodos en paralelo (intervalo 2s)
 python simulator_fast.py \
-  --api-key 99189486-8181-4e8c-8c6d-b3da66e6712b \
-  --api-key c1f5cd79-e760-4a9f-92ea-31ea685a3add \
+  --preset partner-socio \
   --interval 2
 
 # Modo demo de alertas controladas
 python simulator_fast.py \
-  --api-key 99189486-8181-4e8c-8c6d-b3da66e6712b \
+  --preset partner-socio \
   --mode demo-alerts \
   --demo-spike-every 6 \
   --interval 2
@@ -89,6 +88,8 @@ python simulator_fast.py \
 export SIMULATOR_API_KEY=ak_n01_xxxxxx
 export SIMULATOR_API_KEYS="key1,key2,key3"
 export SIMULATOR_PRESET=seed-demo
+# Preset alterno para nodos productivos del socio (local seed)
+# export SIMULATOR_PRESET=partner-socio
 export SIMULATOR_ADMIN_EMAIL=admin@sensores.com
 export SIMULATOR_ADMIN_PASSWORD=admin123
 export SIMULATOR_BASE_URL=http://localhost:5050/api/v1
