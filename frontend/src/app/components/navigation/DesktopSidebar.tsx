@@ -17,6 +17,7 @@ import {
   SlidersHorizontal,
   Sprout,
   Sun,
+  User,
   Users,
   Warehouse,
 } from "lucide-react";
@@ -69,6 +70,7 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
     { path: "/cliente/reportes-ia",  icon: Bot,               label: "Reportes IA" },
     { path: "/cliente/umbrales",     icon: SlidersHorizontal, label: "Umbrales" },
     { path: "/cliente/notificaciones", icon: BellRing,        label: "Notificaciones" },
+    { path: "/cliente/perfil",       icon: User,              label: "Perfil" },
   ];
 
   const adminNavItems = [

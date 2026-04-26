@@ -14,6 +14,7 @@ import {
   SlidersHorizontal,
   Sprout,
   Sun,
+  User,
   Users,
   Warehouse,
 } from "lucide-react";
@@ -45,6 +46,7 @@ export function MobileTabBar({ role }: MobileTabBarProps) {
     { path: "/cliente/reportes-ia",    icon: Bot,               label: "IA" },
     { path: "/cliente/umbrales",       icon: SlidersHorizontal, label: "Umbrales" },
     { path: "/cliente/notificaciones", icon: BellRing,          label: "Notifs" },
+    { path: "/cliente/perfil",         icon: User,              label: "Perfil" },
   ];
 
   const adminTabs = [

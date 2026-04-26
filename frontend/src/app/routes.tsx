@@ -124,10 +124,6 @@ export const router = createBrowserRouter([
                 Component: AIChatPage,
               },
               {
-                path: "consumo-ia",
-                Component: AIAssistantUsagePage,
-              },
-              {
                 path: "reportes-ia/:reportId",
                 Component: AIReportDetailPage,
               },
@@ -213,6 +209,10 @@ export const router = createBrowserRouter([
               {
                 path: "asistente-ia",
                 Component: AIChatPage,
+              },
+              {
+                path: "consumo-ia",
+                Component: AIAssistantUsagePage,
               },
               {
                 path: "reportes-ia/:reportId",
