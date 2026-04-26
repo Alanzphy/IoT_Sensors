@@ -68,6 +68,7 @@ export function ThresholdManagement() {
   const { user } = useAuth();
   const selection = useOptionalSelection();
   const isClientRole = user?.rol === "cliente";
+  const selectionLoading = selection?.loading ?? false;
   const selectedClientAreaId = selection?.selectedArea?.id;
 
   const [thresholds, setThresholds] = useState<ThresholdItem[]>([]);
@@ -89,16 +90,33 @@ export function ThresholdManagement() {
   }, [areas]);
 
   const fetchData = async () => {
+    if (isClientRole) {
+      if (selectionLoading || !selectedClientAreaId) {
+        if (!selectionLoading && !selectedClientAreaId) {
+          setThresholds([]);
+          setLoading(false);
+        }
+        return;
+      }
+    }
+
     try {
       setLoading(true);
       setError(null);
+
+      const scopedAreaId =
+        isClientRole && selectedClientAreaId
+          ? selectedClientAreaId
+          : filterAreaId
+            ? Number(filterAreaId)
+            : undefined;
 
       const [areasRes, thresholdsRes] = await Promise.all([
         api.get("/irrigation-areas?per_page=200"),
         listThresholds({
           page: 1,
           per_page: 200,
-          irrigation_area_id: filterAreaId ? Number(filterAreaId) : undefined,
+          irrigation_area_id: scopedAreaId,
           parameter: filterParameter ? (filterParameter as ThresholdParameter) : undefined,
           active:
             filterActive === ""
@@ -125,7 +143,14 @@ export function ThresholdManagement() {
 
   useEffect(() => {
     fetchData();
-  }, [filterAreaId, filterParameter, filterActive]);
+  }, [
+    filterAreaId,
+    filterParameter,
+    filterActive,
+    isClientRole,
+    selectedClientAreaId,
+    selectionLoading,
+  ]);
 
   useEffect(() => {
     if (!isClientRole || filterAreaId) {
