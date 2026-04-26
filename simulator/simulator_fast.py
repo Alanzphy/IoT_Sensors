@@ -245,6 +245,14 @@ def get_config():
         default=None,
         help="Scope opcional de area de riego para reporte IA",
     )
+    parser.add_argument(
+        "--ai-weekly-report-per-key-area",
+        action="store_true",
+        help=(
+            "Genera un reporte IA por cada area asociada a las API keys "
+            "activas del simulador (usa /nodes/geo)."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -330,6 +338,7 @@ def apply_quick_demo_defaults(args) -> None:
         args.ai_weekly_report_initial_delay = 15
     if not args.ai_weekly_report_force:
         args.ai_weekly_report_force = True
+    args.ai_weekly_report_per_key_area = True
 
 
 def _init_node_state(node_index: int, seed: int) -> NodeState:
@@ -400,6 +409,15 @@ def _generate_reading(
     soil_cond = _clamp(2.4 + (noise * 0.25), 0.5, 5.0)
 
     irrigating = _is_irrigation_hour(hour, state.soil_humidity)
+    demo_flow_burst = False
+    if mode == "demo-alerts":
+        burst_every = max(4, demo_spike_every)
+        burst_window = max(2, burst_every // 2)
+        # Fuerza rafagas de flujo en demo para que el dashboard muestre cambios
+        # perceptibles aun fuera de horarios de riego reales.
+        if (state.tick % burst_every) < burst_window:
+            demo_flow_burst = True
+            irrigating = True
     evap_loss = 0.08 + (0.17 * solar) + (max(env_temp - 31.0, 0.0) * 0.02)
     irrig_gain = (1.3 + rng.uniform(0.2, 1.3)) if irrigating else 0.0
 
@@ -409,6 +427,12 @@ def _generate_reading(
     flow = 0.0
     if irrigating:
         flow = _clamp(state.flow_base + rng.uniform(-1.8, 1.8) + (noise * 0.35), 2.8, 14.5)
+        if demo_flow_burst:
+            flow = _clamp(
+                flow + rng.uniform(0.6, 2.4),
+                3.2,
+                14.5,
+            )
 
     spike_hints: list[str] = []
     if mode == "demo-alerts" and demo_spike_every > 0 and state.tick % demo_spike_every == 0:
@@ -525,6 +549,110 @@ def _post_json(
         return 0, {"detail": f"No se pudo conectar: {exc.reason}"}
     except TimeoutError:
         return 0, {"detail": "Timeout al conectar"}
+
+
+def _get_json(
+    url: str,
+    *,
+    headers: dict[str, str] | None = None,
+    timeout: int = 20,
+) -> tuple[int, dict]:
+    req = urllib.request.Request(url, method="GET")
+    req.add_header("Accept", "application/json, text/plain, */*")
+    req.add_header("User-Agent", DEFAULT_HTTP_USER_AGENT)
+    if headers:
+        for key, value in headers.items():
+            req.add_header(key, value)
+
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            body = resp.read().decode("utf-8", errors="replace")
+            parsed = json.loads(body) if body else {}
+            return resp.status, parsed
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        try:
+            parsed = json.loads(body) if body else {}
+        except json.JSONDecodeError:
+            parsed = {"detail": body[:300]}
+        return exc.code, parsed
+    except urllib.error.URLError as exc:
+        return 0, {"detail": f"No se pudo conectar: {exc.reason}"}
+    except TimeoutError:
+        return 0, {"detail": "Timeout al conectar"}
+
+
+def resolve_irrigation_areas_for_keys(
+    base_url: str,
+    access_token: str,
+    api_keys: list[str],
+) -> tuple[list[dict[str, object]], str | None]:
+    wanted_keys = {normalize_api_key(k)[0] for k in api_keys}
+    if not wanted_keys:
+        return [], "no hay API keys activas"
+
+    headers = {"Authorization": f"Bearer {access_token}"}
+    per_page = 200
+    page = 1
+    fetched = 0
+    total = 0
+    matched_by_area: dict[int, dict[str, object]] = {}
+
+    while True:
+        qs = urlencode(
+            {
+                "page": page,
+                "per_page": per_page,
+                "include_without_coordinates": "true",
+            }
+        )
+        status, payload = _get_json(f"{base_url}/nodes/geo?{qs}", headers=headers)
+        if status != 200:
+            return [], (
+                f"/nodes/geo fallo (status={status}) detail={payload.get('detail')}"
+            )
+
+        rows = payload.get("data") or []
+        if not isinstance(rows, list):
+            return [], "respuesta invalida de /nodes/geo"
+
+        fetched += len(rows)
+        raw_total = payload.get("total")
+        if isinstance(raw_total, int):
+            total = raw_total
+        elif total == 0:
+            total = len(rows)
+
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            row_key = str(row.get("api_key") or "")
+            normalized_key, _ = normalize_api_key(row_key)
+            if normalized_key not in wanted_keys:
+                continue
+
+            area_id_raw = row.get("irrigation_area_id")
+            if not isinstance(area_id_raw, int):
+                continue
+            if area_id_raw in matched_by_area:
+                continue
+
+            matched_by_area[area_id_raw] = {
+                "irrigation_area_id": area_id_raw,
+                "irrigation_area_name": str(row.get("irrigation_area_name") or ""),
+                "property_name": str(row.get("property_name") or ""),
+                "api_key": normalized_key,
+            }
+
+        if fetched >= total or not rows:
+            break
+        page += 1
+
+    matched = sorted(
+        matched_by_area.values(),
+        key=lambda item: int(item.get("irrigation_area_id") or 0),
+    )
+    return matched, None
 
 
 def admin_login(base_url: str, email: str, password: str) -> tuple[str | None, str | None]:
@@ -715,6 +843,11 @@ def main():
             else ""
         )
     )
+    if args.ai_weekly_report:
+        print(
+            "IA por area key: "
+            f"{'si' if args.ai_weekly_report_per_key_area else 'no'}"
+        )
     print(f"Nodos activos:  {len(nodes)}")
     for node in nodes:
         print(f"  - {node.label}: {_masked_key(node.api_key)}")
@@ -731,6 +864,7 @@ def main():
         )
 
     admin_token: str | None = None
+    ai_targets_by_key_area: list[dict[str, object]] = []
     next_dispatch_ts = time.monotonic() + max(3, args.dispatch_interval)
     next_ai_report_ts = (
         time.monotonic() + max(5, args.ai_weekly_report_initial_delay)
@@ -753,6 +887,27 @@ def main():
                 print(f"No se pudo iniciar sesion admin para dispatch: {err}")
             else:
                 print("Sesion admin iniciada (dispatch/reportes IA).")
+                if args.ai_weekly_report and args.ai_weekly_report_per_key_area:
+                    ai_targets_by_key_area, resolve_err = resolve_irrigation_areas_for_keys(
+                        args.base_url,
+                        admin_token,
+                        [node.api_key for node in nodes],
+                    )
+                    if resolve_err:
+                        print(f"[AI-REPORT] no se pudieron resolver areas por key: {resolve_err}")
+                    elif not ai_targets_by_key_area:
+                        print("[AI-REPORT] no se encontro area asociada a las API keys activas.")
+                    else:
+                        print("[AI-REPORT] areas objetivo por API key:")
+                        for target in ai_targets_by_key_area:
+                            print(
+                                "  - area_id={aid} area='{area}' predio='{property}' key={key}".format(
+                                    aid=target.get("irrigation_area_id"),
+                                    area=target.get("irrigation_area_name", ""),
+                                    property=target.get("property_name", ""),
+                                    key=_masked_key(str(target.get("api_key", ""))),
+                                )
+                            )
 
     if args.ai_weekly_report and args.dry_run:
         print("Trigger de reporte IA semanal deshabilitado durante dry-run.")
@@ -850,32 +1005,117 @@ def main():
                         )
 
                     if admin_token is not None:
-                        status, payload = trigger_ai_weekly_report(
-                            args.base_url,
-                            admin_token,
-                            days=args.ai_weekly_report_days,
-                            force=args.ai_weekly_report_force,
-                            notify=args.ai_weekly_report_notify,
-                            client_id=args.ai_weekly_report_client_id,
-                            irrigation_area_id=args.ai_weekly_report_irrigation_area_id,
-                        )
-                        if status == 200:
-                            print(
-                                "[AI-REPORT] generated={generated} skipped={skipped} "
-                                "failed={failed} ids={ids}".format(
-                                    generated=payload.get("generated_count", 0),
-                                    skipped=payload.get("skipped_count", 0),
-                                    failed=payload.get("failed_count", 0),
-                                    ids=payload.get("report_ids", []),
+                        if args.ai_weekly_report_per_key_area:
+                            if not ai_targets_by_key_area:
+                                ai_targets_by_key_area, resolve_err = (
+                                    resolve_irrigation_areas_for_keys(
+                                        args.base_url,
+                                        admin_token,
+                                        [node.api_key for node in nodes],
+                                    )
                                 )
-                            )
-                        elif status == 401:
-                            admin_token = None
-                            print("[AI-REPORT] token expirado/no valido, reintentando login.")
+                                if resolve_err:
+                                    print(
+                                        "[AI-REPORT] no se pudieron resolver areas por key: "
+                                        f"{resolve_err}"
+                                    )
+                            if not ai_targets_by_key_area:
+                                print(
+                                    "[AI-REPORT] sin areas resueltas por API key, "
+                                    "omitiendo trigger semanal."
+                                )
+                            else:
+                                generated_total = 0
+                                skipped_total = 0
+                                failed_total = 0
+                                report_ids_total: list[int] = []
+                                for target in ai_targets_by_key_area:
+                                    area_id = int(target["irrigation_area_id"])
+                                    status, payload = trigger_ai_weekly_report(
+                                        args.base_url,
+                                        admin_token,
+                                        days=args.ai_weekly_report_days,
+                                        force=args.ai_weekly_report_force,
+                                        notify=args.ai_weekly_report_notify,
+                                        client_id=None,
+                                        irrigation_area_id=area_id,
+                                    )
+                                    if status == 200:
+                                        generated = int(payload.get("generated_count", 0))
+                                        skipped = int(payload.get("skipped_count", 0))
+                                        failed = int(payload.get("failed_count", 0))
+                                        ids = payload.get("report_ids", [])
+                                        generated_total += generated
+                                        skipped_total += skipped
+                                        failed_total += failed
+                                        if isinstance(ids, list):
+                                            for rid in ids:
+                                                if isinstance(rid, int):
+                                                    report_ids_total.append(rid)
+                                        print(
+                                            "[AI-REPORT][area={area_id}] generated={generated} "
+                                            "skipped={skipped} failed={failed} ids={ids}".format(
+                                                area_id=area_id,
+                                                generated=generated,
+                                                skipped=skipped,
+                                                failed=failed,
+                                                ids=ids,
+                                            )
+                                        )
+                                        continue
+                                    if status == 401:
+                                        admin_token = None
+                                        print(
+                                            "[AI-REPORT] token expirado/no valido, "
+                                            "reintentando login."
+                                        )
+                                        break
+                                    failed_total += 1
+                                    print(
+                                        "[AI-REPORT][area={area_id}] fallo status={status} "
+                                        "detail={detail}".format(
+                                            area_id=area_id,
+                                            status=status,
+                                            detail=payload.get("detail"),
+                                        )
+                                    )
+
+                                print(
+                                    "[AI-REPORT] total generated={generated} skipped={skipped} "
+                                    "failed={failed} ids={ids}".format(
+                                        generated=generated_total,
+                                        skipped=skipped_total,
+                                        failed=failed_total,
+                                        ids=report_ids_total,
+                                    )
+                                )
                         else:
-                            print(
-                                f"[AI-REPORT] fallo status={status} detail={payload.get('detail')}"
+                            status, payload = trigger_ai_weekly_report(
+                                args.base_url,
+                                admin_token,
+                                days=args.ai_weekly_report_days,
+                                force=args.ai_weekly_report_force,
+                                notify=args.ai_weekly_report_notify,
+                                client_id=args.ai_weekly_report_client_id,
+                                irrigation_area_id=args.ai_weekly_report_irrigation_area_id,
                             )
+                            if status == 200:
+                                print(
+                                    "[AI-REPORT] generated={generated} skipped={skipped} "
+                                    "failed={failed} ids={ids}".format(
+                                        generated=payload.get("generated_count", 0),
+                                        skipped=payload.get("skipped_count", 0),
+                                        failed=payload.get("failed_count", 0),
+                                        ids=payload.get("report_ids", []),
+                                    )
+                                )
+                            elif status == 401:
+                                admin_token = None
+                                print("[AI-REPORT] token expirado/no valido, reintentando login.")
+                            else:
+                                print(
+                                    f"[AI-REPORT] fallo status={status} detail={payload.get('detail')}"
+                                )
                     else:
                         print(
                             "[AI-REPORT] sin token admin, omitiendo trigger semanal."

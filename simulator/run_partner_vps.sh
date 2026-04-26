@@ -42,6 +42,7 @@ python3 simulator_fast.py \
   --admin-email "${ADMIN_EMAIL}" \
   --admin-password "${ADMIN_PASSWORD}" \
   --ai-weekly-report \
+  --ai-weekly-report-per-key-area \
   --ai-weekly-report-force \
   --ai-weekly-report-days "${AI_REPORT_DAYS}" \
   --ai-weekly-report-initial-delay "${AI_REPORT_INITIAL_DELAY}" \

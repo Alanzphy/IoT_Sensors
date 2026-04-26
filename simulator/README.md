@@ -38,7 +38,7 @@ python simulator.py --api-key ak_n01_xxxxxx --base-url https://mi-servidor.com/a
 `simulator_fast.py` incluye soporte para varios nodos en paralelo, modo de picos controlados para demo y carga de API keys desde archivo.
 
 ```bash
-# Demo total de un comando (usa el preset del seed local y despacha notificaciones)
+# Demo total de un comando (usa preset partner-socio y despacha notificaciones)
 python simulator_fast.py --quick-demo
 
 # 2 nodos en paralelo (intervalo 2s)
@@ -61,10 +61,11 @@ python simulator_fast.py --api-keys-file ./keys.txt --backfill 7 --interval 2
 ```
 
 `--quick-demo` habilita:
-- preset `seed-demo` (4 API keys del seed local)
+- preset `partner-socio` (Granja Hogar + Campus Reforestado)
 - modo `demo-alerts`
 - dispatch automatico de notificaciones cada 20s
 - trigger automatico de reporte IA semanal (ventana 7 dias)
+- generacion de reporte IA por cada area asociada a las API keys activas
 - login admin local por defecto (`admin@sensores.com` / `admin123`)
 
 Ejemplo con trigger IA manual:
@@ -75,6 +76,7 @@ python simulator_fast.py \
   --mode demo-alerts \
   --interval 2 \
   --ai-weekly-report \
+  --ai-weekly-report-per-key-area \
   --ai-weekly-report-force \
   --ai-weekly-report-days 7 \
   --ai-weekly-report-initial-delay 30 \
