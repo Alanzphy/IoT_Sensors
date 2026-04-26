@@ -149,6 +149,14 @@ services:
         condition: service_healthy
     ports:
       - "${FRONTEND_PORT_BIND:-127.0.0.1:3022}:80"
+    labels:
+      # Fallback routing for Dokploy/Traefik when Domains UI is not applying rules.
+      - "traefik.enable=true"
+      - "traefik.http.routers.sensores-frontend.rule=Host(`${DOMAIN:-sensores.alanrz.bond}`)"
+      - "traefik.http.routers.sensores-frontend.entrypoints=websecure"
+      - "traefik.http.routers.sensores-frontend.tls=true"
+      - "traefik.http.routers.sensores-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.sensores-frontend.loadbalancer.server.port=80"
 
 volumes:
   mysql_data:
