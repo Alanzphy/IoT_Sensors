@@ -15,6 +15,8 @@ import {
 
 import { BentoCard } from "../../components/BentoCard";
 import { PageTransition } from "../../components/PageTransition";
+import { SelectionScopeBar } from "../../components/selection/SelectionScopeBar";
+import { useOptionalSelection } from "../../context/SelectionContext";
 import {
   askAIAssistant,
   AIChatMessage,
@@ -69,6 +71,8 @@ function formatWidgetValue(value: unknown): string {
 export function AIChatPage() {
   const location = useLocation();
   const isAdmin = location.pathname.startsWith("/admin");
+  const selection = useOptionalSelection();
+  const scopedAreaId = !isAdmin ? selection?.selectedArea?.id : undefined;
 
   const [messages, setMessages] = useState<ChatBubble[]>([]);
   const [input, setInput] = useState("");
@@ -86,8 +90,13 @@ export function AIChatPage() {
     if (isAdmin) {
       return "Consulta operativa global o por cliente/área.";
     }
+    const propertyName = selection?.selectedProperty?.name;
+    const areaName = selection?.selectedArea?.name;
+    if (propertyName && areaName) {
+      return `Consulta operativa del contexto activo: ${propertyName} / ${areaName}.`;
+    }
     return "Consulta operativa de tus predios y áreas.";
-  }, [isAdmin]);
+  }, [isAdmin, selection?.selectedProperty?.name, selection?.selectedArea?.name]);
 
   const resetConversation = () => {
     if (streamTimerRef.current !== null) {
@@ -191,7 +200,9 @@ export function AIChatPage() {
         history,
         hours_back: hoursBack,
         client_id: isAdmin && clientIdScope ? Number(clientIdScope) : undefined,
-        irrigation_area_id: areaIdScope ? Number(areaIdScope) : undefined,
+        irrigation_area_id: isAdmin
+          ? (areaIdScope ? Number(areaIdScope) : undefined)
+          : scopedAreaId,
       });
 
       const assistantMessage: ChatBubble = {
@@ -256,6 +267,7 @@ export function AIChatPage() {
           </h1>
           <p className="text-[var(--text-subtle)]">{contextHint}</p>
         </div>
+        {!isAdmin && <SelectionScopeBar className="mb-4" />}
 
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
           <BentoCard variant="light">
@@ -291,19 +303,27 @@ export function AIChatPage() {
                 </div>
               )}
 
-              <div>
-                <label className="mb-1 block text-sm text-[var(--text-subtle)]">
-                  Área ID (opcional)
-                </label>
-                <input
-                  type="number"
-                  min={1}
-                  value={areaIdScope}
-                  onChange={(event) => setAreaIdScope(event.target.value)}
-                  placeholder="Todas"
-                  className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] px-3 py-2 text-[var(--text-body)]"
-                />
-              </div>
+              {isAdmin && (
+                <div>
+                  <label className="mb-1 block text-sm text-[var(--text-subtle)]">
+                    Área ID (opcional)
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={areaIdScope}
+                    onChange={(event) => setAreaIdScope(event.target.value)}
+                    placeholder="Todas"
+                    className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] px-3 py-2 text-[var(--text-body)]"
+                  />
+                </div>
+              )}
+
+              {!isAdmin && (
+                <p className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] px-3 py-2 text-xs text-[var(--text-subtle)]">
+                  Este chat usa automáticamente el predio/área seleccionados en el contexto activo.
+                </p>
+              )}
 
               <button
                 type="button"

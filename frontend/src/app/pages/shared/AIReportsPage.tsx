@@ -13,6 +13,8 @@ import { Link, useLocation } from "react-router";
 import { BentoCard } from "../../components/BentoCard";
 import { PageTransition } from "../../components/PageTransition";
 import { ReadingDateRangeSelector } from "../../components/ReadingDateRangeSelector";
+import { SelectionScopeBar } from "../../components/selection/SelectionScopeBar";
+import { useOptionalSelection } from "../../context/SelectionContext";
 import { usePageVisibility } from "../../hooks/usePageVisibility";
 import { AIReportItem, AIReportStatus, listAIReports } from "../../services/aiReports";
 
@@ -48,6 +50,8 @@ function summaryFallback(item: AIReportItem): string {
 export function AIReportsPage() {
   const location = useLocation();
   const isAdmin = location.pathname.startsWith("/admin");
+  const selection = useOptionalSelection();
+  const scopedAreaId = !isAdmin ? selection?.selectedArea?.id : undefined;
   const baseDetailPath = isAdmin ? "/admin/reportes-ia" : "/cliente/reportes-ia";
   const isPageVisible = usePageVisibility();
   const loadingRef = useRef(false);
@@ -86,6 +90,7 @@ export function AIReportsPage() {
         per_page: PAGE_SIZE,
         status: statusFilter || undefined,
         client_id: isAdmin && clientIdFilter ? Number(clientIdFilter) : undefined,
+        irrigation_area_id: scopedAreaId || undefined,
         start_date: startDate || undefined,
         end_date: endDate || undefined,
       });
@@ -98,11 +103,11 @@ export function AIReportsPage() {
       loadingRef.current = false;
       setLoading(false);
     }
-  }, [page, statusFilter, isAdmin, clientIdFilter, startDate, endDate, items.length]);
+  }, [page, statusFilter, isAdmin, clientIdFilter, startDate, endDate, items.length, scopedAreaId]);
 
   useEffect(() => {
     setItems([]);
-  }, [statusFilter, clientIdFilter, startDate, endDate]);
+  }, [statusFilter, clientIdFilter, startDate, endDate, scopedAreaId]);
 
   useEffect(() => {
     if (!isPageVisible) return;
@@ -141,6 +146,7 @@ export function AIReportsPage() {
             Actualizar
           </button>
         </div>
+        {!isAdmin && <SelectionScopeBar className="mb-4" />}
 
         <BentoCard variant="light" className="mb-4">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">

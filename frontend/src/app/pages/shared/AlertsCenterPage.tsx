@@ -16,6 +16,8 @@ import { Link, useLocation } from "react-router";
 import { BentoCard } from "../../components/BentoCard";
 import { PageTransition } from "../../components/PageTransition";
 import { ReadingDateRangeSelector } from "../../components/ReadingDateRangeSelector";
+import { SelectionScopeBar } from "../../components/selection/SelectionScopeBar";
+import { useOptionalSelection } from "../../context/SelectionContext";
 import { usePageVisibility } from "../../hooks/usePageVisibility";
 import { AlertItem, listAlerts, markAlertRead } from "../../services/alerts";
 
@@ -43,8 +45,10 @@ function formatRelativeDate(iso: string): string {
 export function AlertsCenterPage() {
   const location = useLocation();
   const isAdmin = location.pathname.startsWith("/admin");
+  const selection = useOptionalSelection();
   const isPageVisible = usePageVisibility();
   const loadingRef = useRef(false);
+  const scopedAreaId = !isAdmin ? selection?.selectedArea?.id : undefined;
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -82,6 +86,7 @@ export function AlertsCenterPage() {
       const response = await listAlerts({
         page,
         per_page: PAGE_SIZE,
+        irrigation_area_id: scopedAreaId || undefined,
         severity: severity || undefined,
         alert_type: alertType || undefined,
         read:
@@ -103,11 +108,11 @@ export function AlertsCenterPage() {
       loadingRef.current = false;
       setLoading(false);
     }
-  }, [page, severity, alertType, readFilter, startDate, endDate]);
+  }, [page, severity, alertType, readFilter, startDate, endDate, scopedAreaId]);
 
   useEffect(() => {
     setItems([]);
-  }, [severity, alertType, readFilter, startDate, endDate]);
+  }, [severity, alertType, readFilter, startDate, endDate, scopedAreaId]);
 
   useEffect(() => {
     if (!isPageVisible) return;
@@ -178,6 +183,7 @@ export function AlertsCenterPage() {
           Actualizar
         </button>
       </div>
+      {!isAdmin && <SelectionScopeBar className="mb-4" />}
 
       <BentoCard variant="light" className="mb-4">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">

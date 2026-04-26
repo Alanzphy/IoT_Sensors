@@ -455,15 +455,20 @@ def _clone_recent_readings(
     source_area_id: int,
     target_area_id: int,
     target_node_api_key: str,
+    progress_label: str = "",
 ) -> tuple[int, int]:
     latest_target = client.get(
         "/readings/latest",
         params={"irrigation_area_id": target_area_id},
     )
-    latest_target_ts = _parse_iso_datetime(latest_target.get("timestamp"))
+    latest_target_ts = None
+    if isinstance(latest_target, dict):
+        latest_target_ts = _parse_iso_datetime(latest_target.get("timestamp"))
     copied = 0
     skipped = 0
     page = 1
+    source_total_snapshot: int | None = None
+    source_processed = 0
 
     while True:
         payload = client.get(
@@ -475,9 +480,12 @@ def _clone_recent_readings(
             },
         )
         rows = payload.get("data") or []
+        if source_total_snapshot is None:
+            source_total_snapshot = int(payload.get("total") or 0)
         if not rows:
             break
 
+        source_processed += len(rows)
         for row in rows:
             ts = _parse_iso_datetime(row.get("timestamp"))
             if latest_target_ts and ts and ts <= latest_target_ts:
@@ -498,6 +506,15 @@ def _clone_recent_readings(
                 copied += 1
             except RuntimeError:
                 skipped += 1
+
+        label = f"{progress_label}: " if progress_label else ""
+        print(
+            f"[migrate] {label}page={page} processed={source_processed}/"
+            f"{source_total_snapshot or '?'} copied={copied} skipped={skipped}"
+        )
+
+        if source_total_snapshot is not None and source_processed >= source_total_snapshot:
+            break
         page += 1
 
     return copied, skipped
@@ -680,6 +697,7 @@ def run(args: argparse.Namespace) -> int:
                 source_area_id=source_area_id,
                 target_area_id=area_id,
                 target_node_api_key=api_key,
+                progress_label=str(node.get("name") or f"area_id={area_id}"),
             )
             created, updated = _clone_thresholds(
                 api,

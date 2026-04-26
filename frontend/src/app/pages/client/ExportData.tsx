@@ -1,16 +1,17 @@
 import { format, startOfDay, subDays } from "date-fns";
-import { Calendar, Download, FileSpreadsheet, FileText, Filter } from "lucide-react";
+import { Calendar, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { useState } from "react";
 import { BentoCard } from "../../components/BentoCard";
 import { PageTransition } from "../../components/PageTransition";
 import { PillButton } from "../../components/PillButton";
 import { ReadingDateRangeSelector } from "../../components/ReadingDateRangeSelector";
+import { SelectionScopeBar } from "../../components/selection/SelectionScopeBar";
 import { useToast } from "../../components/Toast";
 import { useSelection } from "../../context/SelectionContext";
 import { api } from "../../services/api";
 
 export function ExportData() {
-  const { areas, selectedArea, setSelectedArea } = useSelection();
+  const { selectedArea } = useSelection();
   const { showToast } = useToast();
 
   const [startDate, setStartDate] = useState<Date>(startOfDay(subDays(new Date(), 7)));
@@ -73,6 +74,7 @@ export function ExportData() {
               Descarga el histórico de tus sensores en diferentes formatos
             </p>
           </div>
+          <SelectionScopeBar className="mb-1" />
 
           {/* Export Configuration */}
           <BentoCard>
@@ -99,29 +101,6 @@ export function ExportData() {
                     if (normalized < startDate) setStartDate(normalized);
                   }}
                 />
-              </div>
-
-              {/* Area Selection */}
-              <div>
-                <label htmlFor="export-area" className="flex items-center gap-2 mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-subtle)]">
-                  <Filter className="w-5 h-5 text-[var(--accent-primary)]" />
-                  <span>Área de Riego</span>
-                </label>
-                <select
-                  id="export-area"
-                  value={selectedArea?.id || ""}
-                  onChange={(e) => {
-                    const area = areas.find(a => a.id.toString() === e.target.value);
-                    if (area) setSelectedArea(area);
-                  }}
-                  className="w-full rounded-[24px] border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] px-4 py-2.5 text-[var(--text-body)]
-                    focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-1"
-                >
-                  {!selectedArea && <option value="">Selecciona un área</option>}
-                  {areas.map(area => (
-                    <option key={area.id} value={area.id}>{area.name}</option>
-                  ))}
-                </select>
               </div>
 
               {/* Format Selection */}

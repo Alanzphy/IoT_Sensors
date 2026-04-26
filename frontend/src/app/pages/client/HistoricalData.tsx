@@ -8,6 +8,7 @@ import { ChartSkeleton } from "../../components/ChartSkeleton";
 import { PageTransition } from "../../components/PageTransition";
 import { PillButton } from "../../components/PillButton";
 import { ReadingDateRangeSelector } from "../../components/ReadingDateRangeSelector";
+import { SelectionScopeBar } from "../../components/selection/SelectionScopeBar";
 import { useSelection } from "../../context/SelectionContext";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { api } from "../../services/api";
@@ -412,6 +413,7 @@ export function HistoricalData() {
         <h1 className="text-2xl md:text-3xl font-serif text-[var(--text-title)] mb-2">Datos Históricos</h1>
         <p className="text-[var(--text-subtle)]">Consulta el histórico de lecturas de {selectedArea ? selectedArea.name : "tus sensores"}</p>
       </div>
+      <SelectionScopeBar className="mb-6" />
 
       {/* Filters */}
       <BentoCard variant="light" className="mb-6">
