@@ -2,10 +2,32 @@ import { Bot, Loader2, Send } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router";
 import { isAxiosError } from "axios";
+import {
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import { BentoCard } from "../../components/BentoCard";
 import { PageTransition } from "../../components/PageTransition";
-import { askAIAssistant, AIChatMessage } from "../../services/aiAssistant";
+import {
+  askAIAssistant,
+  AIChatMessage,
+  AIChatWidget,
+} from "../../services/aiAssistant";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../components/ui/table";
 
 interface ChatBubble {
   id: string;
@@ -17,6 +39,7 @@ interface ChatBubble {
   model?: string;
   tokensPrompt?: number;
   tokensCompletion?: number;
+  widgets?: AIChatWidget[];
 }
 
 function formatDateTime(isoValue?: string): string {
@@ -30,6 +53,17 @@ function formatDateTime(isoValue?: string): string {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function formatWidgetValue(value: unknown): string {
+  if (value === null || value === undefined) return "-";
+  if (typeof value === "number") {
+    const abs = Math.abs(value);
+    if (abs >= 1000) return value.toLocaleString("es-MX", { maximumFractionDigits: 0 });
+    if (abs >= 100) return value.toLocaleString("es-MX", { maximumFractionDigits: 1 });
+    return value.toLocaleString("es-MX", { maximumFractionDigits: 2 });
+  }
+  return String(value);
 }
 
 export function AIChatPage() {
@@ -78,13 +112,22 @@ export function AIChatPage() {
     chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
   }, [messages, loading, isStreaming]);
 
-  const streamAssistantText = (messageId: string, fullText: string) => {
+  const streamAssistantText = (
+    messageId: string,
+    fullText: string,
+    widgets: AIChatWidget[]
+  ) => {
     if (streamTimerRef.current !== null) {
       window.clearInterval(streamTimerRef.current);
       streamTimerRef.current = null;
     }
 
     if (!fullText) {
+      setMessages((previous) =>
+        previous.map((item) =>
+          item.id === messageId ? { ...item, widgets } : item
+        )
+      );
       setIsStreaming(false);
       return;
     }
@@ -111,6 +154,11 @@ export function AIChatPage() {
           window.clearInterval(streamTimerRef.current);
           streamTimerRef.current = null;
         }
+        setMessages((previous) =>
+          previous.map((item) =>
+            item.id === messageId ? { ...item, widgets } : item
+          )
+        );
         setIsStreaming(false);
       }
     }, 26);
@@ -168,9 +216,10 @@ export function AIChatPage() {
           typeof response.metadata.tokens_completion === "number"
             ? response.metadata.tokens_completion
             : undefined,
+        widgets: [],
       };
       setMessages((previous) => [...previous, assistantMessage]);
-      streamAssistantText(assistantMessage.id, response.answer);
+      streamAssistantText(assistantMessage.id, response.answer, response.widgets ?? []);
     } catch (error) {
       console.error("Failed to send AI assistant message", error);
       if (isAxiosError(error)) {
@@ -296,6 +345,126 @@ export function AIChatPage() {
                       <p className="whitespace-pre-wrap text-sm text-[var(--text-body)]">
                         {message.content}
                       </p>
+                      {!isUser && (message.widgets?.length ?? 0) > 0 && (
+                        <div className="mt-3 space-y-3">
+                          {message.widgets?.map((widget, widgetIndex) => {
+                            if (widget.type === "kpi_cards") {
+                              const items = widget.items ?? [];
+                              return (
+                                <div
+                                  key={`${message.id}-kpi-${widgetIndex}`}
+                                  className="rounded-xl border border-[var(--border-subtle)] p-3"
+                                >
+                                  {widget.title && (
+                                    <h4 className="mb-2 text-sm font-medium text-[var(--text-body)]">
+                                      {widget.title}
+                                    </h4>
+                                  )}
+                                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                    {items.map((item, index) => (
+                                      <div
+                                        key={`${message.id}-kpi-item-${index}`}
+                                        className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] px-3 py-2"
+                                      >
+                                        <div className="text-xs text-[var(--text-subtle)]">
+                                          {item.label}
+                                        </div>
+                                        <div className="text-base font-medium text-[var(--text-body)]">
+                                          {formatWidgetValue(item.value)}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            }
+
+                            if (widget.type === "table") {
+                              const columns = widget.columns ?? [];
+                              const rows = widget.rows ?? [];
+                              return (
+                                <div
+                                  key={`${message.id}-table-${widgetIndex}`}
+                                  className="rounded-xl border border-[var(--border-subtle)] p-3"
+                                >
+                                  {widget.title && (
+                                    <h4 className="mb-2 text-sm font-medium text-[var(--text-body)]">
+                                      {widget.title}
+                                    </h4>
+                                  )}
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        {columns.map((column) => (
+                                          <TableHead key={`${message.id}-th-${column.key}`}>
+                                            {column.label}
+                                          </TableHead>
+                                        ))}
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {rows.map((row, rowIndex) => (
+                                        <TableRow key={`${message.id}-tr-${rowIndex}`}>
+                                          {columns.map((column) => (
+                                            <TableCell key={`${message.id}-td-${rowIndex}-${column.key}`}>
+                                              {formatWidgetValue(row[column.key])}
+                                            </TableCell>
+                                          ))}
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              );
+                            }
+
+                            if (widget.type === "line_chart") {
+                              const data = (widget.data ?? []) as Array<Record<string, string | number | null>>;
+                              const xKey = widget.x_key ?? "date";
+                              const series = widget.series ?? [];
+                              if (data.length === 0 || series.length === 0) {
+                                return null;
+                              }
+                              return (
+                                <div
+                                  key={`${message.id}-line-${widgetIndex}`}
+                                  className="rounded-xl border border-[var(--border-subtle)] p-3"
+                                >
+                                  {widget.title && (
+                                    <h4 className="mb-2 text-sm font-medium text-[var(--text-body)]">
+                                      {widget.title}
+                                    </h4>
+                                  )}
+                                  <div className="h-56 w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                      <LineChart data={data}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
+                                        <XAxis dataKey={xKey} tick={{ fontSize: 11 }} />
+                                        <YAxis tick={{ fontSize: 11 }} />
+                                        <Tooltip />
+                                        <Legend />
+                                        {series.map((serie) => (
+                                          <Line
+                                            key={`${message.id}-series-${serie.key}`}
+                                            type="monotone"
+                                            dataKey={serie.key}
+                                            name={serie.label}
+                                            stroke={serie.color || "var(--chart-1)"}
+                                            strokeWidth={2}
+                                            dot={false}
+                                          />
+                                        ))}
+                                      </LineChart>
+                                    </ResponsiveContainer>
+                                  </div>
+                                </div>
+                              );
+                            }
+
+                            return null;
+                          })}
+                        </div>
+                      )}
                       {!isUser && (
                         <div className="mt-2 text-xs text-[var(--text-subtle)]">
                           Fuente: {message.source === "ai" ? "IA" : "Fallback"}{" "}

@@ -22,3 +22,4 @@ class AIChatResponse(BaseModel):
     source: str
     generated_at: datetime
     metadata: dict[str, Any] = Field(default_factory=dict)
+    widgets: list[dict[str, Any]] = Field(default_factory=list)
