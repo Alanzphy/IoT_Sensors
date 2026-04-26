@@ -1,22 +1,25 @@
 import { format, formatDistanceToNowStrict } from "date-fns";
 import { es } from "date-fns/locale";
 import {
-  AlertTriangle,
   ArrowLeft,
   Bell,
+  Bot,
   CheckCircle2,
-  Droplets,
   Loader2,
-  RadioTower,
   RefreshCw,
-  ThermometerSun,
+  Sparkles,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router";
 
 import { BentoCard } from "../../components/BentoCard";
 import { PageTransition } from "../../components/PageTransition";
-import { AlertItem, getAlert, markAlertRead } from "../../services/alerts";
+import {
+  AlertItem,
+  generateAlertRecommendation,
+  getAlert,
+  markAlertRead,
+} from "../../services/alerts";
 
 const severityStyles: Record<AlertItem["severity"], string> = {
   info: "bg-[var(--status-info-bg)] text-[var(--status-info)]",
@@ -38,68 +41,10 @@ function formatTimestamp(iso: string): string {
   })})`;
 }
 
-function buildRecommendation(alert: AlertItem): {
-  title: string;
-  icon: typeof AlertTriangle;
-  steps: string[];
-} {
-  if (alert.type === "inactivity") {
-    return {
-      title: "Recomendación por inactividad",
-      icon: RadioTower,
-      steps: [
-        "Verifica energía, conectividad y ubicación física del nodo.",
-        "Confirma que la última lectura esperada no haya fallado por mantenimiento o baja señal.",
-        "Si el nodo sigue sin enviar datos, revisa el API key del simulador/dispositivo y reinicia el equipo.",
-      ],
-    };
-  }
-
-  if (alert.parameter === "soil.humidity") {
-    return {
-      title: "Recomendación para humedad de suelo",
-      icon: Droplets,
-      steps: [
-        "Compara el valor detectado contra el rango configurado para el área.",
-        "Revisa si el riego programado reciente fue suficiente o si hubo interrupciones de flujo.",
-        "Inspecciona el sensor y el punto de medición antes de ajustar el calendario de riego.",
-      ],
-    };
-  }
-
-  if (alert.parameter === "irrigation.flow_per_minute") {
-    return {
-      title: "Recomendación para flujo de riego",
-      icon: Droplets,
-      steps: [
-        "Confirma si el riego debía estar activo al momento de la alerta.",
-        "Revisa presión, válvulas, filtros y posibles fugas u obstrucciones.",
-        "Compara el flujo contra lecturas previas del mismo nodo para detectar cambios bruscos.",
-      ],
-    };
-  }
-
-  if (alert.parameter === "environmental.eto") {
-    return {
-      title: "Recomendación para E.T.O.",
-      icon: ThermometerSun,
-      steps: [
-        "Interpreta la alerta como una señal de mayor demanda hídrica del cultivo.",
-        "Cruza E.T.O. con humedad de suelo y estado del riego antes de aumentar lámina de agua.",
-        "Revisa radiación, temperatura y viento para descartar una lectura ambiental atípica.",
-      ],
-    };
-  }
-
-  return {
-    title: "Recomendación general",
-    icon: AlertTriangle,
-    steps: [
-      "Revisa el parámetro alertado y compáralo con su rango configurado.",
-      "Valida que el sensor esté reportando valores coherentes con el estado real del área.",
-      "Consulta el histórico reciente antes de aplicar cambios operativos en riego.",
-    ],
-  };
+function recommendationSourceLabel(source: string | null): string {
+  if (source === "ai" || source === "cached_ai") return "IA";
+  if (source === "fallback" || source === "cached_fallback") return "Reglas";
+  return "N/D";
 }
 
 export function AlertDetailPage() {
@@ -114,11 +59,34 @@ export function AlertDetailPage() {
   const [updating, setUpdating] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const recommendation = useMemo(
-    () => (alert ? buildRecommendation(alert) : null),
-    [alert],
-  );
-  const RecommendationIcon = recommendation?.icon ?? AlertTriangle;
+  const [recommendationLoading, setRecommendationLoading] = useState(false);
+  const [recommendationText, setRecommendationText] = useState<string>("");
+  const [recommendationSource, setRecommendationSource] = useState<string | null>(null);
+  const [recommendationError, setRecommendationError] = useState<string | null>(null);
+  const [recommendationGeneratedAt, setRecommendationGeneratedAt] = useState<string | null>(null);
+
+  const syncRecommendationFromAlert = useCallback((item: AlertItem) => {
+    setRecommendationText(item.ai_recommendation ?? "");
+    setRecommendationError(item.ai_recommendation_error);
+    setRecommendationGeneratedAt(item.ai_recommendation_generated_at);
+
+    if (item.ai_recommendation) {
+      try {
+        const metadata = item.ai_recommendation_metadata
+          ? JSON.parse(item.ai_recommendation_metadata)
+          : null;
+        if (metadata?.provider === "rules-fallback") {
+          setRecommendationSource("cached_fallback");
+        } else {
+          setRecommendationSource("cached_ai");
+        }
+      } catch {
+        setRecommendationSource("cached_ai");
+      }
+    } else {
+      setRecommendationSource(null);
+    }
+  }, []);
 
   const fetchAlert = useCallback(async () => {
     if (!Number.isFinite(parsedAlertId) || parsedAlertId <= 0) {
@@ -132,17 +100,45 @@ export function AlertDetailPage() {
     try {
       const data = await getAlert(parsedAlertId);
       setAlert(data);
+      syncRecommendationFromAlert(data);
     } catch (error) {
       console.error("Failed to fetch alert detail", error);
       setErrorMessage("No fue posible cargar la alerta");
     } finally {
       setLoading(false);
     }
-  }, [parsedAlertId]);
+  }, [parsedAlertId, syncRecommendationFromAlert]);
+
+  const fetchRecommendation = useCallback(
+    async (force = false) => {
+      if (!alert) return;
+      setRecommendationLoading(true);
+      setRecommendationError(null);
+      try {
+        const result = await generateAlertRecommendation(alert.id, force);
+        setRecommendationText(result.recommendation ?? "");
+        setRecommendationSource(result.source);
+        setRecommendationGeneratedAt(result.generated_at);
+        setRecommendationError(result.error_detail);
+      } catch (error) {
+        console.error("Failed to fetch AI recommendation", error);
+        setRecommendationError("No fue posible generar la recomendación IA.");
+      } finally {
+        setRecommendationLoading(false);
+      }
+    },
+    [alert],
+  );
 
   useEffect(() => {
     fetchAlert();
   }, [fetchAlert]);
+
+  useEffect(() => {
+    if (!alert) return;
+    if (alert.ai_recommendation) return;
+    void fetchRecommendation(false);
+  }, [alert, fetchRecommendation]);
 
   const markAsRead = async () => {
     if (!alert || alert.read) return;
@@ -151,6 +147,7 @@ export function AlertDetailPage() {
     try {
       const updated = await markAlertRead(alert.id, true);
       setAlert(updated);
+      syncRecommendationFromAlert(updated);
     } catch (error) {
       console.error("Failed to mark alert as read", error);
       setErrorMessage("No fue posible marcar la alerta como leída");
@@ -175,7 +172,7 @@ export function AlertDetailPage() {
               Recomendación de alerta
             </h1>
             <p className="text-[var(--text-subtle)]">
-              Detalle operativo para revisar la alerta recibida por WhatsApp.
+              Detalle operativo con recomendación generada por IA.
             </p>
           </div>
 
@@ -202,7 +199,7 @@ export function AlertDetailPage() {
               {errorMessage}
             </div>
           </BentoCard>
-        ) : alert && recommendation ? (
+        ) : alert ? (
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
             <BentoCard variant="light">
               <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -286,38 +283,66 @@ export function AlertDetailPage() {
             </BentoCard>
 
             <BentoCard variant="light">
-              <div className="mb-4 flex items-center gap-3">
-                <div className="grid h-10 w-10 place-items-center rounded-full bg-[var(--accent-gold-glow)] text-[var(--accent-primary)]">
-                  <RecommendationIcon className="h-5 w-5" />
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="grid h-10 w-10 place-items-center rounded-full bg-[var(--accent-gold-glow)] text-[var(--accent-primary)]">
+                    <Bot className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-[var(--text-title)]">
+                      Recomendación IA
+                    </h2>
+                    <p className="text-sm text-[var(--text-subtle)]">
+                      Fuente: {recommendationSourceLabel(recommendationSource)}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-[var(--text-title)]">
-                    {recommendation.title}
-                  </h2>
-                  <p className="text-sm text-[var(--text-subtle)]">
-                    Guía inicial generada con reglas del sistema.
-                  </p>
-                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    void fetchRecommendation(true);
+                  }}
+                  disabled={recommendationLoading}
+                  className="inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] px-3 py-1.5 text-xs font-medium text-[var(--text-body)] hover:bg-[var(--hover-overlay)] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {recommendationLoading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5" />
+                  )}
+                  Regenerar
+                </button>
               </div>
 
-              <ol className="space-y-3">
-                {recommendation.steps.map((step, index) => (
-                  <li
-                    key={step}
-                    className="flex gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] p-3"
-                  >
-                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[var(--accent-primary)] text-xs font-semibold text-[var(--text-inverted)]">
-                      {index + 1}
-                    </span>
-                    <span className="text-sm text-[var(--text-body)]">{step}</span>
-                  </li>
-                ))}
-              </ol>
+              {recommendationLoading ? (
+                <div className="flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] p-3 text-sm text-[var(--text-subtle)]">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generando recomendación...
+                </div>
+              ) : recommendationText ? (
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] p-3">
+                    <p className="text-sm text-[var(--text-body)] whitespace-pre-wrap">
+                      {recommendationText}
+                    </p>
+                  </div>
 
-              <p className="mt-4 text-xs text-[var(--text-subtle)]">
-                En la Fase 2 esta sección podrá enriquecerse con análisis histórico y
-                recomendaciones generadas dentro de la plataforma.
-              </p>
+                  <div className="text-xs text-[var(--text-subtle)]">
+                    Generada: {recommendationGeneratedAt ? formatTimestamp(recommendationGeneratedAt) : "N/D"}
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] p-3 text-sm text-[var(--text-subtle)]">
+                  Sin recomendación generada aún.
+                </div>
+              )}
+
+              {recommendationError && (
+                <p className="mt-4 rounded-xl border border-[var(--status-warning)]/30 bg-[var(--status-warning-bg)] px-3 py-2 text-xs text-[var(--status-warning)]">
+                  {recommendationError}
+                </p>
+              )}
             </BentoCard>
           </div>
         ) : null}

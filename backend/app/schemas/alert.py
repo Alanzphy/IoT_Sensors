@@ -7,6 +7,18 @@ class AlertReadUpdate(BaseModel):
     read: bool = True
 
 
+class AlertRecommendationGenerateRequest(BaseModel):
+    force: bool = False
+
+
+class AlertRecommendationResponse(BaseModel):
+    alert_id: int
+    recommendation: str
+    source: str
+    generated_at: datetime | None = None
+    error_detail: str | None = None
+
+
 class AlertResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -26,6 +38,18 @@ class AlertResponse(BaseModel):
     read_at: datetime | None = Field(default=None, validation_alias="leida_en")
     notified_email: bool = Field(validation_alias="notificada_email")
     notified_whatsapp: bool = Field(validation_alias="notificada_whatsapp")
+    ai_recommendation: str | None = Field(
+        default=None, validation_alias="recomendacion_ia"
+    )
+    ai_recommendation_error: str | None = Field(
+        default=None, validation_alias="recomendacion_ia_error"
+    )
+    ai_recommendation_generated_at: datetime | None = Field(
+        default=None, validation_alias="recomendacion_ia_generada_en"
+    )
+    ai_recommendation_metadata: str | None = Field(
+        default=None, validation_alias="recomendacion_ia_metadata"
+    )
     created_at: datetime = Field(validation_alias="creado_en")
     updated_at: datetime = Field(validation_alias="actualizado_en")
 

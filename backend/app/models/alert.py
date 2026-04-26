@@ -11,6 +11,7 @@ from sqlalchemy import (
     Index,
     Integer,
     String,
+    Text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -60,6 +61,12 @@ class Alert(Base, TimestampMixin):
     notificada_whatsapp: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False
     )
+    recomendacion_ia: Mapped[str | None] = mapped_column(Text, nullable=True)
+    recomendacion_ia_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    recomendacion_ia_generada_en: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True
+    )
+    recomendacion_ia_metadata: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     node: Mapped["Node"] = relationship("Node", back_populates="alerts")
     irrigation_area: Mapped["IrrigationArea"] = relationship(

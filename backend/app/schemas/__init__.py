@@ -48,7 +48,13 @@ from app.schemas.threshold import (
     ThresholdResponse,
     ThresholdUpdate,
 )
-from app.schemas.alert import AlertReadUpdate, AlertResponse, AlertUnreadCountResponse
+from app.schemas.alert import (
+    AlertReadUpdate,
+    AlertRecommendationGenerateRequest,
+    AlertRecommendationResponse,
+    AlertResponse,
+    AlertUnreadCountResponse,
+)
 from app.schemas.audit_log import AuditLogResponse, AuditLogUserSummary
 from app.schemas.notification_preference import (
     NotificationPreferenceBulkUpsertRequest,
@@ -114,6 +120,8 @@ __all__ = [
     "ThresholdUpdate",
     "ThresholdResponse",
     "AlertReadUpdate",
+    "AlertRecommendationGenerateRequest",
+    "AlertRecommendationResponse",
     "AlertResponse",
     "AlertUnreadCountResponse",
     "AuditLogUserSummary",

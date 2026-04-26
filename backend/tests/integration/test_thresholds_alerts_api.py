@@ -344,6 +344,39 @@ class TestAlertsApi:
         assert resp.status_code == 201
         return resp.json()
 
+    def _create_threshold_alert(
+        self,
+        client,
+        admin_headers,
+        node_headers,
+        area_id: int,
+        *,
+        timestamp: str = "2026-04-02T09:00:00Z",
+        humidity: float = 35.0,
+    ) -> int:
+        self._create_threshold(client, admin_headers, area_id)
+        ingest = client.post(
+            "/api/v1/readings",
+            headers=node_headers,
+            json={
+                **SENSOR_PAYLOAD,
+                "timestamp": timestamp,
+                "soil": {
+                    **SENSOR_PAYLOAD["soil"],
+                    "humidity": humidity,
+                },
+            },
+        )
+        assert ingest.status_code == 201
+
+        list_resp = client.get(
+            f"/api/v1/alerts?irrigation_area_id={area_id}",
+            headers=admin_headers,
+        )
+        assert list_resp.status_code == 200
+        assert list_resp.json()["total"] >= 1
+        return list_resp.json()["data"][0]["id"]
+
     def test_ingest_breach_creates_alert(
         self,
         client,
@@ -449,6 +482,91 @@ class TestAlertsApi:
         updated = patch_resp.json()
         assert updated["read"] is True
         assert updated["read_at"] is not None
+
+    def test_generate_alert_recommendation_returns_and_caches_result(
+        self,
+        client,
+        admin_headers,
+        sample_irrigation_area,
+        node_headers,
+    ):
+        alert_id = self._create_threshold_alert(
+            client,
+            admin_headers,
+            node_headers,
+            sample_irrigation_area.id,
+            timestamp="2026-04-02T10:00:00Z",
+            humidity=34.0,
+        )
+
+        first_resp = client.post(
+            f"/api/v1/alerts/{alert_id}/recommendation",
+            headers=admin_headers,
+            json={"force": False},
+        )
+        assert first_resp.status_code == 200
+        first_data = first_resp.json()
+        assert first_data["alert_id"] == alert_id
+        assert first_data["recommendation"]
+        assert first_data["source"] in {"ai", "fallback"}
+
+        detail_resp = client.get(f"/api/v1/alerts/{alert_id}", headers=admin_headers)
+        assert detail_resp.status_code == 200
+        detail_data = detail_resp.json()
+        assert detail_data["ai_recommendation"]
+        assert detail_data["ai_recommendation_generated_at"] is not None
+
+        cached_resp = client.post(
+            f"/api/v1/alerts/{alert_id}/recommendation",
+            headers=admin_headers,
+            json={"force": False},
+        )
+        assert cached_resp.status_code == 200
+        cached_data = cached_resp.json()
+        assert cached_data["alert_id"] == alert_id
+        assert cached_data["source"] in {"cached_ai", "cached_fallback"}
+        assert cached_data["recommendation"] == first_data["recommendation"]
+
+    def test_client_cannot_generate_recommendation_for_foreign_alert(
+        self,
+        client,
+        db,
+        admin_headers,
+        client_headers,
+        sample_crop_type,
+    ):
+        foreign_area, foreign_node = self._create_foreign_area_node(
+            db, sample_crop_type.id
+        )
+        self._create_threshold(client, admin_headers, foreign_area.id)
+
+        ingest = client.post(
+            "/api/v1/readings",
+            headers={"X-API-Key": foreign_node.api_key},
+            json={
+                **SENSOR_PAYLOAD,
+                "timestamp": "2026-04-02T11:00:00Z",
+                "soil": {
+                    **SENSOR_PAYLOAD["soil"],
+                    "humidity": 32.0,
+                },
+            },
+        )
+        assert ingest.status_code == 201
+
+        alerts_resp = client.get(
+            f"/api/v1/alerts?irrigation_area_id={foreign_area.id}",
+            headers=admin_headers,
+        )
+        assert alerts_resp.status_code == 200
+        alert_id = alerts_resp.json()["data"][0]["id"]
+
+        forbidden_resp = client.post(
+            f"/api/v1/alerts/{alert_id}/recommendation",
+            headers=client_headers,
+            json={"force": False},
+        )
+        assert forbidden_resp.status_code == 403
 
     def test_client_cannot_access_foreign_alert_detail_or_mark_read(
         self,

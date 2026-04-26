@@ -1,9 +1,11 @@
 import smtplib
+import json
 from datetime import UTC, date, datetime, timedelta
 from email.message import EmailMessage
+from urllib import error, request
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, or_, select
+from sqlalchemy import desc, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -65,6 +67,193 @@ def _normalize_phone_number(raw_phone: str | None) -> str | None:
         return None
     cleaned = "".join(ch for ch in raw_phone if ch.isdigit())
     return cleaned or None
+
+
+def _to_float(value) -> float | None:
+    if value is None:
+        return None
+    return float(value)
+
+
+def _is_azure_alert_recommendation_enabled() -> bool:
+    return (
+        settings.AI_ALERT_RECOMMENDATIONS_ENABLED
+        and settings.AZURE_OPENAI_ENABLED
+        and bool(settings.AZURE_OPENAI_ENDPOINT)
+        and bool(settings.AZURE_OPENAI_API_KEY)
+        and bool(settings.AZURE_OPENAI_DEPLOYMENT)
+    )
+
+
+def _build_deterministic_recommendation(alert: Alert) -> str:
+    if alert.tipo == "inactivity":
+        return (
+            "1. Verifica energía, conectividad y estado físico del nodo.\n"
+            "2. Confirma que la API key del nodo no haya cambiado.\n"
+            "3. Si el nodo sigue sin enviar datos, reinicia equipo y gateway de red."
+        )
+
+    parameter = alert.parametro or ""
+    if parameter == "soil.humidity":
+        return (
+            "1. Compara la humedad detectada contra el umbral configurado.\n"
+            "2. Revisa si el último riego fue suficiente para recuperar humedad.\n"
+            "3. Valida sensor y punto de medición antes de ajustar programa de riego."
+        )
+    if parameter == "irrigation.flow_per_minute":
+        return (
+            "1. Revisa presión, válvulas y filtros de la línea de riego.\n"
+            "2. Verifica fugas u obstrucciones que alteren el caudal.\n"
+            "3. Compara con el histórico reciente para detectar desviaciones sostenidas."
+        )
+    if parameter == "environmental.eto":
+        return (
+            "1. Interpreta ETO alta como mayor demanda hídrica del cultivo.\n"
+            "2. Cruza ETO con humedad de suelo antes de aumentar la lámina de riego.\n"
+            "3. Ajusta horarios para reducir pérdidas por evaporación."
+        )
+    return (
+        "1. Revisa el parámetro alertado contra su rango configurado.\n"
+        "2. Valida coherencia con lecturas recientes del mismo nodo.\n"
+        "3. Ejecuta ajuste operativo gradual y monitorea siguiente ventana de datos."
+    )
+
+
+def _resolve_alert_scope_labels(
+    db: Session,
+    *,
+    alert: Alert,
+) -> tuple[str, str, str]:
+    row = db.execute(
+        select(
+            Property.nombre,
+            IrrigationArea.nombre,
+            Node.nombre,
+        )
+        .select_from(IrrigationArea)
+        .join(Property, Property.id == IrrigationArea.predio_id)
+        .join(Node, Node.area_riego_id == IrrigationArea.id)
+        .where(
+            IrrigationArea.id == alert.area_riego_id,
+            Node.id == alert.nodo_id,
+            Property.eliminado_en.is_(None),
+            IrrigationArea.eliminado_en.is_(None),
+            Node.eliminado_en.is_(None),
+        )
+    ).first()
+    if row is None:
+        return ("Predio desconocido", "Area desconocida", f"Nodo {alert.nodo_id}")
+    property_name, area_name, node_name = row
+    return (
+        property_name or "Predio desconocido",
+        area_name or "Area desconocida",
+        node_name or f"Nodo {alert.nodo_id}",
+    )
+
+
+def _collect_recent_readings_context(db: Session, *, alert: Alert) -> dict:
+    max_rows = max(1, settings.AI_ALERT_RECOMMENDATIONS_MAX_RECENT_READINGS)
+    rows = list(
+        db.execute(
+            select(Reading)
+            .where(Reading.nodo_id == alert.nodo_id)
+            .order_by(desc(Reading.marca_tiempo))
+            .limit(max_rows)
+        ).scalars()
+    )
+    if not rows:
+        return {
+            "count": 0,
+            "first_timestamp": None,
+            "last_timestamp": None,
+            "soil_humidity_avg": None,
+            "flow_avg": None,
+            "eto_avg": None,
+        }
+
+    hum_values = [_to_float(item.suelo_humedad) for item in rows if item.suelo_humedad is not None]
+    flow_values = [_to_float(item.riego_flujo_por_minuto) for item in rows if item.riego_flujo_por_minuto is not None]
+    eto_values = [_to_float(item.ambiental_eto) for item in rows if item.ambiental_eto is not None]
+
+    def _avg(values: list[float]) -> float | None:
+        if not values:
+            return None
+        return sum(values) / len(values)
+
+    timestamps = [item.marca_tiempo for item in rows]
+    return {
+        "count": len(rows),
+        "first_timestamp": min(timestamps),
+        "last_timestamp": max(timestamps),
+        "soil_humidity_avg": _avg(hum_values),
+        "flow_avg": _avg(flow_values),
+        "eto_avg": _avg(eto_values),
+    }
+
+
+def _call_azure_alert_recommendation(
+    *,
+    alert: Alert,
+    context_payload: dict,
+) -> tuple[str, dict]:
+    endpoint = settings.AZURE_OPENAI_ENDPOINT.rstrip("/")
+    url = (
+        f"{endpoint}/openai/deployments/{settings.AZURE_OPENAI_DEPLOYMENT}"
+        f"/chat/completions?api-version={settings.AZURE_OPENAI_API_VERSION}"
+    )
+
+    system_message = (
+        "Eres un asistente agronomico. Genera una recomendacion breve, accionable y "
+        "especifica para una alerta de riego en espanol. Responde en texto plano, "
+        "maximo 5 lineas numeradas."
+    )
+    user_message = (
+        "Genera recomendacion basada en este contexto JSON:\n"
+        f"{json.dumps(context_payload, ensure_ascii=True, default=str)}"
+    )
+    payload = {
+        "messages": [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": user_message},
+        ],
+        "temperature": settings.AZURE_OPENAI_TEMPERATURE,
+        "max_tokens": min(settings.AZURE_OPENAI_MAX_TOKENS, 500),
+    }
+
+    req = request.Request(
+        url=url,
+        data=json.dumps(payload).encode("utf-8"),
+        method="POST",
+    )
+    req.add_header("Content-Type", "application/json")
+    req.add_header("api-key", settings.AZURE_OPENAI_API_KEY)
+
+    try:
+        with request.urlopen(req, timeout=settings.AZURE_OPENAI_TIMEOUT_SECONDS) as resp:
+            raw = resp.read().decode("utf-8")
+    except error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="ignore")
+        raise RuntimeError(f"Azure OpenAI HTTP {exc.code}: {detail}") from exc
+    except Exception as exc:
+        raise RuntimeError(f"Azure OpenAI request failed: {exc}") from exc
+
+    try:
+        data = json.loads(raw)
+        content = str(data["choices"][0]["message"]["content"]).strip()
+        if not content:
+            raise ValueError("empty content")
+    except Exception as exc:
+        raise RuntimeError(f"Invalid Azure response payload: {exc}") from exc
+
+    usage = data.get("usage", {})
+    metadata = {
+        "provider": "azure-openai",
+        "model": data.get("model"),
+        "tokens_prompt": usage.get("prompt_tokens"),
+        "tokens_completion": usage.get("completion_tokens"),
+        "alert_id": alert.id,
+    }
+    return content, metadata
 
 
 def _resolve_alert_contact_data(
@@ -544,6 +733,92 @@ def mark_alert_read(db: Session, alert_id: int, read: bool = True) -> Alert:
     db.commit()
     db.refresh(alert)
     return alert
+
+
+def generate_alert_recommendation(
+    db: Session,
+    *,
+    alert_id: int,
+    force: bool = False,
+) -> dict[str, str | datetime | int | None]:
+    alert = get_alert(db, alert_id)
+
+    existing_recommendation = (alert.recomendacion_ia or "").strip()
+    if existing_recommendation and not force:
+        source = "cached_ai"
+        metadata_raw = (alert.recomendacion_ia_metadata or "").strip()
+        if metadata_raw:
+            try:
+                metadata = json.loads(metadata_raw)
+                if metadata.get("provider") == "rules-fallback":
+                    source = "cached_fallback"
+            except Exception:
+                source = "cached_ai"
+        return {
+            "alert_id": alert.id,
+            "recommendation": existing_recommendation,
+            "source": source,
+            "generated_at": alert.recomendacion_ia_generada_en,
+            "error_detail": alert.recomendacion_ia_error,
+        }
+
+    property_name, area_name, node_name = _resolve_alert_scope_labels(db, alert=alert)
+    readings_context = _collect_recent_readings_context(db, alert=alert)
+    context_payload = {
+        "alert": {
+            "id": alert.id,
+            "type": alert.tipo,
+            "severity": alert.severidad,
+            "parameter": alert.parametro,
+            "detected_value": _to_float(alert.valor_detectado),
+            "message": alert.mensaje,
+            "timestamp": alert.marca_tiempo.isoformat(),
+        },
+        "scope": {
+            "property_name": property_name,
+            "area_name": area_name,
+            "node_name": node_name,
+        },
+        "recent_readings": readings_context,
+    }
+
+    source = "fallback"
+    metadata = {"provider": "rules-fallback", "alert_id": alert.id}
+    error_detail: str | None = None
+
+    if _is_azure_alert_recommendation_enabled():
+        try:
+            recommendation, ai_metadata = _call_azure_alert_recommendation(
+                alert=alert,
+                context_payload=context_payload,
+            )
+            source = "ai"
+            metadata = ai_metadata
+        except Exception as exc:
+            recommendation = _build_deterministic_recommendation(alert)
+            error_detail = str(exc)[:1500]
+    else:
+        recommendation = _build_deterministic_recommendation(alert)
+
+    generated_at = datetime.now(UTC).replace(tzinfo=None)
+    alert.recomendacion_ia = recommendation
+    alert.recomendacion_ia_error = error_detail
+    alert.recomendacion_ia_generada_en = generated_at
+    alert.recomendacion_ia_metadata = json.dumps(
+        metadata,
+        ensure_ascii=True,
+        default=str,
+    )
+    db.commit()
+    db.refresh(alert)
+
+    return {
+        "alert_id": alert.id,
+        "recommendation": recommendation,
+        "source": source,
+        "generated_at": generated_at,
+        "error_detail": error_detail,
+    }
 
 
 def _has_inactivity_alert_for_current_outage(

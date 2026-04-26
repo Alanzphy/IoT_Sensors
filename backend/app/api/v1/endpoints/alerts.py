@@ -12,6 +12,8 @@ from app.models.property import Property
 from app.models.user import User
 from app.schemas.alert import (
     AlertReadUpdate,
+    AlertRecommendationGenerateRequest,
+    AlertRecommendationResponse,
     AlertResponse,
     AlertUnreadCountResponse,
     InactivityScanResponse,
@@ -159,6 +161,33 @@ def get_alert(
     if current_user.rol != "admin":
         _validate_client_area_access(current_user, db, alert.area_riego_id)
     return AlertResponse.model_validate(alert)
+
+
+@router.post("/{alert_id}/recommendation", response_model=AlertRecommendationResponse)
+def generate_alert_recommendation(
+    alert_id: int,
+    payload: AlertRecommendationGenerateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    alert = alert_service.get_alert(db, alert_id)
+    if current_user.rol != "admin":
+        _validate_client_area_access(current_user, db, alert.area_riego_id)
+
+    result = alert_service.generate_alert_recommendation(
+        db,
+        alert_id=alert_id,
+        force=payload.force,
+    )
+    audit_log_service.create_audit_log(
+        db,
+        user_id=current_user.id,
+        action="execute",
+        entity="alert_ai_recommendation",
+        entity_id=str(alert_id),
+        detail=f"force={payload.force}, source={result['source']}",
+    )
+    return AlertRecommendationResponse.model_validate(result)
 
 
 @router.patch("/{alert_id}/read", response_model=AlertResponse)

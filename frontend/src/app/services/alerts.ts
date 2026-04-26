@@ -15,8 +15,20 @@ export interface AlertItem {
   read_at: string | null;
   notified_email: boolean;
   notified_whatsapp: boolean;
+  ai_recommendation: string | null;
+  ai_recommendation_error: string | null;
+  ai_recommendation_generated_at: string | null;
+  ai_recommendation_metadata: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface AlertRecommendationResponse {
+  alert_id: number;
+  recommendation: string;
+  source: "ai" | "fallback" | "cached_ai" | "cached_fallback";
+  generated_at: string | null;
+  error_detail: string | null;
 }
 
 export interface AlertsPaginatedResponse {
@@ -56,6 +68,17 @@ export async function getAlert(alertId: number): Promise<AlertItem> {
 
 export async function markAlertRead(alertId: number, read = true): Promise<AlertItem> {
   const response = await api.patch<AlertItem>(`/alerts/${alertId}/read`, { read });
+  return response.data;
+}
+
+export async function generateAlertRecommendation(
+  alertId: number,
+  force = false,
+): Promise<AlertRecommendationResponse> {
+  const response = await api.post<AlertRecommendationResponse>(
+    `/alerts/${alertId}/recommendation`,
+    { force },
+  );
   return response.data;
 }
 
