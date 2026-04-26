@@ -1,6 +1,7 @@
 import { Bot, Loader2, Send } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { useLocation } from "react-router";
+import { isAxiosError } from "axios";
 
 import { BentoCard } from "../../components/BentoCard";
 import { PageTransition } from "../../components/PageTransition";
@@ -92,7 +93,22 @@ export function AIChatPage() {
       setMessages((previous) => [...previous, assistantMessage]);
     } catch (error) {
       console.error("Failed to send AI assistant message", error);
-      setErrorMessage("No fue posible obtener respuesta del asistente IA.");
+      if (isAxiosError(error)) {
+        const detail = error.response?.data?.detail;
+        if (typeof detail === "string" && detail.trim()) {
+          setErrorMessage(`Error del asistente IA: ${detail}`);
+        } else if (Array.isArray(detail) && detail.length > 0) {
+          const first = detail[0];
+          const msg = typeof first?.msg === "string" ? first.msg : null;
+          setErrorMessage(msg ? `Error del asistente IA: ${msg}` : "No fue posible obtener respuesta del asistente IA.");
+        } else if (error.response?.status) {
+          setErrorMessage(`Error del asistente IA: HTTP ${error.response.status}.`);
+        } else {
+          setErrorMessage("No fue posible obtener respuesta del asistente IA.");
+        }
+      } else {
+        setErrorMessage("No fue posible obtener respuesta del asistente IA.");
+      }
     } finally {
       setLoading(false);
     }
