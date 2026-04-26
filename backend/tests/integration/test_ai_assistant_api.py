@@ -146,6 +146,30 @@ class TestAIAssistantApi:
         assert data["widgets"] == []
         assert "riego iot" in data["answer"].lower()
 
+    def test_off_topic_followup_with_domain_history_is_rejected(
+        self,
+        client,
+        admin_headers,
+    ):
+        resp = client.post(
+            "/api/v1/ai-assistant/chat",
+            headers=admin_headers,
+            json={
+                "message": "Como se llama el dinosaurio con patas cortas?",
+                "history": [
+                    {"role": "user", "content": "Dame estado de humedad y flujo"},
+                    {"role": "assistant", "content": "Resumen operativo listo"},
+                ],
+                "hours_back": 24,
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["source"] == "fallback"
+        assert data["metadata"]["reason"] == "out_of_scope_question"
+        assert data["widgets"] == []
+        assert "riego iot" in data["answer"].lower()
+
     def test_client_can_ask_chat_in_owned_scope(
         self,
         client,

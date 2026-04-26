@@ -41,7 +41,7 @@ export function AlertsPopover({
   refreshIntervalMs = 3000,
 }: AlertsPopoverProps) {
   const fixedBottomRightClassName =
-    "fixed !bottom-4 !right-4 !top-auto !left-auto !z-[60]";
+    "fixed !right-4 !top-auto !left-auto !z-[60] !bottom-[calc(6rem+env(safe-area-inset-bottom))] sm:!bottom-4";
 
   const location = useLocation();
   const isPageVisible = usePageVisibility();
