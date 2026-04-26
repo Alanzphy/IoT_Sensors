@@ -268,6 +268,10 @@ Guía operativa paso a paso:
 
 - [`docs/dokploy_despliegue.md`](docs/dokploy_despliegue.md)
 - Smoke check post-deploy: `./scripts/dokploy_smoke_check.sh <tu-dominio>`
+- Smoke IA reports (login + generate + list + detail):  
+  `./scripts/smoke_ai_reports.sh --base-url https://sensores.alanrz.bond --admin-password 'TU_PASSWORD'`
+- Sincronizar BD local -> VPS (con backup remoto automático):  
+  `./scripts/sync_db_to_vps.sh --ssh usuario@vps --remote-db-pass 'PASSWORD_VPS' --yes`
 
 ### Scheduler De Inactividad (Producción)
 
