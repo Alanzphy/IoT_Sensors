@@ -51,7 +51,7 @@ export function AIReportsPage() {
   const location = useLocation();
   const isAdmin = location.pathname.startsWith("/admin");
   const selection = useOptionalSelection();
-  const scopedAreaId = !isAdmin ? selection?.selectedArea?.id : undefined;
+  const scopedAreaId = selection?.selectedArea?.id;
   const baseDetailPath = isAdmin ? "/admin/reportes-ia" : "/cliente/reportes-ia";
   const isPageVisible = usePageVisibility();
   const loadingRef = useRef(false);
@@ -146,7 +146,7 @@ export function AIReportsPage() {
             Actualizar
           </button>
         </div>
-        {!isAdmin && <SelectionScopeBar className="mb-4" />}
+        <SelectionScopeBar className="mb-4" />
 
         <BentoCard variant="light" className="mb-4">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">

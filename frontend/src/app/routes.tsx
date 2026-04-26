@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { createBrowserRouter } from "react-router";
+import { Navigate, createBrowserRouter } from "react-router";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminLayout } from "./layouts/AdminLayout";
@@ -143,6 +143,10 @@ export const router = createBrowserRouter([
                 path: "predio/:predioId",
                 Component: PropertyDetail,
               },
+              {
+                path: "*",
+                element: <Navigate to="/cliente" replace />,
+              },
             ]
           }
         ],
@@ -215,6 +219,10 @@ export const router = createBrowserRouter([
                 Component: AIAssistantUsagePage,
               },
               {
+                path: "consume-ia",
+                Component: AIAssistantUsagePage,
+              },
+              {
                 path: "reportes-ia/:reportId",
                 Component: AIReportDetailPage,
               },
@@ -225,6 +233,10 @@ export const router = createBrowserRouter([
               {
                 path: "auditoria",
                 Component: AuditLogsPage,
+              },
+              {
+                path: "*",
+                element: <Navigate to="/admin" replace />,
               },
             ]
           }

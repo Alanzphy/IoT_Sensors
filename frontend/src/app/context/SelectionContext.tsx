@@ -36,7 +36,13 @@ interface SelectionContextType {
 
 const SelectionContext = createContext<SelectionContextType | undefined>(undefined);
 
-export function SelectionProvider({ children }: { children: ReactNode }) {
+export function SelectionProvider({
+  children,
+  autoSelectFirst = true,
+}: {
+  children: ReactNode;
+  autoSelectFirst?: boolean;
+}) {
   const [properties, setProperties] = useState<Property[]>([]);
   const [areas, setAreas] = useState<IrrigationArea[]>([]);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
@@ -59,8 +65,9 @@ export function SelectionProvider({ children }: { children: ReactNode }) {
       const fetchedAreas = areasRes.data.data;
       setAreas(fetchedAreas);
 
-      // If we have properties and no selected property, select the first one.
-      if (fetchedProperties.length > 0 && !selectedProperty) {
+      // Default behavior for client views: select first property/area.
+      // Admin views can disable this to keep global scope until explicit selection.
+      if (autoSelectFirst && fetchedProperties.length > 0 && !selectedProperty) {
         setSelectedProperty(fetchedProperties[0]);
         // And automatically select the first area for that property
         const matchedArea = fetchedAreas.find((a: IrrigationArea) => a.property_id === fetchedProperties[0].id);

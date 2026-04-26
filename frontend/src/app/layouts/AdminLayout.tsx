@@ -3,6 +3,7 @@ import { Outlet, useLocation } from "react-router";
 import { DesktopSidebar } from "../components/navigation/DesktopSidebar";
 import { MobileTabBar } from "../components/navigation/MobileTabBar";
 import { AlertsPopover } from "../components/notifications/AlertsPopover";
+import { SelectionProvider } from "../context/SelectionContext";
 import { useIsMobile } from "../hooks/useIsMobile";
 
 export function AdminLayout() {
@@ -16,24 +17,26 @@ export function AdminLayout() {
   }, [location.pathname]);
 
   return (
-    <div
-      className={`bg-background flex overflow-x-hidden transition-colors duration-300 ${
-        isMobile ? "min-h-screen" : "h-screen overflow-hidden"
-      }`}
-    >
-      {!isMobile && <DesktopSidebar role="admin" />}
-
-      <main
-        ref={mainRef}
-        className={`flex-1 min-w-0 overflow-x-hidden bg-[var(--surface-page)] ${isMobile ? "pb-20" : "h-screen overflow-y-auto"
-          }`}
+    <SelectionProvider autoSelectFirst={false}>
+      <div
+        className={`bg-background flex overflow-x-hidden transition-colors duration-300 ${
+          isMobile ? "min-h-screen" : "h-screen overflow-hidden"
+        }`}
       >
-        <Outlet />
-      </main>
+        {!isMobile && <DesktopSidebar role="admin" />}
 
-      <AlertsPopover className={isMobile ? "fixed top-3 right-3 z-40" : "fixed top-4 right-6 z-40"} />
+        <main
+          ref={mainRef}
+          className={`flex-1 min-w-0 overflow-x-hidden bg-[var(--surface-page)] ${isMobile ? "pb-20" : "h-screen overflow-y-auto"
+            }`}
+        >
+          <Outlet />
+        </main>
 
-      {isMobile && <MobileTabBar role="admin" />}
-    </div>
+        <AlertsPopover className={isMobile ? "fixed top-3 right-3 z-40" : "fixed top-4 right-6 z-40"} />
+
+        {isMobile && <MobileTabBar role="admin" />}
+      </div>
+    </SelectionProvider>
   );
 }
