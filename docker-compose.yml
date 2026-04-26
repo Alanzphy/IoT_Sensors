@@ -7,10 +7,7 @@
 #   3. frontend  — React SPA (Nginx interno sirviendo build estático)
 #
 # Deployment:
-#   - En Dokploy: Traefik maneja el ruteo público y SSL automático.
-#     Las labels de Traefik están configuradas para rutear:
-#       /api/*   → backend:5050
-#       /*       → frontend:80
+#   - En Dokploy: define dominio/rutas desde la UI de Domains (sin labels).
 #   - Local: Usa los ports mapeados en localhost.
 #
 # Uso local:
@@ -101,15 +98,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-    labels:
-      # --- Traefik (Dokploy) ---
-      - "traefik.enable=true"
-      # Rutea /api/* y /health al backend
-      - "traefik.http.routers.sensores-backend.rule=Host(`${DOMAIN:-sensores.tudominio.com}`) && (PathPrefix(`/api`) || PathPrefix(`/health`))"
-      - "traefik.http.routers.sensores-backend.entrypoints=websecure"
-      - "traefik.http.routers.sensores-backend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.sensores-backend.loadbalancer.server.port=5050"
-
   # --- Inactivity Scheduler (calls /api/v1/alerts/scan-inactivity) ---
   inactivity_scheduler:
     build:
@@ -161,16 +149,6 @@ services:
         condition: service_healthy
     ports:
       - "${FRONTEND_PORT_BIND:-127.0.0.1:3022}:80"
-    labels:
-      # --- Traefik (Dokploy) ---
-      - "traefik.enable=true"
-      # Todo lo demás va al frontend
-      - "traefik.http.routers.sensores-frontend.rule=Host(`${DOMAIN:-sensores.tudominio.com}`)"
-      - "traefik.http.routers.sensores-frontend.entrypoints=websecure"
-      - "traefik.http.routers.sensores-frontend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.sensores-frontend.loadbalancer.server.port=80"
-      # Prioridad más baja que el backend (Traefik usa la ruta más específica primero)
-      - "traefik.http.routers.sensores-frontend.priority=1"
 
 volumes:
   mysql_data:

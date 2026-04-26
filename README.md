@@ -262,7 +262,7 @@ El proyecto está diseñado para desplegarse ágilmente en un VPS utilizando **D
 2. **Conectar Repositorio:** En el panel de Dokploy, crea un nuevo *Compose Project* y conéctalo a este repositorio Git.
 3. **Variables de Entorno:** Copia el contenido del archivo `.env.docker.example`, pégalo en la pestaña "Environment" de Dokploy, y ajusta las claves (reemplaza `tudominio.com` y cambia las contraseñas).
 4. **Desplegar:** Haz clic en "Deploy". Dokploy leerá el `docker-compose.yml`, construirá las imágenes optimizadas (multi-stage para React), levantará la base de datos MySQL, ejecutará las migraciones de Alembic y finalmente encenderá la API de FastAPI.
-5. **SSL Automático:** Traefik detectará las etiquetas de enrutamiento y generará automáticamente los certificados SSL (Let's Encrypt), enrutando `/api/*` al backend y todo el resto al dashboard React.
+5. **SSL Automático:** Configura el dominio desde la sección **Domains** de Dokploy (servicio `frontend`, puerto interno `80`) y Traefik emitirá el certificado SSL (Let's Encrypt).
 
 Guía operativa paso a paso:
 
