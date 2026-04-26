@@ -219,6 +219,7 @@ def _collect_chat_context(
                 "flow_avg": None,
                 "eto_avg": None,
             },
+            "daily_stats": [],
         }
 
         if node_id is not None:
@@ -248,6 +249,7 @@ def _collect_chat_context(
             agg = db.execute(
                 select(
                     Reading.id,
+                    Reading.marca_tiempo,
                     Reading.suelo_humedad,
                     Reading.riego_flujo_por_minuto,
                     Reading.ambiental_eto,
@@ -259,15 +261,60 @@ def _collect_chat_context(
                 )
                 .order_by(Reading.marca_tiempo.desc())
             ).all()
-            hum = [_to_float(item[1]) for item in agg if item[1] is not None]
-            flow = [_to_float(item[2]) for item in agg if item[2] is not None]
-            eto = [_to_float(item[3]) for item in agg if item[3] is not None]
+            hum = [_to_float(item[2]) for item in agg if item[2] is not None]
+            flow = [_to_float(item[3]) for item in agg if item[3] is not None]
+            eto = [_to_float(item[4]) for item in agg if item[4] is not None]
             area_item["window_stats"] = {
                 "readings_count": len(agg),
                 "soil_humidity_avg": _round(sum(hum) / len(hum), digits=2) if hum else None,
                 "flow_avg": _round(sum(flow) / len(flow), digits=2) if flow else None,
                 "eto_avg": _round(sum(eto) / len(eto), digits=3) if eto else None,
             }
+
+            # Daily buckets to answer questions like "como estuvo ayer"
+            day_buckets: dict[str, dict[str, Any]] = {}
+            for reading_id, reading_ts, soil_h, flow_m, eto_v in agg:
+                _ = reading_id
+                day_key = reading_ts.date().isoformat()
+                bucket = day_buckets.setdefault(
+                    day_key,
+                    {
+                        "readings_count": 0,
+                        "soil_humidity_values": [],
+                        "flow_values": [],
+                        "eto_values": [],
+                    },
+                )
+                bucket["readings_count"] += 1
+                if soil_h is not None:
+                    bucket["soil_humidity_values"].append(_to_float(soil_h))
+                if flow_m is not None:
+                    bucket["flow_values"].append(_to_float(flow_m))
+                if eto_v is not None:
+                    bucket["eto_values"].append(_to_float(eto_v))
+
+            daily_stats: list[dict[str, Any]] = []
+            for day in sorted(day_buckets.keys(), reverse=True)[:7]:
+                bucket = day_buckets[day]
+                hum_values = [v for v in bucket["soil_humidity_values"] if v is not None]
+                flow_values = [v for v in bucket["flow_values"] if v is not None]
+                eto_values = [v for v in bucket["eto_values"] if v is not None]
+                daily_stats.append(
+                    {
+                        "date": day,
+                        "readings_count": bucket["readings_count"],
+                        "soil_humidity_avg": _round(sum(hum_values) / len(hum_values), digits=2)
+                        if hum_values
+                        else None,
+                        "flow_avg": _round(sum(flow_values) / len(flow_values), digits=2)
+                        if flow_values
+                        else None,
+                        "eto_avg": _round(sum(eto_values) / len(eto_values), digits=3)
+                        if eto_values
+                        else None,
+                    }
+                )
+            area_item["daily_stats"] = daily_stats
 
         areas.append(area_item)
 
@@ -358,6 +405,9 @@ def _collect_chat_context(
     return {
         "generated_at": now_utc.isoformat(),
         "current_user_role": current_user.rol,
+        "timezone_reference": "UTC",
+        "today_utc": now_utc.date().isoformat(),
+        "yesterday_utc": (now_utc.date() - timedelta(days=1)).isoformat(),
         "scope": scope,
         "window": {
             "hours_back": hours_back,
@@ -426,7 +476,8 @@ def _call_azure_chat_completion(
         "Responde en espanol con tono tecnico claro y accionable. "
         "Usa SOLO el contexto JSON proporcionado. Si falta informacion, dilo de forma explicita. "
         "Prioriza humedad de suelo, flujo de riego, ETO, alertas y frescura de datos. "
-        "Incluye cifras concretas cuando existan en el contexto."
+        "Incluye cifras concretas cuando existan en el contexto. "
+        "Si preguntan por hoy o ayer, usa daily_stats por fecha UTC cuando exista."
     )
 
     messages: list[dict[str, str]] = [

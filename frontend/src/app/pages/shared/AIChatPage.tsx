@@ -1,5 +1,5 @@
 import { Bot, Loader2, Send } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router";
 import { isAxiosError } from "axios";
 
@@ -13,6 +13,10 @@ interface ChatBubble {
   content: string;
   source?: "ai" | "fallback";
   generatedAt?: string;
+  provider?: string;
+  model?: string;
+  tokensPrompt?: number;
+  tokensCompletion?: number;
 }
 
 function formatDateTime(isoValue?: string): string {
@@ -35,11 +39,14 @@ export function AIChatPage() {
   const [messages, setMessages] = useState<ChatBubble[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [hoursBack, setHoursBack] = useState(72);
   const [clientIdScope, setClientIdScope] = useState("");
   const [areaIdScope, setAreaIdScope] = useState("");
+  const streamTimerRef = useRef<number | null>(null);
+  const chatScrollRef = useRef<HTMLDivElement | null>(null);
 
   const contextHint = useMemo(() => {
     if (isAdmin) {
@@ -49,14 +56,70 @@ export function AIChatPage() {
   }, [isAdmin]);
 
   const resetConversation = () => {
+    if (streamTimerRef.current !== null) {
+      window.clearInterval(streamTimerRef.current);
+      streamTimerRef.current = null;
+    }
+    setIsStreaming(false);
     setMessages([]);
     setErrorMessage(null);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (streamTimerRef.current !== null) {
+        window.clearInterval(streamTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!chatScrollRef.current) return;
+    chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+  }, [messages, loading, isStreaming]);
+
+  const streamAssistantText = (messageId: string, fullText: string) => {
+    if (streamTimerRef.current !== null) {
+      window.clearInterval(streamTimerRef.current);
+      streamTimerRef.current = null;
+    }
+
+    if (!fullText) {
+      setIsStreaming(false);
+      return;
+    }
+
+    setIsStreaming(true);
+    let index = 0;
+    const totalLength = fullText.length;
+
+    streamTimerRef.current = window.setInterval(() => {
+      const remaining = totalLength - index;
+      const step =
+        remaining > 1000 ? 30 : remaining > 600 ? 20 : remaining > 300 ? 12 : 6;
+      index = Math.min(totalLength, index + step);
+      const partial = fullText.slice(0, index);
+
+      setMessages((previous) =>
+        previous.map((item) =>
+          item.id === messageId ? { ...item, content: partial } : item
+        )
+      );
+
+      if (index >= totalLength) {
+        if (streamTimerRef.current !== null) {
+          window.clearInterval(streamTimerRef.current);
+          streamTimerRef.current = null;
+        }
+        setIsStreaming(false);
+      }
+    }, 26);
   };
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     const userText = input.trim();
-    if (!userText || loading) return;
+    if (!userText || loading || isStreaming) return;
 
     const userMessage: ChatBubble = {
       id: `user-${Date.now()}`,
@@ -86,11 +149,28 @@ export function AIChatPage() {
       const assistantMessage: ChatBubble = {
         id: `assistant-${Date.now()}`,
         role: "assistant",
-        content: response.answer,
+        content: "",
         source: response.source,
         generatedAt: response.generated_at,
+        provider:
+          typeof response.metadata.provider === "string"
+            ? response.metadata.provider
+            : undefined,
+        model:
+          typeof response.metadata.model === "string"
+            ? response.metadata.model
+            : undefined,
+        tokensPrompt:
+          typeof response.metadata.tokens_prompt === "number"
+            ? response.metadata.tokens_prompt
+            : undefined,
+        tokensCompletion:
+          typeof response.metadata.tokens_completion === "number"
+            ? response.metadata.tokens_completion
+            : undefined,
       };
       setMessages((previous) => [...previous, assistantMessage]);
+      streamAssistantText(assistantMessage.id, response.answer);
     } catch (error) {
       console.error("Failed to send AI assistant message", error);
       if (isAxiosError(error)) {
@@ -100,7 +180,11 @@ export function AIChatPage() {
         } else if (Array.isArray(detail) && detail.length > 0) {
           const first = detail[0];
           const msg = typeof first?.msg === "string" ? first.msg : null;
-          setErrorMessage(msg ? `Error del asistente IA: ${msg}` : "No fue posible obtener respuesta del asistente IA.");
+          setErrorMessage(
+            msg
+              ? `Error del asistente IA: ${msg}`
+              : "No fue posible obtener respuesta del asistente IA."
+          );
         } else if (error.response?.status) {
           setErrorMessage(`Error del asistente IA: HTTP ${error.response.status}.`);
         } else {
@@ -188,7 +272,10 @@ export function AIChatPage() {
               Chat operativo con datos del sistema
             </div>
 
-            <div className="flex-1 space-y-3 overflow-y-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] p-3">
+            <div
+              ref={chatScrollRef}
+              className="flex-1 space-y-3 overflow-y-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] p-3"
+            >
               {messages.length === 0 ? (
                 <div className="text-sm text-[var(--text-subtle)]">
                   Escribe una consulta, por ejemplo: “¿Qué áreas están con riesgo de
@@ -212,7 +299,15 @@ export function AIChatPage() {
                       {!isUser && (
                         <div className="mt-2 text-xs text-[var(--text-subtle)]">
                           Fuente: {message.source === "ai" ? "IA" : "Fallback"}{" "}
-                          {message.generatedAt ? `· ${formatDateTime(message.generatedAt)}` : ""}
+                          {message.provider ? `· ${message.provider}` : ""}
+                          {message.model ? `· ${message.model}` : ""}
+                          {typeof message.tokensPrompt === "number"
+                            ? `· in:${message.tokensPrompt}`
+                            : ""}
+                          {typeof message.tokensCompletion === "number"
+                            ? ` out:${message.tokensCompletion}`
+                            : ""}
+                          {message.generatedAt ? ` · ${formatDateTime(message.generatedAt)}` : ""}
                         </div>
                       )}
                     </div>
@@ -224,6 +319,13 @@ export function AIChatPage() {
                 <div className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-app)] px-3 py-2 text-sm text-[var(--text-subtle)]">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Pensando respuesta...
+                </div>
+              )}
+
+              {isStreaming && !loading && (
+                <div className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-app)] px-3 py-2 text-sm text-[var(--text-subtle)]">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Escribiendo...
                 </div>
               )}
             </div>
@@ -244,11 +346,11 @@ export function AIChatPage() {
               />
               <button
                 type="submit"
-                disabled={loading || !input.trim()}
+                disabled={loading || isStreaming || !input.trim()}
                 className="inline-flex h-fit items-center gap-2 rounded-full bg-[var(--accent-primary)] px-4 py-2 text-sm font-medium text-[var(--text-inverted)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Send className="h-4 w-4" />
-                Enviar
+                {loading ? "Pensando..." : isStreaming ? "Escribiendo..." : "Enviar"}
               </button>
             </form>
           </BentoCard>
