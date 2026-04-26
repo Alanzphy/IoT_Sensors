@@ -1,4 +1,11 @@
-import { createContext, ReactNode, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { api } from "../services/api";
 
 export interface Property {
@@ -54,6 +61,11 @@ function writeStoredId(key: string, value: number | null): void {
   window.localStorage.setItem(key, String(value));
 }
 
+function isDemoPropertyName(name: string | null | undefined): boolean {
+  if (!name) return false;
+  return name.trim().toUpperCase().startsWith("DEMO -");
+}
+
 export function SelectionProvider({
   children,
   autoSelectFirst = true,
@@ -65,10 +77,11 @@ export function SelectionProvider({
 }) {
   const [properties, setProperties] = useState<Property[]>([]);
   const [areas, setAreas] = useState<IrrigationArea[]>([]);
-  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
-  const [selectedArea, setSelectedArea] = useState<IrrigationArea | null>(null);
+  const [selectedProperty, setSelectedPropertyState] = useState<Property | null>(null);
+  const [selectedArea, setSelectedAreaState] = useState<IrrigationArea | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectionHydrated, setSelectionHydrated] = useState(false);
   const propertyStorageKey = `selection:${persistenceKey}:propertyId`;
   const areaStorageKey = `selection:${persistenceKey}:areaId`;
 
@@ -102,10 +115,12 @@ export function SelectionProvider({
       // Default behavior for client views: select first property/area.
       // Admin views can disable this to keep global scope until explicit selection.
       if (!nextProperty && autoSelectFirst && fetchedProperties.length > 0) {
-        nextProperty = fetchedProperties[0];
+        nextProperty =
+          fetchedProperties.find((item: Property) => !isDemoPropertyName(item.name)) ||
+          fetchedProperties[0];
       }
 
-      setSelectedProperty(nextProperty);
+      setSelectedPropertyState(nextProperty);
 
       let nextArea = selectedArea
         ? fetchedAreas.find((item: IrrigationArea) => item.id === selectedArea.id) || null
@@ -128,7 +143,8 @@ export function SelectionProvider({
         nextArea = fetchedAreas.find((item: IrrigationArea) => item.property_id === nextProperty.id) || null;
       }
 
-      setSelectedArea(nextArea);
+      setSelectedAreaState(nextArea);
+      setSelectionHydrated(true);
     } catch (err: any) {
       console.error("Error fetching selection data:", err);
       setError("No se pudieron cargar las propiedades o áreas.");
@@ -142,13 +158,33 @@ export function SelectionProvider({
     fetchData();
   }, []);
 
-  useEffect(() => {
-    writeStoredId(propertyStorageKey, selectedProperty?.id ?? null);
-  }, [propertyStorageKey, selectedProperty?.id]);
+  const setSelectedProperty = useCallback(
+    (property: Property | null) => {
+      setSelectedPropertyState(property);
+      if (!selectionHydrated) return;
+      writeStoredId(propertyStorageKey, property?.id ?? null);
+    },
+    [selectionHydrated, propertyStorageKey],
+  );
+
+  const setSelectedArea = useCallback(
+    (area: IrrigationArea | null) => {
+      setSelectedAreaState(area);
+      if (!selectionHydrated) return;
+      writeStoredId(areaStorageKey, area?.id ?? null);
+    },
+    [selectionHydrated, areaStorageKey],
+  );
 
   useEffect(() => {
+    if (!selectionHydrated || loading || error) return;
+    writeStoredId(propertyStorageKey, selectedProperty?.id ?? null);
+  }, [selectionHydrated, loading, error, propertyStorageKey, selectedProperty?.id]);
+
+  useEffect(() => {
+    if (!selectionHydrated || loading || error) return;
     writeStoredId(areaStorageKey, selectedArea?.id ?? null);
-  }, [areaStorageKey, selectedArea?.id]);
+  }, [selectionHydrated, loading, error, areaStorageKey, selectedArea?.id]);
 
   // Whenever the selected property changes, try to pick an area for it if it doesn't match
   useEffect(() => {
@@ -156,13 +192,13 @@ export function SelectionProvider({
       if (!selectedArea || selectedArea.property_id !== selectedProperty.id) {
         const firstArea = areas.find(a => a.property_id === selectedProperty.id);
         if (firstArea) {
-          setSelectedArea(firstArea);
+          setSelectedAreaState(firstArea);
         } else {
-          setSelectedArea(null); // No areas matched this property
+          setSelectedAreaState(null); // No areas matched this property
         }
       }
     }
-  }, [selectedProperty, areas]);
+  }, [selectedProperty, selectedArea, areas]);
 
   return (
     <SelectionContext.Provider
