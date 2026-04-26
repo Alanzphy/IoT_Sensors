@@ -181,6 +181,7 @@ make demo-live
 - preset de 4 nodos del seed local
 - modo `demo-alerts`
 - despacho periódico de notificaciones (`/alerts/dispatch-notifications`)
+- trigger periódico de reporte IA semanal (`/ai-reports/generate`, ventana 7 días)
 - credenciales admin locales por defecto (`admin@sensores.com` / `admin123`)
 
 ```bash
@@ -196,6 +197,29 @@ python3 simulator_fast.py \
 ```
 
 Con esto se generan lecturas en vivo para los 4 nodos del seed de prueba y se activan breaches de umbral de forma visible en dashboard/alertas.
+
+### Trigger demo para Reporte IA semanal
+
+Si quieres control manual del trigger (sin `--quick-demo`), puedes activarlo así:
+
+```bash
+cd simulator
+python3 simulator_fast.py \
+  --api-keys-file ./keys.txt \
+  --mode demo-alerts \
+  --interval 2 \
+  --ai-weekly-report \
+  --ai-weekly-report-force \
+  --ai-weekly-report-days 7 \
+  --ai-weekly-report-initial-delay 30 \
+  --ai-weekly-report-interval 120 \
+  --admin-email admin@sensores.com \
+  --admin-password admin123
+```
+
+Opcional para reducir scope en demo:
+- `--ai-weekly-report-client-id <ID>`
+- `--ai-weekly-report-irrigation-area-id <ID>`
 
 ### Checklist demo completa (rápido)
 

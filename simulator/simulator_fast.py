@@ -33,6 +33,9 @@ DEFAULT_DISPATCH_INTERVAL = 20
 DEFAULT_DISPATCH_LIMIT = 200
 DEFAULT_ADMIN_EMAIL = "admin@sensores.com"
 DEFAULT_ADMIN_PASSWORD = "admin123"
+DEFAULT_AI_WEEKLY_REPORT_INTERVAL = 90
+DEFAULT_AI_WEEKLY_REPORT_DAYS = 7
+DEFAULT_AI_WEEKLY_REPORT_INITIAL_DELAY = 35
 DEMO_SEED_API_KEYS = [
     "99189486-8181-4e8c-8c6d-b3da66e6712b",  # Nodo Nogal Norte
     "c1f5cd79-e760-4a9f-92ea-31ea685a3add",  # Nodo Alfalfa Este
@@ -163,6 +166,72 @@ def get_config():
             "dispatch automatico de notificaciones"
         ),
     )
+    parser.add_argument(
+        "--ai-weekly-report",
+        action="store_true",
+        help="Genera reporte IA semanal periodico via /ai-reports/generate",
+    )
+    parser.add_argument(
+        "--ai-weekly-report-interval",
+        type=int,
+        default=int(
+            os.getenv(
+                "SIMULATOR_AI_WEEKLY_REPORT_INTERVAL",
+                str(DEFAULT_AI_WEEKLY_REPORT_INTERVAL),
+            )
+        ),
+        help=(
+            "Intervalo en segundos para intentar trigger de reporte IA "
+            f"(default: {DEFAULT_AI_WEEKLY_REPORT_INTERVAL})"
+        ),
+    )
+    parser.add_argument(
+        "--ai-weekly-report-initial-delay",
+        type=int,
+        default=int(
+            os.getenv(
+                "SIMULATOR_AI_WEEKLY_REPORT_INITIAL_DELAY",
+                str(DEFAULT_AI_WEEKLY_REPORT_INITIAL_DELAY),
+            )
+        ),
+        help=(
+            "Espera inicial (seg) antes del primer trigger IA semanal "
+            f"(default: {DEFAULT_AI_WEEKLY_REPORT_INITIAL_DELAY})"
+        ),
+    )
+    parser.add_argument(
+        "--ai-weekly-report-days",
+        type=int,
+        default=int(
+            os.getenv(
+                "SIMULATOR_AI_WEEKLY_REPORT_DAYS",
+                str(DEFAULT_AI_WEEKLY_REPORT_DAYS),
+            )
+        ),
+        help=f"Ventana de reporte en dias (default: {DEFAULT_AI_WEEKLY_REPORT_DAYS})",
+    )
+    parser.add_argument(
+        "--ai-weekly-report-force",
+        action="store_true",
+        help="Fuerza generacion de reporte IA aunque ya exista para ese rango",
+    )
+    parser.add_argument(
+        "--ai-weekly-report-notify",
+        action="store_true",
+        help="Permite notificar reporte IA por canales configurados",
+    )
+    parser.add_argument(
+        "--ai-weekly-report-client-id",
+        type=int,
+        default=None,
+        help="Scope opcional de cliente para reporte IA",
+    )
+    parser.add_argument(
+        "--ai-weekly-report-irrigation-area-id",
+        type=int,
+        default=None,
+        help="Scope opcional de area de riego para reporte IA",
+    )
     return parser.parse_args()
 
 
@@ -239,6 +308,13 @@ def apply_quick_demo_defaults(args) -> None:
         args.admin_email = DEFAULT_ADMIN_EMAIL
     if not args.admin_password:
         args.admin_password = DEFAULT_ADMIN_PASSWORD
+    args.ai_weekly_report = True
+    if args.ai_weekly_report_interval == DEFAULT_AI_WEEKLY_REPORT_INTERVAL:
+        args.ai_weekly_report_interval = 75
+    if args.ai_weekly_report_initial_delay == DEFAULT_AI_WEEKLY_REPORT_INITIAL_DELAY:
+        args.ai_weekly_report_initial_delay = 30
+    if not args.ai_weekly_report_force:
+        args.ai_weekly_report_force = True
 
 
 def _init_node_state(node_index: int, seed: int) -> NodeState:
@@ -456,6 +532,44 @@ def dispatch_notifications(
     )
 
 
+def _utc_iso(dt: datetime) -> str:
+    return dt.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace(
+        "+00:00", "Z"
+    )
+
+
+def trigger_ai_weekly_report(
+    base_url: str,
+    access_token: str,
+    *,
+    days: int,
+    force: bool,
+    notify: bool,
+    client_id: int | None,
+    irrigation_area_id: int | None,
+) -> tuple[int, dict]:
+    now_utc = datetime.now(timezone.utc)
+    range_end = now_utc
+    range_start = now_utc - timedelta(days=max(1, days))
+
+    payload: dict[str, object] = {
+        "start_datetime": _utc_iso(range_start),
+        "end_datetime": _utc_iso(range_end),
+        "notify": notify,
+        "force": force,
+    }
+    if client_id is not None:
+        payload["client_id"] = int(client_id)
+    if irrigation_area_id is not None:
+        payload["irrigation_area_id"] = int(irrigation_area_id)
+
+    return _post_json(
+        f"{base_url}/ai-reports/generate",
+        payload,
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+
 def _masked_key(api_key: str) -> str:
     if len(api_key) <= 16:
         return api_key
@@ -573,6 +687,15 @@ def main():
             else ""
         )
     )
+    print(
+        "Reporte IA sem: "
+        f"{'si' if args.ai_weekly_report else 'no'}"
+        + (
+            f" (cada {args.ai_weekly_report_interval}s, ventana={args.ai_weekly_report_days}d)"
+            if args.ai_weekly_report
+            else ""
+        )
+    )
     print(f"Nodos activos:  {len(nodes)}")
     for node in nodes:
         print(f"  - {node.label}: {_masked_key(node.api_key)}")
@@ -588,8 +711,11 @@ def main():
             demo_spike_every=args.demo_spike_every,
         )
 
-    dispatch_token: str | None = None
+    admin_token: str | None = None
     next_dispatch_ts = time.monotonic() + max(3, args.dispatch_interval)
+    next_ai_report_ts = (
+        time.monotonic() + max(5, args.ai_weekly_report_initial_delay)
+    )
     if args.dispatch_notifications and args.dry_run:
         print("Dispatch de notificaciones deshabilitado durante dry-run.")
     elif args.dispatch_notifications:
@@ -599,15 +725,23 @@ def main():
                 "--admin-email/--admin-password."
             )
         else:
-            dispatch_token, err = admin_login(
+            admin_token, err = admin_login(
                 args.base_url,
                 args.admin_email,
                 args.admin_password,
             )
-            if dispatch_token is None:
+            if admin_token is None:
                 print(f"No se pudo iniciar sesion admin para dispatch: {err}")
             else:
-                print("Sesion admin para dispatch iniciada.")
+                print("Sesion admin iniciada (dispatch/reportes IA).")
+
+    if args.ai_weekly_report and args.dry_run:
+        print("Trigger de reporte IA semanal deshabilitado durante dry-run.")
+    elif args.ai_weekly_report and (not args.admin_email or not args.admin_password):
+        print(
+            "Trigger de reporte IA semanal activo, pero faltan "
+            "--admin-email/--admin-password."
+        )
 
     print(f"\nLoop en vivo cada {args.interval}s (Ctrl+C para detener)\n")
     try:
@@ -650,17 +784,17 @@ def main():
             if args.dispatch_notifications and not args.dry_run:
                 now_mono = time.monotonic()
                 if now_mono >= next_dispatch_ts:
-                    if dispatch_token is None and args.admin_email and args.admin_password:
-                        dispatch_token, _ = admin_login(
+                    if admin_token is None and args.admin_email and args.admin_password:
+                        admin_token, _ = admin_login(
                             args.base_url,
                             args.admin_email,
                             args.admin_password,
                         )
 
-                    if dispatch_token is not None:
+                    if admin_token is not None:
                         status, payload = dispatch_notifications(
                             args.base_url,
-                            dispatch_token,
+                            admin_token,
                             limit=args.dispatch_limit,
                         )
                         if status == 200:
@@ -674,7 +808,7 @@ def main():
                                 )
                             )
                         elif status == 401:
-                            dispatch_token = None
+                            admin_token = None
                             print("[DISPATCH] token expirado/no valido, reintentando login.")
                         else:
                             print(
@@ -685,6 +819,52 @@ def main():
                             "[DISPATCH] sin token admin, omitiendo ciclo de dispatch."
                         )
                     next_dispatch_ts = time.monotonic() + max(3, args.dispatch_interval)
+
+            if args.ai_weekly_report and not args.dry_run:
+                now_mono = time.monotonic()
+                if now_mono >= next_ai_report_ts:
+                    if admin_token is None and args.admin_email and args.admin_password:
+                        admin_token, _ = admin_login(
+                            args.base_url,
+                            args.admin_email,
+                            args.admin_password,
+                        )
+
+                    if admin_token is not None:
+                        status, payload = trigger_ai_weekly_report(
+                            args.base_url,
+                            admin_token,
+                            days=args.ai_weekly_report_days,
+                            force=args.ai_weekly_report_force,
+                            notify=args.ai_weekly_report_notify,
+                            client_id=args.ai_weekly_report_client_id,
+                            irrigation_area_id=args.ai_weekly_report_irrigation_area_id,
+                        )
+                        if status == 200:
+                            print(
+                                "[AI-REPORT] generated={generated} skipped={skipped} "
+                                "failed={failed} ids={ids}".format(
+                                    generated=payload.get("generated_count", 0),
+                                    skipped=payload.get("skipped_count", 0),
+                                    failed=payload.get("failed_count", 0),
+                                    ids=payload.get("report_ids", []),
+                                )
+                            )
+                        elif status == 401:
+                            admin_token = None
+                            print("[AI-REPORT] token expirado/no valido, reintentando login.")
+                        else:
+                            print(
+                                f"[AI-REPORT] fallo status={status} detail={payload.get('detail')}"
+                            )
+                    else:
+                        print(
+                            "[AI-REPORT] sin token admin, omitiendo trigger semanal."
+                        )
+
+                    next_ai_report_ts = time.monotonic() + max(
+                        10, args.ai_weekly_report_interval
+                    )
             time.sleep(args.interval)
     except KeyboardInterrupt:
         print("\nSimulador detenido.")

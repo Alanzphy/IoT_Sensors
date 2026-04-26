@@ -65,7 +65,24 @@ python simulator_fast.py --api-keys-file ./keys.txt --backfill 7 --interval 2
 - preset `seed-demo` (4 API keys del seed local)
 - modo `demo-alerts`
 - dispatch automatico de notificaciones cada 20s
+- trigger automatico de reporte IA semanal (ventana 7 dias)
 - login admin local por defecto (`admin@sensores.com` / `admin123`)
+
+Ejemplo con trigger IA manual:
+
+```bash
+python simulator_fast.py \
+  --api-keys-file ./keys.txt \
+  --mode demo-alerts \
+  --interval 2 \
+  --ai-weekly-report \
+  --ai-weekly-report-force \
+  --ai-weekly-report-days 7 \
+  --ai-weekly-report-initial-delay 30 \
+  --ai-weekly-report-interval 120 \
+  --admin-email admin@sensores.com \
+  --admin-password admin123
+```
 
 ### Variables de entorno (alternativa a CLI)
 ```bash
