@@ -17,7 +17,7 @@ export function ClientLayout() {
   }, [location.pathname]);
 
   return (
-    <SelectionProvider>
+    <SelectionProvider persistenceKey="client">
       <div
         className={`bg-background flex overflow-x-hidden transition-colors duration-300 ${
           isMobile ? "min-h-screen" : "h-screen overflow-hidden"

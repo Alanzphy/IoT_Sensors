@@ -17,7 +17,7 @@ export function AdminLayout() {
   }, [location.pathname]);
 
   return (
-    <SelectionProvider autoSelectFirst={false}>
+    <SelectionProvider autoSelectFirst={false} persistenceKey="admin">
       <div
         className={`bg-background flex overflow-x-hidden transition-colors duration-300 ${
           isMobile ? "min-h-screen" : "h-screen overflow-hidden"

@@ -36,12 +36,32 @@ interface SelectionContextType {
 
 const SelectionContext = createContext<SelectionContextType | undefined>(undefined);
 
+function readStoredId(key: string): number | null {
+  if (typeof window === "undefined") return null;
+  const rawValue = window.localStorage.getItem(key);
+  if (!rawValue) return null;
+  const parsed = Number(rawValue);
+  if (!Number.isInteger(parsed) || parsed <= 0) return null;
+  return parsed;
+}
+
+function writeStoredId(key: string, value: number | null): void {
+  if (typeof window === "undefined") return;
+  if (value == null) {
+    window.localStorage.removeItem(key);
+    return;
+  }
+  window.localStorage.setItem(key, String(value));
+}
+
 export function SelectionProvider({
   children,
   autoSelectFirst = true,
+  persistenceKey = autoSelectFirst ? "client" : "admin",
 }: {
   children: ReactNode;
   autoSelectFirst?: boolean;
+  persistenceKey?: string;
 }) {
   const [properties, setProperties] = useState<Property[]>([]);
   const [areas, setAreas] = useState<IrrigationArea[]>([]);
@@ -49,6 +69,8 @@ export function SelectionProvider({
   const [selectedArea, setSelectedArea] = useState<IrrigationArea | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const propertyStorageKey = `selection:${persistenceKey}:propertyId`;
+  const areaStorageKey = `selection:${persistenceKey}:areaId`;
 
   const fetchData = async () => {
     try {
@@ -65,16 +87,48 @@ export function SelectionProvider({
       const fetchedAreas = areasRes.data.data;
       setAreas(fetchedAreas);
 
-      // Default behavior for client views: select first property/area.
-      // Admin views can disable this to keep global scope until explicit selection.
-      if (autoSelectFirst && fetchedProperties.length > 0 && !selectedProperty) {
-        setSelectedProperty(fetchedProperties[0]);
-        // And automatically select the first area for that property
-        const matchedArea = fetchedAreas.find((a: IrrigationArea) => a.property_id === fetchedProperties[0].id);
-        if (matchedArea && !selectedArea) {
-          setSelectedArea(matchedArea);
+      let nextProperty = selectedProperty
+        ? fetchedProperties.find((item: Property) => item.id === selectedProperty.id) || null
+        : null;
+
+      if (!nextProperty) {
+        const storedPropertyId = readStoredId(propertyStorageKey);
+        if (storedPropertyId != null) {
+          nextProperty =
+            fetchedProperties.find((item: Property) => item.id === storedPropertyId) || null;
         }
       }
+
+      // Default behavior for client views: select first property/area.
+      // Admin views can disable this to keep global scope until explicit selection.
+      if (!nextProperty && autoSelectFirst && fetchedProperties.length > 0) {
+        nextProperty = fetchedProperties[0];
+      }
+
+      setSelectedProperty(nextProperty);
+
+      let nextArea = selectedArea
+        ? fetchedAreas.find((item: IrrigationArea) => item.id === selectedArea.id) || null
+        : null;
+      if (nextArea && nextProperty && nextArea.property_id !== nextProperty.id) {
+        nextArea = null;
+      }
+
+      if (!nextArea) {
+        const storedAreaId = readStoredId(areaStorageKey);
+        if (storedAreaId != null) {
+          const storedArea = fetchedAreas.find((item: IrrigationArea) => item.id === storedAreaId);
+          if (storedArea && (!nextProperty || storedArea.property_id === nextProperty.id)) {
+            nextArea = storedArea;
+          }
+        }
+      }
+
+      if (!nextArea && nextProperty) {
+        nextArea = fetchedAreas.find((item: IrrigationArea) => item.property_id === nextProperty.id) || null;
+      }
+
+      setSelectedArea(nextArea);
     } catch (err: any) {
       console.error("Error fetching selection data:", err);
       setError("No se pudieron cargar las propiedades o áreas.");
@@ -87,6 +141,14 @@ export function SelectionProvider({
     // Only fetch if authenticated. The caller (ClientLayout) should be inside ProtectedRoute.
     fetchData();
   }, []);
+
+  useEffect(() => {
+    writeStoredId(propertyStorageKey, selectedProperty?.id ?? null);
+  }, [propertyStorageKey, selectedProperty?.id]);
+
+  useEffect(() => {
+    writeStoredId(areaStorageKey, selectedArea?.id ?? null);
+  }, [areaStorageKey, selectedArea?.id]);
 
   // Whenever the selected property changes, try to pick an area for it if it doesn't match
   useEffect(() => {
