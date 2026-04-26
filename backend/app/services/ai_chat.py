@@ -1,4 +1,6 @@
 import json
+import re
+import unicodedata
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib import error, request
@@ -39,6 +41,93 @@ def _round(value: float | None, digits: int = 3) -> float | None:
     if value is None:
         return None
     return round(value, digits)
+
+
+def _normalize_text(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", value)
+    without_accents = "".join(ch for ch in normalized if not unicodedata.combining(ch))
+    return without_accents.lower().strip()
+
+
+def _contains_domain_terms(text: str) -> bool:
+    terms = (
+        "riego",
+        "sensor",
+        "sensores",
+        "humedad",
+        "suelo",
+        "eto",
+        "evapotranspir",
+        "flujo",
+        "litros",
+        "nodo",
+        "nodos",
+        "alerta",
+        "alertas",
+        "predio",
+        "predios",
+        "area",
+        "areas",
+        "cultivo",
+        "lectura",
+        "lecturas",
+        "inactividad",
+        "dashboard",
+        "reporte",
+        "reportes",
+        "notificacion",
+        "notificaciones",
+        "whatsapp",
+        "umbral",
+        "umbrales",
+        "frescura",
+        "telemetria",
+        "cliente",
+        "propiedad",
+        "historico",
+        "historial",
+        "recomendacion",
+        "riesgo",
+    )
+    return any(term in text for term in terms)
+
+
+def _is_math_only_question(text: str) -> bool:
+    if not text:
+        return False
+    return bool(re.fullmatch(r"[\d\s\+\-\*\/\(\)\.,=]+", text))
+
+
+def _is_in_scope_question(message: str, history: list[dict[str, str]]) -> bool:
+    normalized_message = _normalize_text(message)
+    if not normalized_message:
+        return False
+
+    if _contains_domain_terms(normalized_message):
+        return True
+
+    if _is_math_only_question(normalized_message):
+        return False
+
+    history_text = " ".join(
+        _normalize_text(item.get("content", ""))
+        for item in history[-4:]
+        if item.get("role") in ("user", "assistant")
+    )
+
+    follow_up_like = len(normalized_message) <= 80
+    if follow_up_like and _contains_domain_terms(history_text):
+        return True
+
+    return False
+
+
+def _build_out_of_scope_answer() -> str:
+    return (
+        "Solo puedo ayudarte con consultas del sistema de riego IoT "
+        "(sensores, lecturas, alertas, humedad, flujo, ETO, nodos, areas, "
+        "predios y reportes). Reformula tu pregunta en ese contexto."
+    )
 
 
 def _azure_openai_enabled() -> bool:
@@ -654,7 +743,8 @@ def _call_azure_chat_completion(
         "Usa SOLO el contexto JSON proporcionado. Si falta informacion, dilo de forma explicita. "
         "Prioriza humedad de suelo, flujo de riego, ETO, alertas y frescura de datos. "
         "Incluye cifras concretas cuando existan en el contexto. "
-        "Si preguntan por hoy o ayer, usa daily_stats por fecha UTC cuando exista."
+        "Si preguntan por hoy o ayer, usa daily_stats por fecha UTC cuando exista. "
+        "Si la pregunta no pertenece al dominio de riego/sensores, rechaza y pide reformular al dominio."
     )
 
     messages: list[dict[str, str]] = [
@@ -721,20 +811,6 @@ def ask_ai_assistant(
     client_id: int | None,
     irrigation_area_id: int | None,
 ) -> dict[str, Any]:
-    scope = _resolve_scope(
-        db,
-        current_user=current_user,
-        client_id=client_id,
-        irrigation_area_id=irrigation_area_id,
-    )
-    context = _collect_chat_context(
-        db,
-        current_user=current_user,
-        scope=scope,
-        hours_back=hours_back,
-    )
-    widgets = _build_dynamic_widgets(question=message, context=context)
-
     normalized_history = [
         {
             "role": item["role"],
@@ -744,7 +820,36 @@ def ask_ai_assistant(
         if item["role"] in ("user", "assistant") and item["content"].strip()
     ]
 
+    scope = _resolve_scope(
+        db,
+        current_user=current_user,
+        client_id=client_id,
+        irrigation_area_id=irrigation_area_id,
+    )
+
     generated_at = _utc_now_naive()
+    if not _is_in_scope_question(message, normalized_history):
+        return {
+            "answer": _build_out_of_scope_answer(),
+            "source": "fallback",
+            "generated_at": generated_at,
+            "metadata": {
+                "provider": "rules-guardrail",
+                "scope": scope,
+                "hours_back": hours_back,
+                "reason": "out_of_scope_question",
+            },
+            "widgets": [],
+        }
+
+    context = _collect_chat_context(
+        db,
+        current_user=current_user,
+        scope=scope,
+        hours_back=hours_back,
+    )
+    widgets = _build_dynamic_widgets(question=message, context=context)
+
     if _azure_openai_enabled():
         try:
             answer, metadata = _call_azure_chat_completion(

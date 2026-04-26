@@ -2,60 +2,69 @@
 
 ## Summary
 
-Implementar primero reportes nocturnos con IA desde el backend, sin n8n en la primera version. El backend agregara datos reales, enviara un contexto compacto a Azure OpenAI, guardara el reporte generado y notificara al cliente con un link corto por WhatsApp/email. n8n queda como opcion futura si aparece necesidad real de flujos visuales o integraciones externas.
+Plan vigente de Fase 2 con enfoque backend-first, sin n8n por el momento:
+- Reportes IA programados y manuales.
+- Recomendaciones IA en alertas.
+- Asistente conversacional IA con contexto operativo real.
+- Observabilidad y guardrails del asistente.
 
-## Key Changes
+## Estado actual (2026-04-26)
 
-- Crear modulo de reportes IA en FastAPI:
-  - Generacion diaria nocturna por cliente/area.
-  - Analisis del dia anterior: humedad de suelo, flujo/consumo, ETO, alertas, inactividad y frescura de nodos.
-  - Recomendaciones agronomicas redactadas por IA, basadas solo en datos agregados del sistema.
-- Agregar persistencia de reportes:
-  - Tabla principal tipo `ai_reports` con cliente, area opcional, rango analizado, estado, resumen, hallazgos, recomendacion, timestamps y metadatos de generacion.
-  - Guardar errores si falla Azure OpenAI para poder auditar/reintentar.
-- Agregar APIs:
-  - `GET /api/v1/ai-reports` listado paginado con ownership por rol.
-  - `GET /api/v1/ai-reports/{id}` detalle del reporte.
-  - `POST /api/v1/ai-reports/generate` endpoint admin/scheduler para generar reporte manual o nocturno.
-- Agregar frontend:
-  - Nueva seccion cliente: `/cliente/reportes-ia`.
-  - Nueva vista detalle: `/cliente/reportes-ia/:reportId`.
-  - Admin puede consultar reportes por cliente/area.
-- Agregar scheduler propio:
-  - Servicio tipo `ai_report_scheduler`, similar a `notification_scheduler`.
-  - Cadencia inicial: nocturno diario.
-  - Configurable por env vars.
-- Integrar notificacion:
-  - Al terminar un reporte, enviar WhatsApp/email corto con link al reporte.
-  - No enviar el reporte completo por WhatsApp.
-- Mantener n8n fuera de v1:
-  - No agrega valor suficiente todavia porque el proyecto ya tiene schedulers propios.
-  - Se podra incorporar despues como orquestador externo llamando los mismos endpoints.
+### Completado
+- Reportes IA backend:
+  - `GET /api/v1/ai-reports`
+  - `GET /api/v1/ai-reports/{id}`
+  - `POST /api/v1/ai-reports/generate`
+  - Scheduler diario `ai_report_scheduler`.
+- Integración Azure OpenAI con fallback determinístico para reportes y recomendaciones.
+- UI de reportes IA:
+  - `/cliente/reportes-ia`
+  - `/cliente/reportes-ia/:reportId`
+  - `/admin/reportes-ia`
+  - `/admin/reportes-ia/:reportId`
+- Asistente conversacional:
+  - `POST /api/v1/ai-assistant/chat`
+  - UI: `/cliente/asistente-ia` y `/admin/asistente-ia`
+  - Respuesta con texto + widgets dinámicos (KPIs, tabla, tendencia).
+- Guardrails del asistente:
+  - rate limit por usuario configurable por env.
+  - límites de contexto/tokens.
+- Observabilidad IA:
+  - logging estructurado por request del asistente (source/provider/model/tokens/latencia/status).
+  - endpoint admin `GET /api/v1/ai-assistant/usage`
+  - UI admin `/admin/consumo-ia`.
 
-## Test Plan
+### Diferido (intencional)
+- n8n como orquestador externo.
 
-- Unit tests de agregacion de datos para reportes.
-- Integration tests de ownership:
-  - Cliente solo ve sus reportes.
-  - Admin ve todos y filtra por cliente/area.
-- Test de generacion manual con datos demo.
-- Test de fallo Azure OpenAI:
-  - Reporte queda en estado `failed`.
-  - Error queda persistido.
-  - No se envia notificacion de exito.
-- Test de scheduler:
-  - Genera reportes una vez por ventana.
-  - No duplica reportes del mismo cliente/area/rango.
-- Frontend build y prueba manual:
-  - Listado de reportes.
-  - Detalle de reporte.
-  - Link desde WhatsApp abre el reporte.
+## Variables clave (asistente IA)
+
+- `AI_ASSISTANT_ENABLED`
+- `AI_ASSISTANT_MAX_AREAS`
+- `AI_ASSISTANT_MAX_ALERTS`
+- `AI_ASSISTANT_MAX_HISTORY_MESSAGES`
+- `AI_ASSISTANT_RATE_LIMIT_WINDOW_MINUTES`
+- `AI_ASSISTANT_RATE_LIMIT_MAX_REQUESTS`
+
+## Test plan (estado)
+
+### Cubierto
+- Ownership y acceso por rol en reportes y asistente.
+- Generación manual de reportes.
+- Caso de no-duplicación de reportes por rango cuando `force=false`.
+- Caso de falla de generación en reportes (`estado=failed`).
+- Scheduler: validación de decisión de ejecución diaria (unidad).
+- Asistente:
+  - widgets en contrato de respuesta.
+  - rate limit (`429`).
+  - endpoint admin de uso y bloqueo para cliente (`403`).
+
+### Pendiente recomendado
+- Pruebas E2E UI para flujo chat + visualizaciones.
+- Pruebas de carga ligera para `/ai-assistant/chat` (latencia y límites).
 
 ## Assumptions
 
-- Primera version IA = reportes nocturnos, no chat.
-- Orquestacion inicial = backend scheduler, no n8n.
-- Entrega = reporte completo en web + aviso corto por WhatsApp/email.
-- Proveedor = Azure OpenAI mediante configuracion por variables de entorno.
-- La IA no consulta MySQL directamente; el backend prepara el contexto seguro y filtrado.
-- El chat conversacional queda para una etapa posterior, reutilizando APIs y agregaciones creadas para reportes.
+- Orquestación principal sigue en backend (FastAPI + schedulers internos).
+- n8n queda fuera del alcance actual por decisión de producto.
+- Azure OpenAI se usa con contexto preparado por backend (sin acceso directo a MySQL).

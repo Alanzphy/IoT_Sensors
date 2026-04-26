@@ -1,7 +1,7 @@
 # Plan de Sprints - Fase 2 Completa
 
 Estado base: Fase 2 Lite finalizada.
-Fecha de actualizacion: 2026-04-18.
+Fecha de actualizacion: 2026-04-26.
 
 ## Sprint 1 - Geoespacial Base (COMPLETADO)
 Objetivo:
@@ -59,18 +59,35 @@ Entregables:
 - Preferencias extendidas y motor de despacho horario.
 - Cobertura de pruebas y docs de configuracion.
 
-## Sprint 4 - Analitica Asincrona (n8n + Azure OpenAI)
+## Sprint 4 - Analitica Asincrona (Backend + Azure OpenAI) (COMPLETADO)
 Objetivo:
 - Reportes nocturnos y deteccion de patrones/anomalias.
 
 Entregables:
-- Pipeline batch desacoplado.
-- Persistencia y consulta de reportes.
+- Scheduler interno `ai_report_scheduler` (sin n8n).
+- Persistencia de reportes IA (`reportes_ia`) con estados y metadatos.
+- Endpoints:
+  - `GET /api/v1/ai-reports`
+  - `GET /api/v1/ai-reports/{id}`
+  - `POST /api/v1/ai-reports/generate`
+- UI admin/cliente de listados y detalle de reportes.
+- Notificación opcional post-generación por canales configurados.
 
-## Sprint 5 - Asistente Conversacional (Azure OpenAI)
+## Sprint 5 - Asistente Conversacional (Azure OpenAI) (COMPLETADO)
 Objetivo:
 - Chat con consultas operativas en tiempo real usando function calling.
 
 Entregables:
-- Capa de consultas seguras por ownership.
-- Guardrails, auditoria y limites de uso.
+- Endpoint `POST /api/v1/ai-assistant/chat` con ownership por rol.
+- Vistas:
+  - `/cliente/asistente-ia`
+  - `/admin/asistente-ia`
+- Guardrails:
+  - rate limiting por usuario configurable.
+  - límites de contexto en backend.
+- Auditoría y observabilidad:
+  - logging estructurado por request (source/provider/model/tokens/latencia/status).
+  - endpoint admin `GET /api/v1/ai-assistant/usage`.
+  - vista admin `/admin/consumo-ia`.
+- Salida enriquecida del chat:
+  - texto + widgets dinámicos (KPIs, tabla y gráfica de tendencia).

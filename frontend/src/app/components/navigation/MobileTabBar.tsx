@@ -1,4 +1,5 @@
 import {
+  Activity,
   Bot,
   Bell,
   BellRing,
@@ -55,6 +56,7 @@ export function MobileTabBar({ role }: MobileTabBarProps) {
     { path: "/admin/umbrales",  icon: SlidersHorizontal, label: "Umbrales" },
     { path: "/admin/alertas",   icon: Bell,             label: "Alertas" },
     { path: "/admin/asistente-ia", icon: MessageCircle, label: "Chat IA" },
+    { path: "/admin/consumo-ia", icon: Activity,        label: "Uso IA" },
     { path: "/admin/reportes-ia", icon: Bot,            label: "IA" },
     { path: "/admin/auditoria", icon: ClipboardList,    label: "Auditoría" },
   ];

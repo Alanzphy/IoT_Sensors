@@ -1,5 +1,6 @@
 """Integration tests for /api/v1/ai-assistant/chat."""
 
+from app.core.config import settings
 from app.core.security import hash_password
 from app.models.client import Client
 from app.models.irrigation_area import IrrigationArea
@@ -105,6 +106,46 @@ class TestAIAssistantApi:
         assert data["source"] in {"ai", "fallback"}
         assert "metadata" in data
 
+    def test_out_of_scope_question_is_rejected(
+        self,
+        client,
+        admin_headers,
+    ):
+        resp = client.post(
+            "/api/v1/ai-assistant/chat",
+            headers=admin_headers,
+            json={
+                "message": "Dame la receta de un huevo ranchero",
+                "hours_back": 24,
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["source"] == "fallback"
+        assert data["metadata"]["reason"] == "out_of_scope_question"
+        assert data["widgets"] == []
+        assert "riego iot" in data["answer"].lower()
+
+    def test_math_only_question_is_rejected(
+        self,
+        client,
+        admin_headers,
+    ):
+        resp = client.post(
+            "/api/v1/ai-assistant/chat",
+            headers=admin_headers,
+            json={
+                "message": "2 + 2",
+                "hours_back": 24,
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["source"] == "fallback"
+        assert data["metadata"]["reason"] == "out_of_scope_question"
+        assert data["widgets"] == []
+        assert "riego iot" in data["answer"].lower()
+
     def test_client_can_ask_chat_in_owned_scope(
         self,
         client,
@@ -146,3 +187,58 @@ class TestAIAssistantApi:
             },
         )
         assert resp.status_code == 403
+
+    def test_rate_limit_blocks_excessive_requests(
+        self,
+        client,
+        admin_headers,
+        monkeypatch,
+    ):
+        monkeypatch.setattr(settings, "AI_ASSISTANT_RATE_LIMIT_WINDOW_MINUTES", 60)
+        monkeypatch.setattr(settings, "AI_ASSISTANT_RATE_LIMIT_MAX_REQUESTS", 1)
+
+        first = client.post(
+            "/api/v1/ai-assistant/chat",
+            headers=admin_headers,
+            json={
+                "message": "Primera consulta",
+                "hours_back": 24,
+            },
+        )
+        assert first.status_code == 200
+
+        second = client.post(
+            "/api/v1/ai-assistant/chat",
+            headers=admin_headers,
+            json={
+                "message": "Segunda consulta bloqueada",
+                "hours_back": 24,
+            },
+        )
+        assert second.status_code == 429
+
+    def test_admin_can_view_ai_usage_and_client_cannot(
+        self,
+        client,
+        admin_headers,
+        client_headers,
+    ):
+        ask = client.post(
+            "/api/v1/ai-assistant/chat",
+            headers=admin_headers,
+            json={
+                "message": "Genera telemetria de uso",
+                "hours_back": 24,
+            },
+        )
+        assert ask.status_code == 200
+
+        usage = client.get("/api/v1/ai-assistant/usage?hours=24", headers=admin_headers)
+        assert usage.status_code == 200
+        payload = usage.json()
+        assert payload["total"] >= 1
+        assert payload["summary"]["total_requests"] >= 1
+        assert len(payload["data"]) >= 1
+
+        denied = client.get("/api/v1/ai-assistant/usage?hours=24", headers=client_headers)
+        assert denied.status_code == 403

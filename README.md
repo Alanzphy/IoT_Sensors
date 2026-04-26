@@ -394,6 +394,39 @@ Integración Azure OpenAI (opcional):
 
 Si `AZURE_OPENAI_ENABLED=false`, el backend usa un fallback determinístico para resumen/hallazgos/recomendación y mantiene el flujo operativo en local y producción.
 
+### Asistente Conversacional IA (Admin/Cliente)
+
+Endpoint backend:
+
+- `POST /api/v1/ai-assistant/chat`
+
+Vista web:
+
+- Cliente: `/cliente/asistente-ia`
+- Admin: `/admin/asistente-ia`
+
+Capacidades actuales:
+
+- Respuesta en lenguaje natural usando contexto real del sistema (áreas, lecturas, alertas, frescura y reportes recientes).
+- Fallback operativo cuando Azure no responde.
+- Widgets dinámicos junto al texto (`kpi_cards`, `table`, `line_chart`) para feedback visual.
+
+Guardrails:
+
+- Rate limit por usuario configurable:
+  - `AI_ASSISTANT_RATE_LIMIT_WINDOW_MINUTES`
+  - `AI_ASSISTANT_RATE_LIMIT_MAX_REQUESTS`
+- Límites de contexto:
+  - `AI_ASSISTANT_MAX_AREAS`
+  - `AI_ASSISTANT_MAX_ALERTS`
+  - `AI_ASSISTANT_MAX_HISTORY_MESSAGES`
+
+Observabilidad de uso IA:
+
+- Endpoint admin: `GET /api/v1/ai-assistant/usage`
+- Vista admin: `/admin/consumo-ia`
+- Se registran por request: `source`, `provider`, `model`, `tokens_prompt`, `tokens_completion`, `latency_ms`, `status_code`.
+
 ## Política de Documentación (Trabajo por Hitos)
 
 Para evitar pérdida de contexto y desfase entre implementación y docs, este repositorio usa una estrategia híbrida:

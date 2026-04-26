@@ -1,4 +1,5 @@
 import {
+  Activity,
   Bot,
   Bell,
   BellRing,
@@ -79,6 +80,7 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
     { path: "/admin/umbrales",  icon: SlidersHorizontal, label: "Umbrales" },
     { path: "/admin/alertas",   icon: Bell,             label: "Alertas" },
     { path: "/admin/asistente-ia", icon: MessageCircle, label: "Asistente IA" },
+    { path: "/admin/consumo-ia", icon: Activity, label: "Consumo IA" },
     { path: "/admin/reportes-ia", icon: Bot,            label: "Reportes IA" },
     { path: "/admin/auditoria", icon: ClipboardList,    label: "Auditoría" },
   ];

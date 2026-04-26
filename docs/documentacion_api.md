@@ -1611,6 +1611,132 @@ Retorna un registro específico de auditoría con el mismo esquema del listado.
 
 ---
 
+### 5.14. AI Reports (Reportes IA)
+
+Reportes ejecutivos IA por cliente/área con ownership por rol.
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| `GET` | `/api/v1/ai-reports` | Listado paginado con filtros | JWT (Admin/Cliente) |
+| `GET` | `/api/v1/ai-reports/{id}` | Detalle de reporte IA | JWT (Admin/Cliente) |
+| `POST` | `/api/v1/ai-reports/generate` | Generar reporte manual | JWT (Admin) |
+
+#### Generar reporte — `POST /api/v1/ai-reports/generate`
+
+**Request:**
+```json
+{
+  "client_id": 7,
+  "irrigation_area_id": 12,
+  "start_datetime": "2026-04-20T00:00:00Z",
+  "end_datetime": "2026-04-21T00:00:00Z",
+  "notify": false,
+  "force": true
+}
+```
+
+**Response 200:**
+```json
+{
+  "generated_count": 1,
+  "skipped_count": 0,
+  "failed_count": 0,
+  "report_ids": [23],
+  "range_start": "2026-04-20T00:00:00Z",
+  "range_end": "2026-04-21T00:00:00Z",
+  "executed_at": "2026-04-26T16:40:00Z"
+}
+```
+
+Notas:
+- Si `force=false`, el backend evita duplicar reportes del mismo scope/rango.
+- Si Azure falla, el reporte puede terminar en `failed` y persiste `error_detail`.
+
+---
+
+### 5.15. AI Assistant (Asistente Conversacional)
+
+Consulta operativa en lenguaje natural con datos reales agregados del sistema.
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| `POST` | `/api/v1/ai-assistant/chat` | Pregunta al asistente IA | JWT (Admin/Cliente) |
+| `GET` | `/api/v1/ai-assistant/usage` | Consumo/telemetría del asistente | JWT (Admin) |
+
+#### Chat — `POST /api/v1/ai-assistant/chat`
+
+**Request:**
+```json
+{
+  "message": "¿Qué áreas requieren atención hoy?",
+  "hours_back": 72,
+  "client_id": null,
+  "irrigation_area_id": null,
+  "history": []
+}
+```
+
+**Response 200:**
+```json
+{
+  "answer": "Texto de respuesta...",
+  "source": "ai",
+  "generated_at": "2026-04-26T16:57:47.760859",
+  "metadata": {
+    "provider": "azure-openai",
+    "model": "gpt-4.1-nano-2025-04-14",
+    "tokens_prompt": 6675,
+    "tokens_completion": 171
+  },
+  "widgets": [
+    { "type": "kpi_cards" },
+    { "type": "table" },
+    { "type": "line_chart" }
+  ]
+}
+```
+
+Guardrails:
+- Rate limit configurable (`AI_ASSISTANT_RATE_LIMIT_WINDOW_MINUTES`, `AI_ASSISTANT_RATE_LIMIT_MAX_REQUESTS`).
+- Si excede el límite: `429 Too Many Requests`.
+- Si Azure no está disponible, responde `source=fallback`.
+
+#### Uso del asistente (admin) — `GET /api/v1/ai-assistant/usage`
+
+**Query params:**
+
+| Param | Tipo | Requerido | Notas |
+|-------|------|-----------|-------|
+| `page` | integer | No | Default: 1 |
+| `per_page` | integer | No | Default: 20, máx: 200 |
+| `hours` | integer | No | Ventana de análisis (default: 24) |
+| `user_id` | integer | No | Filtrar por usuario |
+| `action` | string | No | `execute`, `error`, `rate_limited` |
+
+**Response 200 (resumen):**
+```json
+{
+  "page": 1,
+  "per_page": 20,
+  "total": 32,
+  "window_hours": 24,
+  "summary": {
+    "total_requests": 32,
+    "successful_requests": 28,
+    "ai_responses": 22,
+    "fallback_responses": 6,
+    "error_requests": 2,
+    "rate_limited_requests": 2,
+    "total_prompt_tokens": 182300,
+    "total_completion_tokens": 9800,
+    "avg_latency_ms": 1432.7
+  },
+  "data": []
+}
+```
+
+---
+
 ## 6. Flujo de Ejemplo Completo
 
 Este ejemplo recorre todo el sistema de punta a punta: desde crear un cliente hasta consultar sus datos en el dashboard.
@@ -1857,10 +1983,25 @@ Header: Authorization: Bearer eyJ...(cliente)...
 | GET | `/api/v1/audit-logs` | Listar eventos (paginado y filtros) |
 | GET | `/api/v1/audit-logs/{audit_log_id}` | Detalle de evento |
 
+### AI Reports (3 endpoints)
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/api/v1/ai-reports` | Listar reportes IA (paginado y filtros) |
+| GET | `/api/v1/ai-reports/{id}` | Detalle de reporte IA |
+| POST | `/api/v1/ai-reports/generate` | Generar reportes IA (Admin) |
+
+### AI Assistant (2 endpoints)
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| POST | `/api/v1/ai-assistant/chat` | Consulta conversacional con contexto operativo |
+| GET | `/api/v1/ai-assistant/usage` | Telemetría de uso del asistente (Admin) |
+
 ### Health (1 endpoint)
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
 | GET | `/health` | Verificación de estado del servicio |
 
-**Total: 65 endpoints.**
+**Total: 70 endpoints.**

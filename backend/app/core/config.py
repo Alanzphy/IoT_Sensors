@@ -88,6 +88,8 @@ class Settings(BaseSettings):
     AI_ASSISTANT_MAX_AREAS: int = 25
     AI_ASSISTANT_MAX_ALERTS: int = 40
     AI_ASSISTANT_MAX_HISTORY_MESSAGES: int = 8
+    AI_ASSISTANT_RATE_LIMIT_WINDOW_MINUTES: int = 15
+    AI_ASSISTANT_RATE_LIMIT_MAX_REQUESTS: int = 20
 
     # --- Azure OpenAI ---
     AZURE_OPENAI_ENABLED: bool = False

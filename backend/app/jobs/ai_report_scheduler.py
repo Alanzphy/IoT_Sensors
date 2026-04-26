@@ -9,6 +9,22 @@ def _now_iso() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat()
 
 
+def should_run_now(
+    *,
+    enabled: bool,
+    now: datetime,
+    schedule_hour: int,
+    schedule_minute: int,
+    last_run_day: str | None,
+) -> bool:
+    today_key = now.strftime("%Y-%m-%d")
+    reached_schedule = (
+        (now.hour > schedule_hour)
+        or (now.hour == schedule_hour and now.minute >= schedule_minute)
+    )
+    return enabled and reached_schedule and last_run_day != today_key
+
+
 class SchedulerApiClient:
     def __init__(
         self,
@@ -138,16 +154,15 @@ def main() -> None:
     while True:
         now = datetime.now(UTC)
         today_key = now.strftime("%Y-%m-%d")
-        should_run_now = (
-            enabled
-            and (
-                (now.hour > schedule_hour)
-                or (now.hour == schedule_hour and now.minute >= schedule_minute)
-            )
-            and last_run_day != today_key
+        should_run = should_run_now(
+            enabled=enabled,
+            now=now,
+            schedule_hour=schedule_hour,
+            schedule_minute=schedule_minute,
+            last_run_day=last_run_day,
         )
 
-        if should_run_now:
+        if should_run:
             try:
                 result = client.run_generation(notify=notify, force=force)
                 last_run_day = today_key

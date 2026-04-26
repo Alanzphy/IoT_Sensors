@@ -67,7 +67,14 @@ from app.schemas.ai_report import (
     AIReportGenerateResponse,
     AIReportResponse,
 )
-from app.schemas.ai_chat import AIChatMessage, AIChatRequest, AIChatResponse
+from app.schemas.ai_chat import (
+    AIAssistantUsageItem,
+    AIAssistantUsageResponse,
+    AIAssistantUsageSummary,
+    AIChatMessage,
+    AIChatRequest,
+    AIChatResponse,
+)
 from app.schemas.user import UserCreate, UserResponse, UserUpdate
 
 __all__ = [
@@ -137,4 +144,7 @@ __all__ = [
     "AIChatMessage",
     "AIChatRequest",
     "AIChatResponse",
+    "AIAssistantUsageItem",
+    "AIAssistantUsageSummary",
+    "AIAssistantUsageResponse",
 ]

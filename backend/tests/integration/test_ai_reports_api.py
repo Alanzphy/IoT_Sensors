@@ -7,6 +7,7 @@ from app.models.irrigation_area import IrrigationArea
 from app.models.node import Node
 from app.models.property import Property
 from app.models.user import User
+from app.services import ai_report as ai_report_service
 
 
 def _create_foreign_area_node(db, crop_type_id: int):
@@ -169,3 +170,68 @@ class TestAIReportsApi:
             },
         )
         assert resp.status_code == 422
+
+    def test_generate_skips_duplicate_range_without_force(
+        self,
+        client,
+        admin_headers,
+        sample_irrigation_area,
+        monkeypatch,
+    ):
+        monkeypatch.setattr(settings, "AI_REPORTS_ENABLED", True)
+        monkeypatch.setattr(settings, "NOTIFICATIONS_ENABLED", False)
+
+        payload = {
+            "irrigation_area_id": sample_irrigation_area.id,
+            "start_datetime": "2026-04-01T00:00:00Z",
+            "end_datetime": "2026-04-02T00:00:00Z",
+            "notify": False,
+            "force": False,
+        }
+
+        first = client.post("/api/v1/ai-reports/generate", headers=admin_headers, json=payload)
+        assert first.status_code == 200
+        assert first.json()["generated_count"] == 1
+        assert first.json()["skipped_count"] == 0
+
+        second = client.post(
+            "/api/v1/ai-reports/generate",
+            headers=admin_headers,
+            json=payload,
+        )
+        assert second.status_code == 200
+        second_data = second.json()
+        assert second_data["generated_count"] == 0
+        assert second_data["skipped_count"] == 1
+        assert second_data["failed_count"] == 0
+
+    def test_generate_marks_failed_when_content_generation_crashes(
+        self,
+        client,
+        admin_headers,
+        sample_irrigation_area,
+        monkeypatch,
+    ):
+        monkeypatch.setattr(settings, "AI_REPORTS_ENABLED", True)
+        monkeypatch.setattr(settings, "NOTIFICATIONS_ENABLED", False)
+
+        def _crash_report_content(_context):
+            raise RuntimeError("forced-report-crash")
+
+        monkeypatch.setattr(ai_report_service, "_generate_report_content", _crash_report_content)
+
+        resp = client.post(
+            "/api/v1/ai-reports/generate",
+            headers=admin_headers,
+            json={
+                "irrigation_area_id": sample_irrigation_area.id,
+                "start_datetime": "2026-04-03T00:00:00Z",
+                "end_datetime": "2026-04-04T00:00:00Z",
+                "notify": False,
+                "force": True,
+            },
+        )
+        assert resp.status_code == 200
+        payload = resp.json()
+        assert payload["generated_count"] == 0
+        assert payload["failed_count"] == 1

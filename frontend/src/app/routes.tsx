@@ -29,6 +29,7 @@ import { AIReportsPage } from "./pages/shared/AIReportsPage";
 
 // Admin pages
 import { AdminDashboard } from "./pages/admin/AdminDashboard";
+import { AIAssistantUsagePage } from "./pages/admin/AIAssistantUsagePage";
 import { AuditLogsPage } from "./pages/admin/AuditLogsPage";
 import { ClientManagement } from "./pages/admin/ClientManagement";
 import { CropCycleManagement } from "./pages/admin/CropCycleManagement";
@@ -121,6 +122,10 @@ export const router = createBrowserRouter([
               {
                 path: "asistente-ia",
                 Component: AIChatPage,
+              },
+              {
+                path: "consumo-ia",
+                Component: AIAssistantUsagePage,
               },
               {
                 path: "reportes-ia/:reportId",

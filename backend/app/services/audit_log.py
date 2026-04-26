@@ -88,3 +88,27 @@ def list_audit_logs(
         ).scalars()
     )
     return items, total
+
+
+def count_audit_logs(
+    db: Session,
+    *,
+    user_id: int | None = None,
+    action: str | None = None,
+    entity: str | None = None,
+    since: datetime | None = None,
+) -> int:
+    conditions = []
+    if user_id is not None:
+        conditions.append(AuditLog.usuario_id == user_id)
+    if action is not None:
+        conditions.append(AuditLog.accion == action)
+    if entity is not None:
+        conditions.append(AuditLog.entidad == entity)
+    if since is not None:
+        conditions.append(AuditLog.creado_en >= since)
+
+    return (
+        db.execute(select(func.count()).select_from(AuditLog).where(*conditions)).scalar()
+        or 0
+    )

@@ -2344,6 +2344,97 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/ai-assistant/chat:
+    post:
+      tags:
+      - AI Assistant
+      summary: Ask Ai Assistant
+      operationId: ask_ai_assistant_api_v1_ai_assistant_chat_post
+      security:
+      - OAuth2PasswordBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AIChatRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIChatResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/ai-assistant/usage:
+    get:
+      tags:
+      - AI Assistant
+      summary: Get Ai Assistant Usage
+      operationId: get_ai_assistant_usage_api_v1_ai_assistant_usage_get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 20
+          title: Per Page
+      - name: hours
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 720
+          minimum: 1
+          default: 24
+          title: Hours
+      - name: user_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: User Id
+      - name: action
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Action
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIAssistantUsageResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /health:
     get:
       summary: Health Check
@@ -2356,6 +2447,242 @@ paths:
               schema: {}
 components:
   schemas:
+    AIAssistantUsageItem:
+      properties:
+        id:
+          type: integer
+          title: Id
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        user_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: User Id
+        user_email:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User Email
+        user_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User Name
+        action:
+          type: string
+          title: Action
+        source:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Source
+        provider:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Provider
+        model:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Model
+        latency_ms:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Latency Ms
+        tokens_prompt:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Tokens Prompt
+        tokens_completion:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Tokens Completion
+        status_code:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Status Code
+        error_detail:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error Detail
+        client_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Client Id
+        irrigation_area_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Irrigation Area Id
+        hours_back:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Hours Back
+      type: object
+      required:
+      - id
+      - created_at
+      - action
+      title: AIAssistantUsageItem
+    AIAssistantUsageResponse:
+      properties:
+        page:
+          type: integer
+          title: Page
+        per_page:
+          type: integer
+          title: Per Page
+        total:
+          type: integer
+          title: Total
+        window_hours:
+          type: integer
+          title: Window Hours
+        summary:
+          $ref: '#/components/schemas/AIAssistantUsageSummary'
+        data:
+          items:
+            $ref: '#/components/schemas/AIAssistantUsageItem'
+          type: array
+          title: Data
+      type: object
+      required:
+      - page
+      - per_page
+      - total
+      - window_hours
+      - summary
+      - data
+      title: AIAssistantUsageResponse
+    AIAssistantUsageSummary:
+      properties:
+        total_requests:
+          type: integer
+          title: Total Requests
+          default: 0
+        successful_requests:
+          type: integer
+          title: Successful Requests
+          default: 0
+        ai_responses:
+          type: integer
+          title: Ai Responses
+          default: 0
+        fallback_responses:
+          type: integer
+          title: Fallback Responses
+          default: 0
+        error_requests:
+          type: integer
+          title: Error Requests
+          default: 0
+        rate_limited_requests:
+          type: integer
+          title: Rate Limited Requests
+          default: 0
+        total_prompt_tokens:
+          type: integer
+          title: Total Prompt Tokens
+          default: 0
+        total_completion_tokens:
+          type: integer
+          title: Total Completion Tokens
+          default: 0
+        avg_latency_ms:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Avg Latency Ms
+      type: object
+      title: AIAssistantUsageSummary
+    AIChatMessage:
+      properties:
+        role:
+          type: string
+          enum:
+          - user
+          - assistant
+          title: Role
+        content:
+          type: string
+          maxLength: 4000
+          minLength: 1
+          title: Content
+      type: object
+      required:
+      - role
+      - content
+      title: AIChatMessage
+    AIChatRequest:
+      properties:
+        message:
+          type: string
+          maxLength: 4000
+          minLength: 1
+          title: Message
+        client_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Client Id
+        irrigation_area_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Irrigation Area Id
+        hours_back:
+          type: integer
+          maximum: 720
+          minimum: 1
+          default: 72
+          title: Hours Back
+        history:
+          items:
+            $ref: '#/components/schemas/AIChatMessage'
+          type: array
+          maxItems: 20
+          title: History
+      type: object
+      required:
+      - message
+      title: AIChatRequest
+    AIChatResponse:
+      properties:
+        answer:
+          type: string
+          title: Answer
+        source:
+          type: string
+          title: Source
+        generated_at:
+          type: string
+          format: date-time
+          title: Generated At
+        metadata:
+          type: object
+          title: Metadata
+        widgets:
+          items:
+            type: object
+          type: array
+          title: Widgets
+      type: object
+      required:
+      - answer
+      - source
+      - generated_at
+      title: AIChatResponse
     AlertReadUpdate:
       properties:
         read:
