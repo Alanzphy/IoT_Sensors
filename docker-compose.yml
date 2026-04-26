@@ -146,7 +146,7 @@ services:
     restart: unless-stopped
     depends_on:
       backend:
-        condition: service_healthy
+        condition: service_started
     ports:
       - "${FRONTEND_PORT_BIND:-127.0.0.1:3022}:80"
     labels:
