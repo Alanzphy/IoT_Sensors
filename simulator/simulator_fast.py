@@ -315,9 +315,9 @@ def apply_quick_demo_defaults(args) -> None:
         args.admin_password = DEFAULT_ADMIN_PASSWORD
     args.ai_weekly_report = True
     if args.ai_weekly_report_interval == DEFAULT_AI_WEEKLY_REPORT_INTERVAL:
-        args.ai_weekly_report_interval = 75
+        args.ai_weekly_report_interval = 15
     if args.ai_weekly_report_initial_delay == DEFAULT_AI_WEEKLY_REPORT_INITIAL_DELAY:
-        args.ai_weekly_report_initial_delay = 30
+        args.ai_weekly_report_initial_delay = 15
     if not args.ai_weekly_report_force:
         args.ai_weekly_report_force = True
 
