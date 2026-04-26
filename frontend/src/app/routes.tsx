@@ -23,6 +23,7 @@ import { ProfilePage } from "./pages/client/ProfilePage";
 import { PropertyDetail } from "./pages/client/PropertyDetail";
 import { AlertDetailPage } from "./pages/shared/AlertDetailPage";
 import { AlertsCenterPage } from "./pages/shared/AlertsCenterPage";
+import { AIChatPage } from "./pages/shared/AIChatPage";
 import { AIReportDetailPage } from "./pages/shared/AIReportDetailPage";
 import { AIReportsPage } from "./pages/shared/AIReportsPage";
 
@@ -118,6 +119,10 @@ export const router = createBrowserRouter([
                 Component: AIReportsPage,
               },
               {
+                path: "asistente-ia",
+                Component: AIChatPage,
+              },
+              {
                 path: "reportes-ia/:reportId",
                 Component: AIReportDetailPage,
               },
@@ -199,6 +204,10 @@ export const router = createBrowserRouter([
               {
                 path: "reportes-ia",
                 Component: AIReportsPage,
+              },
+              {
+                path: "asistente-ia",
+                Component: AIChatPage,
               },
               {
                 path: "reportes-ia/:reportId",

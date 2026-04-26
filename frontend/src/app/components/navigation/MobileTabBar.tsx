@@ -6,6 +6,7 @@ import {
   Clock,
   Download,
   LayoutDashboard,
+  MessageCircle,
   MapPin,
   Moon,
   Radio,
@@ -39,6 +40,7 @@ export function MobileTabBar({ role }: MobileTabBarProps) {
     { path: "/cliente/mapa",           icon: MapPin,            label: "Mapa" },
     { path: "/cliente/historico",      icon: Clock,             label: "Histórico" },
     { path: "/cliente/exportar",       icon: Download,          label: "Exportar" },
+    { path: "/cliente/asistente-ia",   icon: MessageCircle,     label: "Chat IA" },
     { path: "/cliente/reportes-ia",    icon: Bot,               label: "IA" },
     { path: "/cliente/umbrales",       icon: SlidersHorizontal, label: "Umbrales" },
     { path: "/cliente/notificaciones", icon: BellRing,          label: "Notifs" },
@@ -52,6 +54,7 @@ export function MobileTabBar({ role }: MobileTabBarProps) {
     { path: "/admin/cultivos",  icon: Sprout,           label: "Catálogo" },
     { path: "/admin/umbrales",  icon: SlidersHorizontal, label: "Umbrales" },
     { path: "/admin/alertas",   icon: Bell,             label: "Alertas" },
+    { path: "/admin/asistente-ia", icon: MessageCircle, label: "Chat IA" },
     { path: "/admin/reportes-ia", icon: Bot,            label: "IA" },
     { path: "/admin/auditoria", icon: ClipboardList,    label: "Auditoría" },
   ];

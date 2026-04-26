@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
+    ai_assistant,
     ai_reports,
     alerts,
     audit_logs,
@@ -56,4 +57,9 @@ api_v1_router.include_router(
     ai_reports.router,
     prefix="/ai-reports",
     tags=["AI Reports"],
+)
+api_v1_router.include_router(
+    ai_assistant.router,
+    prefix="/ai-assistant",
+    tags=["AI Assistant"],
 )

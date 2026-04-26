@@ -9,6 +9,7 @@ import {
   Download,
   LayoutDashboard,
   LogOut,
+  MessageCircle,
   MapPin,
   Moon,
   Radio,
@@ -63,6 +64,7 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
     { path: "/cliente/historico",    icon: Clock,             label: "Histórico" },
     { path: "/cliente/exportar",     icon: Download,          label: "Exportar" },
     { path: "/cliente/alertas",      icon: Bell,              label: "Alertas" },
+    { path: "/cliente/asistente-ia", icon: MessageCircle,     label: "Asistente IA" },
     { path: "/cliente/reportes-ia",  icon: Bot,               label: "Reportes IA" },
     { path: "/cliente/umbrales",     icon: SlidersHorizontal, label: "Umbrales" },
     { path: "/cliente/notificaciones", icon: BellRing,        label: "Notificaciones" },
@@ -76,6 +78,7 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
     { path: "/admin/cultivos",  icon: Sprout,           label: "Catálogo" },
     { path: "/admin/umbrales",  icon: SlidersHorizontal, label: "Umbrales" },
     { path: "/admin/alertas",   icon: Bell,             label: "Alertas" },
+    { path: "/admin/asistente-ia", icon: MessageCircle, label: "Asistente IA" },
     { path: "/admin/reportes-ia", icon: Bot,            label: "Reportes IA" },
     { path: "/admin/auditoria", icon: ClipboardList,    label: "Auditoría" },
   ];

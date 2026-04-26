@@ -1,0 +1,243 @@
+import { Bot, Loader2, Send } from "lucide-react";
+import { FormEvent, useMemo, useState } from "react";
+import { useLocation } from "react-router";
+
+import { BentoCard } from "../../components/BentoCard";
+import { PageTransition } from "../../components/PageTransition";
+import { askAIAssistant, AIChatMessage } from "../../services/aiAssistant";
+
+interface ChatBubble {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  source?: "ai" | "fallback";
+  generatedAt?: string;
+}
+
+function formatDateTime(isoValue?: string): string {
+  if (!isoValue) return "";
+  const parsed = new Date(isoValue);
+  if (Number.isNaN(parsed.getTime())) return isoValue;
+  return parsed.toLocaleString("es-MX", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+export function AIChatPage() {
+  const location = useLocation();
+  const isAdmin = location.pathname.startsWith("/admin");
+
+  const [messages, setMessages] = useState<ChatBubble[]>([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const [hoursBack, setHoursBack] = useState(72);
+  const [clientIdScope, setClientIdScope] = useState("");
+  const [areaIdScope, setAreaIdScope] = useState("");
+
+  const contextHint = useMemo(() => {
+    if (isAdmin) {
+      return "Consulta operativa global o por cliente/área.";
+    }
+    return "Consulta operativa de tus predios y áreas.";
+  }, [isAdmin]);
+
+  const resetConversation = () => {
+    setMessages([]);
+    setErrorMessage(null);
+  };
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    const userText = input.trim();
+    if (!userText || loading) return;
+
+    const userMessage: ChatBubble = {
+      id: `user-${Date.now()}`,
+      role: "user",
+      content: userText,
+    };
+    const nextMessages = [...messages, userMessage];
+    setMessages(nextMessages);
+    setInput("");
+    setLoading(true);
+    setErrorMessage(null);
+
+    const history: AIChatMessage[] = nextMessages.slice(-8).map((item) => ({
+      role: item.role,
+      content: item.content,
+    }));
+
+    try {
+      const response = await askAIAssistant({
+        message: userText,
+        history,
+        hours_back: hoursBack,
+        client_id: isAdmin && clientIdScope ? Number(clientIdScope) : undefined,
+        irrigation_area_id: areaIdScope ? Number(areaIdScope) : undefined,
+      });
+
+      const assistantMessage: ChatBubble = {
+        id: `assistant-${Date.now()}`,
+        role: "assistant",
+        content: response.answer,
+        source: response.source,
+        generatedAt: response.generated_at,
+      };
+      setMessages((previous) => [...previous, assistantMessage]);
+    } catch (error) {
+      console.error("Failed to send AI assistant message", error);
+      setErrorMessage("No fue posible obtener respuesta del asistente IA.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <PageTransition>
+      <div className="min-h-screen p-4 md:p-6 lg:p-8">
+        <div className="mb-6">
+          <h1 className="text-2xl md:text-3xl font-serif text-[var(--text-title)]">
+            Asistente IA
+          </h1>
+          <p className="text-[var(--text-subtle)]">{contextHint}</p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
+          <BentoCard variant="light">
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm text-[var(--text-subtle)]">
+                  Ventana de análisis
+                </label>
+                <select
+                  value={hoursBack}
+                  onChange={(event) => setHoursBack(Number(event.target.value))}
+                  className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] px-3 py-2 text-[var(--text-body)]"
+                >
+                  <option value={24}>Últimas 24 horas</option>
+                  <option value={72}>Últimas 72 horas</option>
+                  <option value={168}>Últimos 7 días</option>
+                </select>
+              </div>
+
+              {isAdmin && (
+                <div>
+                  <label className="mb-1 block text-sm text-[var(--text-subtle)]">
+                    Cliente ID (opcional)
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={clientIdScope}
+                    onChange={(event) => setClientIdScope(event.target.value)}
+                    placeholder="Todos"
+                    className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] px-3 py-2 text-[var(--text-body)]"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="mb-1 block text-sm text-[var(--text-subtle)]">
+                  Área ID (opcional)
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  value={areaIdScope}
+                  onChange={(event) => setAreaIdScope(event.target.value)}
+                  placeholder="Todas"
+                  className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] px-3 py-2 text-[var(--text-body)]"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={resetConversation}
+                className="w-full rounded-full border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] px-4 py-2 text-sm font-medium text-[var(--text-body)] hover:bg-[var(--hover-overlay)]"
+              >
+                Reiniciar conversación
+              </button>
+            </div>
+          </BentoCard>
+
+          <BentoCard variant="light" className="flex min-h-[66vh] flex-col">
+            <div className="mb-4 flex items-center gap-2 text-sm text-[var(--text-subtle)]">
+              <Bot className="h-4 w-4" />
+              Chat operativo con datos del sistema
+            </div>
+
+            <div className="flex-1 space-y-3 overflow-y-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] p-3">
+              {messages.length === 0 ? (
+                <div className="text-sm text-[var(--text-subtle)]">
+                  Escribe una consulta, por ejemplo: “¿Qué áreas están con riesgo de
+                  inactividad y cuál priorizo hoy?”
+                </div>
+              ) : (
+                messages.map((message) => {
+                  const isUser = message.role === "user";
+                  return (
+                    <div
+                      key={message.id}
+                      className={`rounded-xl border px-3 py-2 ${
+                        isUser
+                          ? "ml-auto max-w-[85%] border-[var(--accent-primary)]/30 bg-[var(--accent-gold-glow)]"
+                          : "mr-auto max-w-[95%] border-[var(--border-subtle)] bg-[var(--surface-app)]"
+                      }`}
+                    >
+                      <p className="whitespace-pre-wrap text-sm text-[var(--text-body)]">
+                        {message.content}
+                      </p>
+                      {!isUser && (
+                        <div className="mt-2 text-xs text-[var(--text-subtle)]">
+                          Fuente: {message.source === "ai" ? "IA" : "Fallback"}{" "}
+                          {message.generatedAt ? `· ${formatDateTime(message.generatedAt)}` : ""}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+
+              {loading && (
+                <div className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-app)] px-3 py-2 text-sm text-[var(--text-subtle)]">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Pensando respuesta...
+                </div>
+              )}
+            </div>
+
+            {errorMessage && (
+              <div className="mt-3 rounded-xl border border-[var(--status-danger)]/30 bg-[var(--status-danger-bg)] px-3 py-2 text-sm text-[var(--status-danger)]">
+                {errorMessage}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="mt-4 flex gap-2">
+              <textarea
+                value={input}
+                onChange={(event) => setInput(event.target.value)}
+                placeholder="Escribe tu pregunta..."
+                rows={3}
+                className="w-full resize-none rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] px-3 py-2 text-sm text-[var(--text-body)]"
+              />
+              <button
+                type="submit"
+                disabled={loading || !input.trim()}
+                className="inline-flex h-fit items-center gap-2 rounded-full bg-[var(--accent-primary)] px-4 py-2 text-sm font-medium text-[var(--text-inverted)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Send className="h-4 w-4" />
+                Enviar
+              </button>
+            </form>
+          </BentoCard>
+        </div>
+      </div>
+    </PageTransition>
+  );
+}
