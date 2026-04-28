@@ -1,6 +1,13 @@
 import { formatDistanceToNowStrict } from "date-fns";
 import { es } from "date-fns/locale";
-import { AlertTriangle, Bell, Check, Loader2, RadioTower } from "lucide-react";
+import {
+  AlertTriangle,
+  Bell,
+  Check,
+  CheckCheck,
+  Loader2,
+  RadioTower,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
 
@@ -9,6 +16,7 @@ import {
     AlertItem,
     getUnreadAlertsCount,
     listAlerts,
+    markAllAlertsRead,
     markAlertRead,
 } from "../../services/alerts";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
@@ -54,6 +62,7 @@ export function AlertsPopover({
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [updatingIds, setUpdatingIds] = useState<Set<number>>(new Set());
+  const [markingAllRead, setMarkingAllRead] = useState(false);
 
   const visibleUnreadCount = useMemo(
     () => alerts.filter((item) => !item.read).length,
@@ -136,6 +145,21 @@ export function AlertsPopover({
     }
   };
 
+  const handleMarkAllRead = async () => {
+    setMarkingAllRead(true);
+    setErrorMessage(null);
+
+    try {
+      await markAllAlertsRead();
+      await loadAlerts();
+    } catch (error) {
+      console.error("Failed to mark all alerts as read", error);
+      setErrorMessage("No fue posible marcar todas como leídas");
+    } finally {
+      setMarkingAllRead(false);
+    }
+  };
+
   return (
     <div className={className + " " + fixedBottomRightClassName}>
       <Popover open={open} onOpenChange={setOpen}>
@@ -164,7 +188,20 @@ export function AlertsPopover({
           <div className="border-b border-[var(--border-strong)] px-4 py-3">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-[var(--text-main)]">Alertas del sistema</h3>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={handleMarkAllRead}
+                  disabled={markingAllRead || unreadCount === 0}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-[var(--accent-primary)] hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {markingAllRead ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <CheckCheck className="h-3 w-3" />
+                  )}
+                  Marcar todas
+                </button>
                 <button
                   type="button"
                   onClick={loadAlerts}
@@ -229,7 +266,7 @@ export function AlertsPopover({
                         {!item.read && (
                           <button
                             type="button"
-                            disabled={isUpdating}
+                            disabled={isUpdating || markingAllRead}
                             onClick={() => handleMarkRead(item.id)}
                             className="inline-flex items-center gap-1 rounded-full border border-[var(--border-strong)] bg-[var(--bg-elevated)] px-2 py-1 text-[11px] font-medium text-[var(--text-main)] hover:bg-[var(--bg-surface)] disabled:cursor-not-allowed disabled:opacity-60"
                           >

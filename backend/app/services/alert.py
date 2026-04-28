@@ -1008,10 +1008,8 @@ def get_alert(db: Session, alert_id: int) -> Alert:
     return alert
 
 
-def list_alerts(
-    db: Session,
-    page: int,
-    per_page: int,
+def _build_alert_conditions(
+    *,
     irrigation_area_id: int | None = None,
     node_id: int | None = None,
     severity: str | None = None,
@@ -1020,12 +1018,13 @@ def list_alerts(
     start_date: date | None = None,
     end_date: date | None = None,
     allowed_area_ids: list[int] | None = None,
-) -> tuple[list[Alert], int]:
+    only_unread: bool = False,
+) -> list:
     conditions = []
 
     if allowed_area_ids is not None:
         if not allowed_area_ids:
-            return [], 0
+            return [Alert.id == -1]
         conditions.append(Alert.area_riego_id.in_(allowed_area_ids))
 
     if irrigation_area_id is not None:
@@ -1046,6 +1045,35 @@ def list_alerts(
         conditions.append(
             Alert.marca_tiempo <= datetime.combine(end_date, datetime.max.time())
         )
+    if only_unread:
+        conditions.append(Alert.leida.is_(False))
+
+    return conditions
+
+
+def list_alerts(
+    db: Session,
+    page: int,
+    per_page: int,
+    irrigation_area_id: int | None = None,
+    node_id: int | None = None,
+    severity: str | None = None,
+    read: bool | None = None,
+    alert_type: str | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
+    allowed_area_ids: list[int] | None = None,
+) -> tuple[list[Alert], int]:
+    conditions = _build_alert_conditions(
+        irrigation_area_id=irrigation_area_id,
+        node_id=node_id,
+        severity=severity,
+        read=read,
+        alert_type=alert_type,
+        start_date=start_date,
+        end_date=end_date,
+        allowed_area_ids=allowed_area_ids,
+    )
 
     total = (
         db.execute(select(func.count()).select_from(Alert).where(*conditions)).scalar()
@@ -1074,29 +1102,16 @@ def count_unread_alerts(
     end_date: date | None = None,
     allowed_area_ids: list[int] | None = None,
 ) -> int:
-    conditions = [Alert.leida.is_(False)]
-
-    if allowed_area_ids is not None:
-        if not allowed_area_ids:
-            return 0
-        conditions.append(Alert.area_riego_id.in_(allowed_area_ids))
-
-    if irrigation_area_id is not None:
-        conditions.append(Alert.area_riego_id == irrigation_area_id)
-    if node_id is not None:
-        conditions.append(Alert.nodo_id == node_id)
-    if severity is not None:
-        conditions.append(Alert.severidad == severity)
-    if alert_type is not None:
-        conditions.append(Alert.tipo == alert_type)
-    if start_date is not None:
-        conditions.append(
-            Alert.marca_tiempo >= datetime.combine(start_date, datetime.min.time())
-        )
-    if end_date is not None:
-        conditions.append(
-            Alert.marca_tiempo <= datetime.combine(end_date, datetime.max.time())
-        )
+    conditions = _build_alert_conditions(
+        irrigation_area_id=irrigation_area_id,
+        node_id=node_id,
+        severity=severity,
+        alert_type=alert_type,
+        start_date=start_date,
+        end_date=end_date,
+        allowed_area_ids=allowed_area_ids,
+        only_unread=True,
+    )
 
     return (
         db.execute(select(func.count()).select_from(Alert).where(*conditions)).scalar()
@@ -1111,6 +1126,46 @@ def mark_alert_read(db: Session, alert_id: int, read: bool = True) -> Alert:
     db.commit()
     db.refresh(alert)
     return alert
+
+
+def mark_alerts_read_bulk(
+    db: Session,
+    *,
+    irrigation_area_id: int | None = None,
+    node_id: int | None = None,
+    severity: str | None = None,
+    alert_type: str | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
+    allowed_area_ids: list[int] | None = None,
+) -> int:
+    conditions = _build_alert_conditions(
+        irrigation_area_id=irrigation_area_id,
+        node_id=node_id,
+        severity=severity,
+        alert_type=alert_type,
+        start_date=start_date,
+        end_date=end_date,
+        allowed_area_ids=allowed_area_ids,
+        only_unread=True,
+    )
+    alerts = list(
+        db.execute(
+            select(Alert)
+            .where(*conditions)
+            .order_by(Alert.marca_tiempo.desc(), Alert.id.desc())
+        ).scalars()
+    )
+    if not alerts:
+        return 0
+
+    read_at = datetime.now(UTC).replace(tzinfo=None)
+    for item in alerts:
+        item.leida = True
+        item.leida_en = read_at
+
+    db.commit()
+    return len(alerts)
 
 
 def generate_alert_recommendation(

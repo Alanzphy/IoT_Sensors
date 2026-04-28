@@ -77,3 +77,7 @@ class NotificationDispatchResponse(BaseModel):
 
 class AlertUnreadCountResponse(BaseModel):
     unread_count: int
+
+
+class AlertBulkReadResponse(BaseModel):
+    updated_count: int

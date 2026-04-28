@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   Bell,
   Check,
+  CheckCheck,
   ChevronLeft,
   ChevronRight,
   Loader2,
@@ -19,7 +20,12 @@ import { ReadingDateRangeSelector } from "../../components/ReadingDateRangeSelec
 import { SelectionScopeBar } from "../../components/selection/SelectionScopeBar";
 import { useOptionalSelection } from "../../context/SelectionContext";
 import { usePageVisibility } from "../../hooks/usePageVisibility";
-import { AlertItem, listAlerts, markAlertRead } from "../../services/alerts";
+import {
+  AlertItem,
+  listAlerts,
+  markAlertRead,
+  markAllAlertsRead,
+} from "../../services/alerts";
 
 type ReadFilter = "all" | "read" | "unread";
 
@@ -56,6 +62,7 @@ export function AlertsCenterPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [updatingIds, setUpdatingIds] = useState<Set<number>>(new Set());
+  const [markingAllRead, setMarkingAllRead] = useState(false);
 
   const [severity, setSeverity] = useState<"" | AlertItem["severity"]>("");
   const [alertType, setAlertType] = useState<"" | AlertItem["type"]>("");
@@ -150,6 +157,27 @@ export function AlertsCenterPage() {
         next.delete(alertId);
         return next;
       });
+    }
+  };
+
+  const markAllAsRead = async () => {
+    setMarkingAllRead(true);
+    setErrorMessage(null);
+
+    try {
+      await markAllAlertsRead({
+        irrigation_area_id: scopedAreaId || undefined,
+        severity: severity || undefined,
+        alert_type: alertType || undefined,
+        start_date: startDate || undefined,
+        end_date: endDate || undefined,
+      });
+      await fetchAlerts();
+    } catch (error) {
+      console.error("Failed to mark all alerts as read", error);
+      setErrorMessage("No fue posible marcar todas las alertas como leídas");
+    } finally {
+      setMarkingAllRead(false);
     }
   };
 
@@ -280,13 +308,26 @@ export function AlertsCenterPage() {
       </BentoCard>
 
       <BentoCard variant="light">
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <div className="inline-flex items-center gap-2 text-sm text-[var(--text-subtle)]">
             <Bell className="h-4 w-4" />
             {total} alertas · {unreadOnPage} no leidas en esta pagina
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={markAllAsRead}
+              disabled={markingAllRead || total === 0 || readFilter === "read"}
+              className="inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] px-3 py-1.5 text-xs font-medium text-[var(--text-body)] hover:bg-[var(--hover-overlay)] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {markingAllRead ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <CheckCheck className="h-3.5 w-3.5" />
+              )}
+              Marcar todas leidas
+            </button>
             <button
               type="button"
               onClick={goToPreviousPage}

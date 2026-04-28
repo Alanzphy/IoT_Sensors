@@ -11,6 +11,7 @@ from app.models.irrigation_area import IrrigationArea
 from app.models.property import Property
 from app.models.user import User
 from app.schemas.alert import (
+    AlertBulkReadResponse,
     AlertReadUpdate,
     AlertRecommendationGenerateRequest,
     AlertRecommendationResponse,
@@ -149,6 +150,49 @@ def get_unread_alert_count(
         allowed_area_ids=allowed_area_ids,
     )
     return AlertUnreadCountResponse(unread_count=unread_count)
+
+
+@router.post("/read-all", response_model=AlertBulkReadResponse)
+def mark_all_alerts_read(
+    irrigation_area_id: int | None = Query(None),
+    node_id: int | None = Query(None),
+    severity: str | None = Query(None),
+    alert_type: str | None = Query(None),
+    start_date: date | None = Query(None),
+    end_date: date | None = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    allowed_area_ids: list[int] | None = None
+
+    if current_user.rol != "admin":
+        allowed_area_ids = _get_client_area_ids(current_user, db)
+        if irrigation_area_id is not None:
+            _validate_client_area_access(current_user, db, irrigation_area_id)
+
+    updated_count = alert_service.mark_alerts_read_bulk(
+        db=db,
+        irrigation_area_id=irrigation_area_id,
+        node_id=node_id,
+        severity=severity,
+        alert_type=alert_type,
+        start_date=start_date,
+        end_date=end_date,
+        allowed_area_ids=allowed_area_ids,
+    )
+    audit_log_service.create_audit_log(
+        db,
+        user_id=current_user.id,
+        action="update",
+        entity="alert",
+        detail=(
+            "Bulk read update "
+            f"(updated_count={updated_count}, irrigation_area_id={irrigation_area_id}, "
+            f"node_id={node_id}, severity={severity}, alert_type={alert_type}, "
+            f"start_date={start_date}, end_date={end_date})"
+        ),
+    )
+    return AlertBulkReadResponse(updated_count=updated_count)
 
 
 @router.get("/{alert_id}", response_model=AlertResponse)

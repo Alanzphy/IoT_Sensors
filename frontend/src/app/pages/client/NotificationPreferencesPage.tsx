@@ -304,11 +304,11 @@ export function NotificationPreferencesPage() {
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
           <button
             type="button"
             onClick={() => void loadData()}
-            className="inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] px-4 py-2 text-sm font-medium text-[var(--text-body)] hover:bg-[var(--hover-overlay)]"
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] px-4 py-2 text-sm font-medium text-[var(--text-body)] hover:bg-[var(--hover-overlay)]"
           >
             <RefreshCw className="h-4 w-4" />
             Recargar
@@ -317,7 +317,7 @@ export function NotificationPreferencesPage() {
             type="button"
             onClick={saveChanges}
             disabled={saving}
-            className="inline-flex items-center gap-2 rounded-full bg-[var(--accent-primary)] px-4 py-2 text-sm font-medium text-[var(--text-inverted)] hover:opacity-90 disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-[var(--accent-primary)] px-4 py-2 text-sm font-medium text-[var(--text-inverted)] hover:opacity-90 disabled:opacity-60"
           >
             {saving ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -341,7 +341,7 @@ export function NotificationPreferencesPage() {
       )}
 
       <BentoCard variant="light" className="mb-6">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg text-[var(--text-title)]">Interruptor global</h2>
             <p className="text-sm text-[var(--text-subtle)]">
@@ -390,7 +390,7 @@ export function NotificationPreferencesPage() {
                           key={alertType.value}
                           className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card-secondary)] p-3"
                         >
-                          <div className="mb-3 flex items-start justify-between gap-3">
+                          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                             <div>
                               <h4 className="text-sm font-semibold text-[var(--text-title)]">
                                 {alertType.label}
@@ -399,13 +399,13 @@ export function NotificationPreferencesPage() {
                                 {getEnabledCountByAlertType(area.id, alertType.value)} de 6 activas
                               </p>
                             </div>
-                            <div className="flex flex-wrap justify-end gap-1.5">
+                            <div className="grid w-full grid-cols-2 gap-1.5 sm:flex sm:w-auto sm:flex-wrap sm:justify-end">
                               <button
                                 type="button"
                                 onClick={() =>
                                   applyAlertTypeBulkAction(area.id, alertType.value, "enable_all")
                                 }
-                                className="rounded-full border border-[var(--border-subtle)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-body)] hover:bg-[var(--hover-overlay)]"
+                                className="w-full rounded-full border border-[var(--border-subtle)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-body)] hover:bg-[var(--hover-overlay)] sm:w-auto"
                               >
                                 Todo ON
                               </button>
@@ -414,7 +414,7 @@ export function NotificationPreferencesPage() {
                                 onClick={() =>
                                   applyAlertTypeBulkAction(area.id, alertType.value, "disable_all")
                                 }
-                                className="rounded-full border border-[var(--border-subtle)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-body)] hover:bg-[var(--hover-overlay)]"
+                                className="w-full rounded-full border border-[var(--border-subtle)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-body)] hover:bg-[var(--hover-overlay)] sm:w-auto"
                               >
                                 Todo OFF
                               </button>
@@ -423,7 +423,7 @@ export function NotificationPreferencesPage() {
                                 onClick={() =>
                                   applyAlertTypeBulkAction(area.id, alertType.value, "enable_email")
                                 }
-                                className="rounded-full border border-[var(--border-subtle)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-body)] hover:bg-[var(--hover-overlay)]"
+                                className="w-full rounded-full border border-[var(--border-subtle)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-body)] hover:bg-[var(--hover-overlay)] sm:w-auto"
                               >
                                 Email ON
                               </button>
@@ -436,16 +436,15 @@ export function NotificationPreferencesPage() {
                                     "enable_whatsapp",
                                   )
                                 }
-                                className="rounded-full border border-[var(--border-subtle)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-body)] hover:bg-[var(--hover-overlay)]"
+                                className="w-full rounded-full border border-[var(--border-subtle)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-body)] hover:bg-[var(--hover-overlay)] sm:w-auto"
                               >
                                 WhatsApp ON
                               </button>
                             </div>
                           </div>
 
-                          <div className="overflow-x-auto">
-                            <div className="min-w-[420px] space-y-2">
-                              <div className="grid grid-cols-[130px_repeat(3,minmax(0,1fr))] items-center gap-2">
+                          <div className="space-y-2">
+                            <div className="grid grid-cols-[118px_repeat(3,minmax(0,1fr))] items-center gap-2 sm:grid-cols-[130px_repeat(3,minmax(0,1fr))]">
                                 <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-subtle)]">
                                   Canal
                                 </span>
@@ -459,73 +458,72 @@ export function NotificationPreferencesPage() {
                                 ))}
                               </div>
 
-                              {CHANNELS.map((channel) => {
-                                const channelEnabled = isChannelFullyEnabled(
-                                  area.id,
-                                  alertType.value,
-                                  channel.value,
-                                );
+                            {CHANNELS.map((channel) => {
+                              const channelEnabled = isChannelFullyEnabled(
+                                area.id,
+                                alertType.value,
+                                channel.value,
+                              );
 
-                                return (
-                                  <div
-                                    key={channel.value}
-                                    className="grid grid-cols-[130px_repeat(3,minmax(0,1fr))] items-center gap-2"
-                                  >
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        setChannelEnabled(
-                                          area.id,
-                                          alertType.value,
-                                          channel.value,
-                                          !channelEnabled,
-                                        )
-                                      }
-                                      className={`inline-flex items-center justify-between rounded-lg border px-2.5 py-2 text-xs font-medium transition-colors ${
-                                        channelEnabled
-                                          ? "border-[var(--accent-primary)] bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]"
-                                          : "border-[var(--border-subtle)] text-[var(--text-body)] hover:bg-[var(--hover-overlay)]"
-                                      }`}
-                                    >
-                                      <span>{channel.label}</span>
-                                      <span>{channelEnabled ? "On" : "Off"}</span>
-                                    </button>
-
-                                    {SEVERITIES.map((severity) => {
-                                      const checked = getCurrentValue(
+                              return (
+                                <div
+                                  key={channel.value}
+                                  className="grid grid-cols-[118px_repeat(3,minmax(0,1fr))] items-center gap-2 sm:grid-cols-[130px_repeat(3,minmax(0,1fr))]"
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setChannelEnabled(
                                         area.id,
                                         alertType.value,
-                                        severity.value,
                                         channel.value,
-                                      );
+                                        !channelEnabled,
+                                      )
+                                    }
+                                    className={`inline-flex items-center justify-between rounded-lg border px-2.5 py-2 text-xs font-medium transition-colors ${
+                                      channelEnabled
+                                        ? "border-[var(--accent-primary)] bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]"
+                                        : "border-[var(--border-subtle)] text-[var(--text-body)] hover:bg-[var(--hover-overlay)]"
+                                    }`}
+                                  >
+                                    <span>{channel.label}</span>
+                                    <span>{channelEnabled ? "On" : "Off"}</span>
+                                  </button>
 
-                                      return (
-                                        <button
-                                          key={severity.value}
-                                          type="button"
-                                          aria-pressed={checked}
-                                          onClick={() =>
-                                            togglePreference(
-                                              area.id,
-                                              alertType.value,
-                                              severity.value,
-                                              channel.value,
-                                            )
-                                          }
-                                          className={`inline-flex h-9 items-center justify-center rounded-lg border text-xs font-semibold transition-colors ${
-                                            checked
-                                              ? "border-[var(--accent-primary)] bg-[var(--accent-primary)] text-[var(--text-inverted)]"
-                                              : "border-[var(--border-subtle)] bg-[var(--surface-card-primary)] text-[var(--text-subtle)] hover:bg-[var(--hover-overlay)]"
-                                          }`}
-                                        >
-                                          {checked ? <Check className="h-3.5 w-3.5" /> : "--"}
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                );
-                              })}
-                            </div>
+                                  {SEVERITIES.map((severity) => {
+                                    const checked = getCurrentValue(
+                                      area.id,
+                                      alertType.value,
+                                      severity.value,
+                                      channel.value,
+                                    );
+
+                                    return (
+                                      <button
+                                        key={severity.value}
+                                        type="button"
+                                        aria-pressed={checked}
+                                        onClick={() =>
+                                          togglePreference(
+                                            area.id,
+                                            alertType.value,
+                                            severity.value,
+                                            channel.value,
+                                          )
+                                        }
+                                        className={`inline-flex h-9 items-center justify-center rounded-lg border text-xs font-semibold transition-colors ${
+                                          checked
+                                            ? "border-[var(--accent-primary)] bg-[var(--accent-primary)] text-[var(--text-inverted)]"
+                                            : "border-[var(--border-subtle)] bg-[var(--surface-card-primary)] text-[var(--text-subtle)] hover:bg-[var(--hover-overlay)]"
+                                        }`}
+                                      >
+                                        {checked ? <Check className="h-3.5 w-3.5" /> : "--"}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       ))}
