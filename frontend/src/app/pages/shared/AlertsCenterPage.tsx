@@ -55,6 +55,8 @@ export function AlertsCenterPage() {
   const selection = useOptionalSelection();
   const isPageVisible = usePageVisibility();
   const loadingRef = useRef(false);
+  const knownAlertIdsRef = useRef<Set<number>>(new Set());
+  const animationTimeoutsRef = useRef<number[]>([]);
   const scopedAreaId = selection?.selectedArea?.id;
 
   const [loading, setLoading] = useState(false);
@@ -64,6 +66,7 @@ export function AlertsCenterPage() {
   const [total, setTotal] = useState(0);
   const [updatingIds, setUpdatingIds] = useState<Set<number>>(new Set());
   const [markingAllRead, setMarkingAllRead] = useState(false);
+  const [animatedIds, setAnimatedIds] = useState<Set<number>>(new Set());
 
   const [severity, setSeverity] = useState<"" | AlertItem["severity"]>("");
   const [alertType, setAlertType] = useState<"" | AlertItem["type"]>("");
@@ -84,11 +87,15 @@ export function AlertsCenterPage() {
     [items],
   );
 
-  const fetchAlerts = useCallback(async () => {
+  const fetchAlerts = useCallback(async (options?: { silent?: boolean; animateNew?: boolean }) => {
+    const silent = options?.silent === true;
+    const animateNew = options?.animateNew === true;
     if (loadingRef.current) return;
     loadingRef.current = true;
-    if (items.length === 0) setLoading(true);
-    setErrorMessage(null);
+    if (!silent) {
+      setLoading(true);
+      setErrorMessage(null);
+    }
 
     try {
       const response = await listAlerts({
@@ -107,20 +114,58 @@ export function AlertsCenterPage() {
         end_date: endDate || undefined,
       });
 
-      setItems(response.data ?? []);
+      const nextItems = response.data ?? [];
+      if (animateNew) {
+        const knownIds = knownAlertIdsRef.current;
+        if (knownIds.size > 0) {
+          const newIds = nextItems
+            .map((item) => item.id)
+            .filter((id) => !knownIds.has(id));
+
+          if (newIds.length > 0) {
+            setAnimatedIds((previous) => {
+              const next = new Set(previous);
+              for (const id of newIds) next.add(id);
+              return next;
+            });
+
+            const timeoutId = window.setTimeout(() => {
+              setAnimatedIds((previous) => {
+                const next = new Set(previous);
+                for (const id of newIds) next.delete(id);
+                return next;
+              });
+            }, 650);
+            animationTimeoutsRef.current.push(timeoutId);
+          }
+        }
+      } else {
+        setAnimatedIds(new Set());
+      }
+
+      knownAlertIdsRef.current = new Set(nextItems.map((item) => item.id));
+      setItems(nextItems);
       setTotal(response.total ?? 0);
     } catch (error) {
       console.error("Failed to fetch alerts", error);
-      setErrorMessage("No fue posible cargar las alertas");
+      if (!silent) {
+        setErrorMessage("No fue posible cargar las alertas");
+      }
     } finally {
       loadingRef.current = false;
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   }, [page, severity, alertType, readFilter, startDate, endDate, scopedAreaId]);
 
   useEffect(() => {
-    setItems([]);
-  }, [severity, alertType, readFilter, startDate, endDate, scopedAreaId]);
+    return () => {
+      for (const timeoutId of animationTimeoutsRef.current) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!isPageVisible) return;
@@ -131,7 +176,7 @@ export function AlertsCenterPage() {
     if (!isPageVisible) return;
 
     const intervalId = window.setInterval(() => {
-      void fetchAlerts();
+      void fetchAlerts({ silent: true, animateNew: true });
     }, LIVE_REFRESH_INTERVAL_MS);
 
     return () => {
@@ -385,6 +430,8 @@ export function AlertsCenterPage() {
                 <article
                   key={item.id}
                   className={`rounded-xl border px-3 py-3 transition-colors ${
+                    animatedIds.has(item.id) ? "animate-fade-in-down" : ""
+                  } ${
                     item.read
                       ? "border-[var(--border-subtle)] bg-[var(--surface-card-primary)]"
                       : "border-[var(--status-warning)]/45 bg-[var(--status-warning-bg)]"
