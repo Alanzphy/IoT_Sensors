@@ -7,6 +7,7 @@ import {
   Clock,
   Download,
   LayoutDashboard,
+  LogOut,
   MessageCircle,
   MapPin,
   Moon,
@@ -18,7 +19,8 @@ import {
   Users,
   Warehouse,
 } from "lucide-react";
-import { Link, useLocation } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
+import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import { preloadMapRoutes } from "../../services/routePreload";
 
@@ -28,6 +30,8 @@ interface MobileTabBarProps {
 
 export function MobileTabBar({ role }: MobileTabBarProps) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
   const maybePreloadMaps = (path: string) => {
@@ -64,6 +68,11 @@ export function MobileTabBar({ role }: MobileTabBarProps) {
   ];
 
   const tabs = role === "client" ? clientTabs : adminTabs;
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
 
   return (
     <div className="fixed bottom-0 left-0 right-0 glass-sidebar border-t border-sidebar-border safe-area-inset-bottom z-50">
@@ -133,6 +142,22 @@ export function MobileTabBar({ role }: MobileTabBarProps) {
             )}
             <span className="text-[10px] font-medium leading-tight text-sidebar-foreground/70 whitespace-nowrap">
               Tema
+            </span>
+          </button>
+
+          <button
+            onClick={handleLogout}
+            className={`
+              flex flex-col items-center gap-0.5 px-3 py-2 rounded-2xl
+              transition-colors flex-shrink-0 min-w-[56px]
+              focus:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring
+              hover:bg-sidebar-accent
+            `}
+            aria-label="Cerrar sesión"
+          >
+            <LogOut className="w-5 h-5 text-sidebar-foreground/70" />
+            <span className="text-[10px] font-medium leading-tight text-sidebar-foreground/70 whitespace-nowrap">
+              Salir
             </span>
           </button>
         </div>

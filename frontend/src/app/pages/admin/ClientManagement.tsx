@@ -1,4 +1,4 @@
-import { ChevronRight, Pencil, Plus, Search, Users, XCircle } from "lucide-react";
+import { ChevronRight, Pencil, Plus, Search, Trash2, Users, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { BentoCard } from "../../components/BentoCard";
@@ -115,6 +115,18 @@ export function ClientManagement() {
     }
   };
 
+  const handleDelete = async (clientId: number) => {
+    if (!window.confirm("¿Seguro que deseas eliminar este cliente?")) return;
+
+    try {
+      await api.delete(`/clients/${clientId}`);
+      fetchClients();
+      showToast("Cliente eliminado", "success");
+    } catch (err: any) {
+      showToast(err.response?.data?.detail || "Error deleting client", "error");
+    }
+  };
+
   const filteredClients = clients.filter(c => {
     const term = searchTerm.toLowerCase();
     return (
@@ -198,6 +210,13 @@ export function ClientManagement() {
                        <Link to={`/admin/clientes/${client.id}/predios`}>
                          <PillButton variant="outline" className="px-3 py-1 text-xs">Predios <ChevronRight className="w-3 h-3 ml-1" /></PillButton>
                        </Link>
+                       <PillButton
+                         variant="outline"
+                         className="px-3 py-1 text-xs border-[var(--status-danger)]/40 text-[var(--status-danger)] hover:bg-[var(--status-danger-bg)]"
+                         onClick={() => handleDelete(client.id)}
+                       >
+                         Borrar <Trash2 className="w-3 h-3 ml-1" />
+                       </PillButton>
                     </td>
                   </tr>
                 )})}
@@ -252,6 +271,15 @@ export function ClientManagement() {
               <Link to={`/admin/clientes/${client.id}/predios`}>
                  <PillButton variant="outline" className="w-full justify-center">Ver Predios <ChevronRight className="w-4 h-4 ml-1" /></PillButton>
               </Link>
+            </div>
+            <div className="mt-2">
+              <PillButton
+                variant="outline"
+                className="w-full justify-center border-[var(--status-danger)]/40 text-[var(--status-danger)] hover:bg-[var(--status-danger-bg)]"
+                onClick={() => handleDelete(client.id)}
+              >
+                Borrar Cliente <Trash2 className="w-4 h-4 ml-1" />
+              </PillButton>
             </div>
           </BentoCard>
         )})}

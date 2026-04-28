@@ -15,12 +15,16 @@ interface CropType {
 
 export function CropTypeManagement() {
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
   const [cropTypes, setCropTypes] = useState<CropType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [editingCropId, setEditingCropId] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
 
   const fetchData = async () => {
     try {
@@ -67,6 +71,34 @@ export function CropTypeManagement() {
       fetchData();
     } catch (err: any) {
       setError(err.response?.data?.detail || "Error deleting crop type");
+      setLoading(false);
+    }
+  };
+
+  const openEdit = (crop: CropType) => {
+    setEditingCropId(crop.id);
+    setEditName(crop.name || "");
+    setEditDescription(crop.description || "");
+    setShowEditForm(true);
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCropId || !editName.trim()) return;
+
+    try {
+      setLoading(true);
+      await api.put(`/crop-types/${editingCropId}`, {
+        name: editName,
+        description: editDescription,
+      });
+      setShowEditForm(false);
+      setEditingCropId(null);
+      setEditName("");
+      setEditDescription("");
+      fetchData();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Error updating crop type");
       setLoading(false);
     }
   };
@@ -118,8 +150,13 @@ export function CropTypeManagement() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
-                  <button type="button" className="p-2 rounded-full hover:bg-[var(--hover-overlay)] transition-colors" title="Edición disponible próximamente">
-                    <Edit className="w-4 h-4 text-[var(--text-muted)]/30" />
+                  <button
+                    type="button"
+                    onClick={() => openEdit(crop)}
+                    className="p-2 rounded-full hover:bg-[var(--hover-overlay)] transition-colors"
+                    title="Editar cultivo"
+                  >
+                    <Edit className="w-4 h-4 text-[var(--text-subtle)]" />
                   </button>
                   <button
                     type="button"
@@ -192,6 +229,65 @@ export function CropTypeManagement() {
                 </PillButton>
                 <PillButton variant="primary" type="submit" className="flex-1" disabled={loading}>
                   {loading ? 'Creando...' : 'Crear Cultivo'}
+                </PillButton>
+              </div>
+            </form>
+          </BentoCard>
+        </div>
+      )}
+
+      {showEditForm && (
+        <div className="fixed inset-0 bg-[var(--surface-page)]/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <BentoCard variant="light" className="w-full max-w-md">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-xl font-serif text-[var(--text-title)]">Editar Tipo de Cultivo</h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEditForm(false);
+                  setEditingCropId(null);
+                }}
+                className="rounded-full p-1 text-[var(--text-subtle)] hover:bg-[var(--hover-overlay)] transition-colors"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+            <form onSubmit={handleUpdate} className="space-y-4">
+              <div>
+                <label className="block text-sm text-[var(--text-subtle)] mb-2">Nombre del Cultivo</label>
+                <input
+                  type="text"
+                  required
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--surface-panel)] border border-[var(--border-strong)] text-[var(--text-body)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-[var(--text-subtle)] mb-2">Descripción</label>
+                <textarea
+                  rows={3}
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--surface-panel)] border border-[var(--border-strong)] text-[var(--text-body)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] resize-none"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <PillButton
+                  variant="secondary"
+                  type="button"
+                  className="flex-1"
+                  onClick={() => {
+                    setShowEditForm(false);
+                    setEditingCropId(null);
+                  }}
+                >
+                  Cancelar
+                </PillButton>
+                <PillButton variant="primary" type="submit" className="flex-1" disabled={loading}>
+                  {loading ? "Guardando..." : "Guardar Cambios"}
                 </PillButton>
               </div>
             </form>

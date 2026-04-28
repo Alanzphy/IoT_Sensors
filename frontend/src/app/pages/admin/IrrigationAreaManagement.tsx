@@ -1,4 +1,4 @@
-import { MoreVertical, Plus, XCircle } from "lucide-react";
+import { Pencil, Plus, Trash2, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { BentoCard } from "../../components/BentoCard";
@@ -37,8 +37,16 @@ export function IrrigationAreaManagement() {
 
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editingArea, setEditingArea] = useState<IrrigationArea | null>(null);
 
   const [formData, setFormData] = useState({
+    name: "",
+    crop_type_id: "",
+    area_size: "",
+  });
+
+  const [editFormData, setEditFormData] = useState({
     name: "",
     crop_type_id: "",
     area_size: "",
@@ -99,6 +107,50 @@ export function IrrigationAreaManagement() {
     }
   };
 
+  const openEditForm = (area: IrrigationArea) => {
+    setEditingArea(area);
+    setEditFormData({
+      name: area.name || "",
+      crop_type_id: String(area.crop_type_id || ""),
+      area_size: area.area_size != null ? String(area.area_size) : "",
+    });
+    setShowEditForm(true);
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingArea) return;
+    if (!editFormData.crop_type_id) {
+      showToast("Por favor selecciona un tipo de cultivo", "error");
+      return;
+    }
+
+    try {
+      await api.put(`/irrigation-areas/${editingArea.id}`, {
+        name: editFormData.name,
+        crop_type_id: Number(editFormData.crop_type_id),
+        area_size: editFormData.area_size ? Number(editFormData.area_size) : null,
+      });
+      setShowEditForm(false);
+      setEditingArea(null);
+      fetchData();
+      showToast("Área actualizada", "success");
+    } catch (err: any) {
+      showToast("Error al actualizar área: " + (err.response?.data?.detail || err.message), "error");
+    }
+  };
+
+  const handleDelete = async (areaId: number) => {
+    if (!window.confirm("¿Seguro que deseas eliminar esta área de riego?")) return;
+    try {
+      await api.delete(`/irrigation-areas/${areaId}`);
+      fetchData();
+      showToast("Área eliminada", "success");
+    } catch (err: any) {
+      showToast("Error al eliminar área: " + (err.response?.data?.detail || err.message), "error");
+    }
+  };
+
   return (
     <PageTransition>
     <div className="min-h-screen p-4 md:p-6 lg:p-8">
@@ -151,9 +203,16 @@ export function IrrigationAreaManagement() {
                   </td>
                   <td className="py-3 px-4 text-[var(--text-subtle)]">{area.area_size ? `${area.area_size} Ha` : "-"}</td>
                   <td className="py-3 px-4 flex justify-end gap-2">
-                    <button className="p-2 text-[var(--text-subtle)] hover:bg-[var(--hover-overlay)] rounded-full transition-colors">
-                      <MoreVertical className="w-4 h-4" />
-                    </button>
+                    <PillButton variant="secondary" className="px-3 py-1 text-xs" onClick={() => openEditForm(area)}>
+                      Editar <Pencil className="w-3 h-3 ml-1" />
+                    </PillButton>
+                    <PillButton
+                      variant="outline"
+                      className="px-3 py-1 text-xs border-[var(--status-danger)]/40 text-[var(--status-danger)] hover:bg-[var(--status-danger-bg)]"
+                      onClick={() => handleDelete(area.id)}
+                    >
+                      Borrar <Trash2 className="w-3 h-3 ml-1" />
+                    </PillButton>
                   </td>
                 </tr>
               ))}
@@ -161,7 +220,7 @@ export function IrrigationAreaManagement() {
                 <tr>
                   <td colSpan={4} className="py-4 px-4">
                     <EmptyState
-                      icon={MoreVertical}
+                      icon={Pencil}
                       title="Sin áreas de riego"
                       description="Crea la primera área y asígnale un cultivo para comenzar a recibir lecturas."
                       action={{
@@ -181,19 +240,30 @@ export function IrrigationAreaManagement() {
         {loading && <div className="text-center py-4 text-[var(--text-subtle)]">Cargando...</div>}
         {!loading && areas.map((area) => (
           <BentoCard key={area.id} variant="light" className="p-4">
-             <div className="flex justify-between items-start mb-2">
+            <div className="flex justify-between items-start mb-2">
               <h3 className="text-[var(--text-main)] font-medium">{area.name}</h3>
-              <button className="text-[var(--text-subtle)]"><MoreVertical className="w-5 h-5"/></button>
             </div>
             <div className="flex items-center gap-2 mt-2">
                <span className="px-2 py-1 bg-[var(--surface-card-secondary)] border border-[var(--border-subtle)] text-[var(--text-main)] text-xs rounded-full">{area.crop_type?.name || "Sin Cultivo"}</span>
                {area.area_size && <span className="text-sm text-[var(--text-subtle)]">{area.area_size} Ha</span>}
             </div>
+            <div className="mt-3 flex flex-col gap-2">
+              <PillButton variant="secondary" className="w-full justify-center" onClick={() => openEditForm(area)}>
+                Editar <Pencil className="w-4 h-4 ml-1" />
+              </PillButton>
+              <PillButton
+                variant="outline"
+                className="w-full justify-center border-[var(--status-danger)]/40 text-[var(--status-danger)] hover:bg-[var(--status-danger-bg)]"
+                onClick={() => handleDelete(area.id)}
+              >
+                Borrar Área <Trash2 className="w-4 h-4 ml-1" />
+              </PillButton>
+            </div>
           </BentoCard>
         ))}
         {!loading && areas.length === 0 && (
           <EmptyState
-            icon={MoreVertical}
+            icon={Pencil}
             title="Sin áreas de riego"
             description="Crea la primera área y asígnale un cultivo para comenzar a recibir lecturas."
             action={{
@@ -230,6 +300,80 @@ export function IrrigationAreaManagement() {
               <div className="flex gap-3 pt-4">
                 <PillButton variant="outline" className="flex-1 justify-center" onClick={() => setShowCreateForm(false)} type="button">Cancelar</PillButton>
                 <PillButton variant="primary" className="flex-1 justify-center" type="submit">Guardar</PillButton>
+              </div>
+            </form>
+          </BentoCard>
+        </div>
+      )}
+
+      {showEditForm && editingArea && (
+        <div className="fixed inset-0 bg-[var(--surface-page)]/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <BentoCard variant="light" className="w-full max-w-md">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-serif text-[var(--text-title)]">Editar Área de Riego</h2>
+              <button
+                onClick={() => {
+                  setShowEditForm(false);
+                  setEditingArea(null);
+                }}
+                type="button"
+                className="rounded-full p-1 text-[var(--text-subtle)] hover:bg-[var(--hover-overlay)] transition-colors"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+            <form className="space-y-4" onSubmit={handleUpdate}>
+              <div>
+                <label className="block text-sm text-[var(--text-subtle)] mb-1">Nombre del Área</label>
+                <input
+                  required
+                  type="text"
+                  value={editFormData.name}
+                  onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--surface-panel)] border border-[var(--border-strong)] text-[var(--text-body)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-[var(--text-subtle)] mb-1">Tipo de Cultivo</label>
+                <select
+                  required
+                  value={editFormData.crop_type_id}
+                  onChange={(e) => setEditFormData({ ...editFormData, crop_type_id: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--surface-panel)] border border-[var(--border-strong)] text-[var(--text-body)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+                >
+                  <option value="">Selecciona un cultivo</option>
+                  {cropTypes.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-[var(--text-subtle)] mb-1">Tamaño (Hectáreas) - Opcional</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editFormData.area_size}
+                  onChange={(e) => setEditFormData({ ...editFormData, area_size: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-[24px] bg-[var(--surface-panel)] border border-[var(--border-strong)] text-[var(--text-body)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+                />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <PillButton
+                  variant="outline"
+                  className="flex-1 justify-center"
+                  onClick={() => {
+                    setShowEditForm(false);
+                    setEditingArea(null);
+                  }}
+                  type="button"
+                >
+                  Cancelar
+                </PillButton>
+                <PillButton variant="primary" className="flex-1 justify-center" type="submit">
+                  Guardar Cambios
+                </PillButton>
               </div>
             </form>
           </BentoCard>
