@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     DEFAULT_PAGE_SIZE: int = 50
     MAX_PAGE_SIZE: int = 200
 
+    # --- Alert generation behavior ---
+    ALERT_THRESHOLD_DUPLICATE_WINDOW_MINUTES: int = 10
+
     # --- Alert Notifications (Direct Backend Delivery) ---
     NOTIFICATIONS_ENABLED: bool = False
 

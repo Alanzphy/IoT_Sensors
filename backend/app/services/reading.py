@@ -6,6 +6,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.models.crop_cycle import CropCycle
 from app.models.alert import Alert
 from app.models.node import Node
@@ -72,6 +73,9 @@ def _has_recent_duplicate_threshold_alert(
     timestamp: datetime,
     window_minutes: int = 10,
 ) -> bool:
+    if window_minutes <= 0:
+        return False
+
     window_start = timestamp - timedelta(minutes=window_minutes)
     existing = db.execute(
         select(Alert.id).where(
@@ -118,6 +122,7 @@ def _create_threshold_alerts(db: Session, node: Node, reading: Reading) -> None:
             parameter=threshold.parametro,
             severity=threshold.severidad,
             timestamp=reading.marca_tiempo,
+            window_minutes=settings.ALERT_THRESHOLD_DUPLICATE_WINDOW_MINUTES,
         ):
             continue
 

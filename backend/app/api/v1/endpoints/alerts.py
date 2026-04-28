@@ -1,6 +1,6 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -81,6 +81,7 @@ def _require_admin(user: User) -> None:
 
 @router.get("", response_model=PaginatedResponse[AlertResponse])
 def list_alerts(
+    response: Response,
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=200),
     irrigation_area_id: int | None = Query(None),
@@ -93,6 +94,10 @@ def list_alerts(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+
     allowed_area_ids: list[int] | None = None
 
     if current_user.rol != "admin":
@@ -123,6 +128,7 @@ def list_alerts(
 
 @router.get("/unread-count", response_model=AlertUnreadCountResponse)
 def get_unread_alert_count(
+    response: Response,
     irrigation_area_id: int | None = Query(None),
     node_id: int | None = Query(None),
     severity: str | None = Query(None),
@@ -132,6 +138,10 @@ def get_unread_alert_count(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+
     allowed_area_ids: list[int] | None = None
 
     if current_user.rol != "admin":
@@ -198,9 +208,14 @@ def mark_all_alerts_read(
 @router.get("/{alert_id}", response_model=AlertResponse)
 def get_alert(
     alert_id: int,
+    response: Response,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+
     alert = alert_service.get_alert(db, alert_id)
     if current_user.rol != "admin":
         _validate_client_area_access(current_user, db, alert.area_riego_id)

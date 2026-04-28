@@ -61,7 +61,16 @@ export interface ListAlertsParams {
 export async function listAlerts(
   params: ListAlertsParams,
 ): Promise<AlertsPaginatedResponse> {
-  const response = await api.get<AlertsPaginatedResponse>("/alerts", { params });
+  const response = await api.get<AlertsPaginatedResponse>("/alerts", {
+    params: {
+      ...params,
+      _ts: Date.now(),
+    },
+    headers: {
+      "Cache-Control": "no-cache",
+      Pragma: "no-cache",
+    },
+  });
   return response.data;
 }
 
@@ -99,7 +108,14 @@ export async function getUnreadAlertsCount(
   params?: Omit<ListAlertsParams, "page" | "per_page" | "read">,
 ): Promise<number> {
   const response = await api.get<AlertUnreadCountResponse>("/alerts/unread-count", {
-    params,
+    params: {
+      ...(params || {}),
+      _ts: Date.now(),
+    },
+    headers: {
+      "Cache-Control": "no-cache",
+      Pragma: "no-cache",
+    },
   });
   return response.data.unread_count ?? 0;
 }

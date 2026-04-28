@@ -30,6 +30,7 @@ import {
 type ReadFilter = "all" | "read" | "unread";
 
 const PAGE_SIZE = 20;
+const LIVE_REFRESH_INTERVAL_MS = 3000;
 
 const severityStyles: Record<AlertItem["severity"], string> = {
   info: "bg-[var(--status-info-bg)] text-[var(--status-info)]",
@@ -124,6 +125,18 @@ export function AlertsCenterPage() {
   useEffect(() => {
     if (!isPageVisible) return;
     fetchAlerts();
+  }, [fetchAlerts, isPageVisible]);
+
+  useEffect(() => {
+    if (!isPageVisible) return;
+
+    const intervalId = window.setInterval(() => {
+      void fetchAlerts();
+    }, LIVE_REFRESH_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
   }, [fetchAlerts, isPageVisible]);
 
 
