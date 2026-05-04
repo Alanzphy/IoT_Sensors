@@ -72,12 +72,16 @@ function chooseBucketMs(daySpan: number, rangeMs: number): number {
 }
 
 function parseReadingTimestamp(value: string): Date {
-  const parsed = parseISO(value);
-  if (!Number.isNaN(parsed.getTime())) {
-    return parsed;
-  }
+  const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/.test(value);
+  const normalized = hasTimezone ? value : `${value}Z`;
+  return parseISO(normalized);
+}
 
-  return parseISO(value + (value.endsWith("Z") ? "" : "Z"));
+function toUtcDateParam(value: Date): string {
+  const year = value.getUTCFullYear();
+  const month = String(value.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(value.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function aggregateReadingsForChart(
@@ -246,8 +250,8 @@ export function HistoricalData() {
 
     let isMounted = true;
 
-    const isoStartDate = format(startDate, "yyyy-MM-dd");
-    const isoEndDate = format(endDate, "yyyy-MM-dd");
+    const isoStartDate = toUtcDateParam(startDate);
+    const isoEndDate = toUtcDateParam(endDate);
 
     const fetchChartReadings = async (): Promise<ReadingResponse[]> => {
       const expectedPoints = Math.max(1, differenceInCalendarDays(endDate, startDate) + 1) * 144;
@@ -384,8 +388,8 @@ export function HistoricalData() {
     try {
       const params = new URLSearchParams({
         irrigation_area_id: selectedArea.id.toString(),
-        start_date: startDate.toISOString().split("T")[0],
-        end_date: endDate.toISOString().split("T")[0],
+        start_date: toUtcDateParam(startDate),
+        end_date: toUtcDateParam(endDate),
         format: formatType
       });
 

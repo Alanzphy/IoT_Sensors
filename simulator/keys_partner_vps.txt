@@ -1,6 +1,2 @@
-# API keys productivas socio formador
-
-# Nodo Campus Reforestado (Area Campus Reforestado)
-ak_3494464ab61fe8b9f57e61cb5b6dca13
-# Nodo Granja Hogar (Area Granja Hogar)
-ak_c92f80628dc5afbdcc0fab7978fe70be
+ak_partner_granja_hogar_001
+ak_partner_campus_reforestado_001
