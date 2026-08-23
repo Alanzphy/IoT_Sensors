@@ -18,9 +18,9 @@ El backend FastAPI (puerto 5050) es el único punto de contacto con MySQL 8 (pue
 
 ## 2. Documentación Automática y Estado de Sincronización
 
-Con el backend corriendo: Swagger UI en `/docs`, ReDoc en `/redoc`, spec crudo en `/openapi.json`.
+Con el backend corriendo: Swagger UI en `/api/v1/docs`, ReDoc en `/api/v1/redoc`, spec crudo en `/api/v1/openapi.json`.
 
-**Estado de sincronización:** el archivo `openapi.yaml` (raíz) es el **contrato fuente de verdad** y se regenera desde el código FastAPI con `make openapi-sync`. Estado actual: **41 paths / 67 operaciones**. Las specs de `openspec/specs/` son la fuente de verdad del **comportamiento** de cada capacidad (ver §4).
+**Estado de sincronización:** el archivo `openapi.yaml` (raíz) es el **contrato fuente de verdad** y se regenera desde el código FastAPI con `make openapi-sync`. Estado actual: **47 paths / 74 operaciones**. Las specs de `openspec/specs/` son la fuente de verdad del **comportamiento** de cada capacidad (ver §4).
 
 ## 3. Autenticación
 
@@ -54,7 +54,7 @@ POST /api/v1/readings
 X-API-Key: ak_n01_a1b2c3d4e5f6
 ```
 
-Validación: si falta el header o la key no existe → **401**; si el nodo está inactivo/eliminado → **403**. La API Key **solo sirve para `POST /api/v1/readings`** — no permite consultar datos.
+Validación: si falta el header → **422** (parámetro requerido); si la key no existe o el nodo está inactivo/eliminado → **401**. La API Key **solo sirve para `POST /api/v1/readings`** — no permite consultar datos.
 
 ## 4. Convenciones Generales
 
@@ -98,6 +98,8 @@ Contrato detallado (payloads, schemas, errores, ejemplos): **`openapi.yaml`** (a
 | Users | GET | `/api/v1/users/{user_id}` | Detalle — Admin |
 | Users | PUT | `/api/v1/users/{user_id}` | Actualizar — Admin |
 | Users | DELETE | `/api/v1/users/{user_id}` | Eliminar — Admin |
+| Users | GET | `/api/v1/users/me` | Perfil del usuario autenticado (admin o cliente) |
+| Users | PATCH | `/api/v1/users/me` | Actualizar perfil propio (nombre; email read-only) |
 | Clients | GET | `/api/v1/clients` | Listar (paginado) — Admin |
 | Clients | POST | `/api/v1/clients` | Crear (cliente + usuario) — Admin |
 | Clients | GET | `/api/v1/clients/{client_id}` | Detalle — Admin |
@@ -148,12 +150,17 @@ Contrato detallado (payloads, schemas, errores, ejemplos): **`openapi.yaml`** (a
 | Alerts | GET | `/api/v1/alerts/unread-count` | Conteo de no leídas |
 | Alerts | GET | `/api/v1/alerts/{alert_id}` | Detalle |
 | Alerts | PATCH | `/api/v1/alerts/{alert_id}/read` | Marcar leída/no leída |
+| Alerts | POST | `/api/v1/alerts/read-all` | Marcar todas como leídas |
+| Alerts | POST | `/api/v1/alerts/{alert_id}/recommendation` | Generar recomendación agronómica para la alerta |
 | Alerts | POST | `/api/v1/alerts/scan-inactivity` | Escanear nodos inactivos — Admin |
 | Alerts | POST | `/api/v1/alerts/dispatch-notifications` | Despachar notificaciones externas — Admin |
 | Audit Logs | GET | `/api/v1/audit-logs` | Listar eventos (paginado y filtros) — Admin |
 | Audit Logs | GET | `/api/v1/audit-logs/{audit_log_id}` | Detalle de evento — Admin |
 | AI Assistant | POST | `/api/v1/ai-assistant/chat` | Consulta conversacional con contexto operativo |
 | AI Assistant | GET | `/api/v1/ai-assistant/usage` | Telemetría de uso del asistente — Admin |
+| AI Reports | GET | `/api/v1/ai-reports` | Listar reportes IA (paginado) |
+| AI Reports | GET | `/api/v1/ai-reports/{report_id}` | Detalle de reporte IA |
+| AI Reports | POST | `/api/v1/ai-reports/generate` | Generar reporte — Admin/scheduler (dormido sin `AI_REPORTS_ENABLED`) |
 | Health | GET | `/health` | Verificación de estado del servicio |
 
-**Total: 67 operaciones sobre 41 paths** (contrato `openapi.yaml`). Para payloads, schemas y ejemplos por endpoint, consulta el contrato autogenerado.
+**Total: 74 operaciones sobre 47 paths** (contrato `openapi.yaml`). Para payloads, schemas y ejemplos por endpoint, consulta el contrato autogenerado.

@@ -7,7 +7,7 @@ Este documento describe la arquitectura, stack tecnológico, estado actual y reg
 
 ## 1. Stack Tecnológico General
 - **Framework Core**: React (v18+) configurado con Vite.
-- **Lenguaje**: TypeScript (tipado parcial; **no hay `tsconfig.json`** — el typecheck está pendiente de configurar).
+- **Lenguaje**: TypeScript con `tsconfig.json` y typecheck (`tsc --noEmit`, corre en CI). Tipado progresivo (aún hay usos de `any`; el endurecimiento a strict es un cambio futuro).
 - **Rutas**: `react-router` (v7). Declarado estáticamente en `routes.tsx` con componentes `Layout` anidados.
 - **Estilos**: Tailwind CSS combinado con variables o valores hexadecimales estáticos derivados del *Design System Bento Box* pre-aprobado.
 - **Cliente HTTP**: `axios` (v1.x) con interceptores para JWT.
@@ -28,7 +28,7 @@ src/app/
 │   ├── notifications/ # Alertas en UI (AlertsPopover)
 │   └── ProtectedRoute.tsx # HOC para blindar rutas según el Rol y JWT.
 ├── context/          # React Context API para estado global (AuthContext, SelectionContext, ThemeContext)
-├── hooks/            # Custom hooks (e.g., useIsMobile.ts, useAuth.ts, usePageVisibility.ts)
+├── hooks/            # Custom hooks (e.g., useIsMobile.ts, usePageVisibility.ts)
 ├── layouts/          # Envoltorios de interfaz (RootLayout, AdminLayout, ClientLayout)
 ├── pages/            # Vistas enrutadas
 │   ├── admin/        # CRUD para el admin (Clientes, Predios, Nodos, Cultivos, etc.)
@@ -49,7 +49,7 @@ Actualmente el frontend está en fase de **transición de datos estáticos hacia
 - **Fase 2 Lite (Finalizada)**: Centro de alertas y popover conectados a `/api/v1/alerts`, bitácora administrativa en `/api/v1/audit-logs`, gestión de umbrales para Admin y Cliente (ownership por área), preferencias de notificación del cliente y flujo de recuperación de contraseña (`/api/v1/auth/forgot-password`, `/api/v1/auth/reset-password`).
 - **Fase 2 Completa - Sprint 1 (Completado)**: módulo geoespacial en cliente y admin con consumo de `/api/v1/nodes/geo`, filtros jerárquicos globales para admin, y optimizaciones de carga (lazy/prefetch/chunking).
 - **Fase 2 Completa - Sprints 4 y 5 (Completados)**: módulos de IA — reportes (`/api/v1/ai-reports`) y asistente conversacional (`/api/v1/ai-assistant/chat`) + consumo de uso IA (`/admin/consumo-ia`).
-- **Fase 3 (Completada)**: reemplazo de `mockData` por datos reales (`/api/v1/readings`, `/api/v1/readings/latest`, `/api/v1/readings/availability`). Quedan stubs estáticos conocidos: `ProfilePage` y `PropertyDetail` (pendientes de conectar al API).
+- **Fase 3 (Completada)**: reemplazo de `mockData` por datos reales (`/api/v1/readings`, `/api/v1/readings/latest`, `/api/v1/readings/availability`); `ProfilePage` y `PropertyDetail` consumen el API real.
 - **Fase 4 (Parcial)**: Semáforos de estado para datos prioritarios en dashboard cliente usando estado en tiempo real de lectura + umbral activo.
 
 ### 3.1 Módulo de Alertas en UI (Activo)
@@ -103,9 +103,9 @@ Actualmente el frontend está en fase de **transición de datos estáticos hacia
 ### 3.7 Estrategia de Polling en UI (Optimizada)
 
 - `hooks/usePageVisibility.ts`: pausa el polling cuando la pestaña no está visible.
-- `pages/client/ClientDashboard.tsx`: refresco periódico, solo en pestaña visible, con guardas para evitar solicitudes simultáneas. Nota: el intervalo quedó en 3s para pruebas de tiempo real; debe restablecerse a 30s.
+- `pages/client/ClientDashboard.tsx`: refresco periódico (30s), solo en pestaña visible, con guardas para evitar solicitudes simultáneas.
 - `components/notifications/AlertsPopover.tsx`: polling deshabilitado en la ruta de centro de alertas y cuando la pestaña está oculta; también evita solicitudes concurrentes y usa `/api/v1/alerts/unread-count` para el badge de no leídas.
-- `pages/shared/AlertsCenterPage.tsx`: auto-refresh periódico solo en pestaña visible y evita solapamiento de peticiones (mismo pendiente de 3s → 30s).
+- `pages/shared/AlertsCenterPage.tsx`: auto-refresh periódico (30s) solo en pestaña visible y evita solapamiento de peticiones.
 
 ### 3.8 Módulo Geoespacial Base (Fase 2 Sprint 1)
 

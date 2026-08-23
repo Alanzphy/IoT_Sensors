@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: "Sistema IoT Riego Agr\xEDcola"
+  title: Sistema IoT Riego Agrícola
   version: 0.1.0
 paths:
   /api/v1/auth/login:
@@ -136,6 +136,50 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/users/me:
+    get:
+      tags:
+      - Users
+      summary: Get Me
+      description: Return the authenticated user's own profile.
+      operationId: get_me_api_v1_users_me_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+      security:
+      - OAuth2PasswordBearer: []
+    patch:
+      tags:
+      - Users
+      summary: Update Me
+      description: Update editable profile fields of the authenticated user (email
+        not editable).
+      operationId: update_me_api_v1_users_me_patch
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserProfileUpdate'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - OAuth2PasswordBearer: []
   /api/v1/users:
     get:
       tags:
@@ -1193,7 +1237,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NodeResponse'
+                $ref: '#/components/schemas/NodeCreateResponse'
         '422':
           description: Validation Error
           content:
@@ -2072,6 +2116,78 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/alerts/read-all:
+    post:
+      tags:
+      - Alerts
+      summary: Mark All Alerts Read
+      operationId: mark_all_alerts_read_api_v1_alerts_read_all_post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: irrigation_area_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Irrigation Area Id
+      - name: node_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Node Id
+      - name: severity
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Severity
+      - name: alert_type
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Alert Type
+      - name: start_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Start Date
+      - name: end_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: End Date
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertBulkReadResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/alerts/{alert_id}:
     get:
       tags:
@@ -2094,6 +2210,40 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AlertResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/alerts/{alert_id}/recommendation:
+    post:
+      tags:
+      - Alerts
+      summary: Generate Alert Recommendation
+      operationId: generate_alert_recommendation_api_v1_alerts__alert_id__recommendation_post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: alert_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Alert Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlertRecommendationGenerateRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertRecommendationResponse'
         '422':
           description: Validation Error
           content:
@@ -2344,20 +2494,154 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/ai-reports:
+    get:
+      tags:
+      - AI Reports
+      summary: List Ai Reports
+      operationId: list_ai_reports_api_v1_ai_reports_get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 50
+          title: Per Page
+      - name: client_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Client Id
+      - name: irrigation_area_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Irrigation Area Id
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      - name: start_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Start Date
+      - name: end_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: End Date
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse_AIReportResponse_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/ai-reports/{report_id}:
+    get:
+      tags:
+      - AI Reports
+      summary: Get Ai Report
+      operationId: get_ai_report_api_v1_ai_reports__report_id__get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: report_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Report Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIReportResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/ai-reports/generate:
+    post:
+      tags:
+      - AI Reports
+      summary: Generate Ai Reports
+      operationId: generate_ai_reports_api_v1_ai_reports_generate_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AIReportGenerateRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIReportGenerateResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - OAuth2PasswordBearer: []
   /api/v1/ai-assistant/chat:
     post:
       tags:
       - AI Assistant
       summary: Ask Ai Assistant
       operationId: ask_ai_assistant_api_v1_ai_assistant_chat_post
-      security:
-      - OAuth2PasswordBearer: []
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/AIChatRequest'
+        required: true
       responses:
         '200':
           description: Successful Response
@@ -2371,6 +2655,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - OAuth2PasswordBearer: []
   /api/v1/ai-assistant/usage:
     get:
       tags:
@@ -2643,10 +2929,10 @@ components:
           title: Irrigation Area Id
         hours_back:
           type: integer
-          maximum: 720
-          minimum: 1
-          default: 72
+          maximum: 720.0
+          minimum: 1.0
           title: Hours Back
+          default: 72
         history:
           items:
             $ref: '#/components/schemas/AIChatMessage'
@@ -2670,10 +2956,12 @@ components:
           format: date-time
           title: Generated At
         metadata:
+          additionalProperties: true
           type: object
           title: Metadata
         widgets:
           items:
+            additionalProperties: true
             type: object
           type: array
           title: Widgets
@@ -2683,6 +2971,160 @@ components:
       - source
       - generated_at
       title: AIChatResponse
+    AIReportGenerateRequest:
+      properties:
+        client_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Client Id
+        irrigation_area_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Irrigation Area Id
+        start_datetime:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Start Datetime
+        end_datetime:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: End Datetime
+        notify:
+          type: boolean
+          title: Notify
+          default: true
+        force:
+          type: boolean
+          title: Force
+          default: false
+      type: object
+      title: AIReportGenerateRequest
+    AIReportGenerateResponse:
+      properties:
+        generated_count:
+          type: integer
+          title: Generated Count
+        skipped_count:
+          type: integer
+          title: Skipped Count
+        failed_count:
+          type: integer
+          title: Failed Count
+        report_ids:
+          items:
+            type: integer
+          type: array
+          title: Report Ids
+        range_start:
+          type: string
+          format: date-time
+          title: Range Start
+        range_end:
+          type: string
+          format: date-time
+          title: Range End
+        executed_at:
+          type: string
+          format: date-time
+          title: Executed At
+      type: object
+      required:
+      - generated_count
+      - skipped_count
+      - failed_count
+      - report_ids
+      - range_start
+      - range_end
+      - executed_at
+      title: AIReportGenerateResponse
+    AIReportResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        client_id:
+          type: integer
+          title: Client Id
+        irrigation_area_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Irrigation Area Id
+        range_start:
+          type: string
+          format: date-time
+          title: Range Start
+        range_end:
+          type: string
+          format: date-time
+          title: Range End
+        status:
+          type: string
+          title: Status
+        summary:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Summary
+        findings:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Findings
+        recommendation:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Recommendation
+        generation_metadata:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Generation Metadata
+        error_detail:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error Detail
+        generated_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Generated At
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - id
+      - client_id
+      - range_start
+      - range_end
+      - status
+      - created_at
+      - updated_at
+      title: AIReportResponse
+    AlertBulkReadResponse:
+      properties:
+        updated_count:
+          type: integer
+          title: Updated Count
+      type: object
+      required:
+      - updated_count
+      title: AlertBulkReadResponse
     AlertReadUpdate:
       properties:
         read:
@@ -2691,6 +3133,42 @@ components:
           default: true
       type: object
       title: AlertReadUpdate
+    AlertRecommendationGenerateRequest:
+      properties:
+        force:
+          type: boolean
+          title: Force
+          default: false
+      type: object
+      title: AlertRecommendationGenerateRequest
+    AlertRecommendationResponse:
+      properties:
+        alert_id:
+          type: integer
+          title: Alert Id
+        recommendation:
+          type: string
+          title: Recommendation
+        source:
+          type: string
+          title: Source
+        generated_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Generated At
+        error_detail:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error Detail
+      type: object
+      required:
+      - alert_id
+      - recommendation
+      - source
+      title: AlertRecommendationResponse
     AlertResponse:
       properties:
         id:
@@ -2745,6 +3223,27 @@ components:
         notified_whatsapp:
           type: boolean
           title: Notified Whatsapp
+        ai_recommendation:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Ai Recommendation
+        ai_recommendation_error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Ai Recommendation Error
+        ai_recommendation_generated_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Ai Recommendation Generated At
+        ai_recommendation_metadata:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Ai Recommendation Metadata
         created_at:
           type: string
           format: date-time
@@ -3374,6 +3873,58 @@ components:
       required:
       - irrigation_area_id
       title: NodeCreate
+    NodeCreateResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        irrigation_area_id:
+          type: integer
+          title: Irrigation Area Id
+        serial_number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Serial Number
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
+        latitude:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Latitude
+        longitude:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Longitude
+        is_active:
+          type: boolean
+          title: Is Active
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        api_key:
+          type: string
+          title: Api Key
+      type: object
+      required:
+      - id
+      - irrigation_area_id
+      - is_active
+      - created_at
+      - updated_at
+      - api_key
+      title: NodeCreateResponse
+      description: 'Respuesta de creación: única respuesta que expone la api_key.'
     NodeGeoResponse:
       properties:
         id:
@@ -3403,9 +3954,6 @@ components:
         crop_type_name:
           type: string
           title: Crop Type Name
-        api_key:
-          type: string
-          title: Api Key
         serial_number:
           anyOf:
           - type: string
@@ -3454,7 +4002,6 @@ components:
       - client_company_name
       - crop_type_id
       - crop_type_name
-      - api_key
       - is_active
       - freshness_status
       title: NodeGeoResponse
@@ -3466,9 +4013,6 @@ components:
         irrigation_area_id:
           type: integer
           title: Irrigation Area Id
-        api_key:
-          type: string
-          title: Api Key
         serial_number:
           anyOf:
           - type: string
@@ -3504,7 +4048,6 @@ components:
       required:
       - id
       - irrigation_area_id
-      - api_key
       - is_active
       - created_at
       - updated_at
@@ -3686,6 +4229,29 @@ components:
       - channel
       - enabled
       title: NotificationPreferenceUpsertItem
+    PaginatedResponse_AIReportResponse_:
+      properties:
+        page:
+          type: integer
+          title: Page
+        per_page:
+          type: integer
+          title: Per Page
+        total:
+          type: integer
+          title: Total
+        data:
+          items:
+            $ref: '#/components/schemas/AIReportResponse'
+          type: array
+          title: Data
+      type: object
+      required:
+      - page
+      - per_page
+      - total
+      - data
+      title: PaginatedResponse[AIReportResponse]
     PaginatedResponse_AlertResponse_:
       properties:
         page:
@@ -4503,6 +5069,17 @@ components:
       - full_name
       - role
       title: UserCreate
+    UserProfileUpdate:
+      properties:
+        full_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Full Name
+      additionalProperties: false
+      type: object
+      title: UserProfileUpdate
+      description: Campos editables por el propio usuario vía PATCH /users/me.
     UserResponse:
       properties:
         id:
@@ -4600,4 +5177,4 @@ components:
       flows:
         password:
           scopes: {}
-          tokenUrl: /api/v1/auth/login
+          tokenUrl: /api/v1/auth/docs-login

@@ -23,7 +23,7 @@ app/
 │                      # notification_preferences
 ├── services/          # Lógica de negocio por entidad; paquetes `alerts/`
 │                      # (queries, inactivity, dispatch, recommendations) y
-│                      # `ai_chat/` (context, model, fallback, widgets, guardrails)
+│                      # `ai_chat/` (context, model, helpers, widgets, guardrails)
 ├── models/            # SQLAlchemy, tablas en español, soft delete (eliminado_en)
 ├── schemas/           # Pydantic: API en inglés, mapeo a columnas en español
 ├── db/                # session, seed (datos base), demo_seed (dataset 30 días)

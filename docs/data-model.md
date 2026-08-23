@@ -24,7 +24,7 @@
 
 ## 1. Vista General
 
-### La base de datos tiene 14 tablas organizadas en 5 grupos:
+### La base de datos tiene 15 tablas organizadas en 6 grupos:
 
 | Grupo | Tablas | Propósito |
 |-------|--------|-----------|
@@ -33,6 +33,7 @@
 | **Hardware IoT** | `nodos` | Los sensores físicos (o simulados) instalados en campo |
 | **Lecturas de Sensores** | `lecturas` | Los datos que llegan cada 10 minutos desde los nodos — es el corazón del sistema |
 | **Alertas y Auditoría (Fase 2 Lite)** | `umbrales`, `alertas`, `preferencias_notificacion`, `audit_log` | Motor de alertas por umbral/inactividad, preferencias de despacho y trazabilidad operativa |
+| **IA (Fase 2)** | `reportes_ia` | Reportes generados por la analítica asíncrona (resumen, hallazgos, recomendación por cliente/área) |
 
 ### Diagrama de Relaciones (ERD)
 
@@ -172,7 +173,7 @@ erDiagram
         VARCHAR accion
         VARCHAR entidad
         VARCHAR entidad_id
-        JSON detalle
+        TEXT detalle
         DATETIME creado_en
     }
     alertas {
@@ -184,12 +185,32 @@ erDiagram
         VARCHAR parametro
         DECIMAL valor_detectado
         VARCHAR severidad
-        TEXT mensaje
+        VARCHAR mensaje
         DATETIME marca_tiempo
         BOOLEAN leida
         DATETIME leida_en
         BOOLEAN notificada_email
         BOOLEAN notificada_whatsapp
+        TEXT recomendacion_ia
+        TEXT recomendacion_ia_error
+        DATETIME recomendacion_ia_generada_en
+        TEXT recomendacion_ia_metadata
+        DATETIME creado_en
+        DATETIME actualizado_en
+    }
+    reportes_ia {
+        BIGINT id PK
+        INT cliente_id FK
+        INT area_riego_id FK
+        DATETIME rango_inicio
+        DATETIME rango_fin
+        VARCHAR estado
+        TEXT resumen
+        TEXT hallazgos
+        TEXT recomendacion
+        TEXT metadatos_generacion
+        TEXT error_detalle
+        DATETIME generado_en
         DATETIME creado_en
         DATETIME actualizado_en
     }
@@ -200,6 +221,7 @@ erDiagram
     usuarios ||--o{ audit_log : "1:N"
     clientes ||--o{ predios : "1:N"
     clientes ||--o{ preferencias_notificacion : "1:N"
+    clientes ||--o{ reportes_ia : "1:N"
     predios ||--o{ areas_riego : "1:N"
     tipos_cultivo ||--o{ areas_riego : "1:N"
     areas_riego ||--o{ ciclos_cultivo : "1:N"
@@ -207,6 +229,7 @@ erDiagram
     areas_riego ||--o{ umbrales : "1:N"
     areas_riego ||--o{ alertas : "1:N"
     areas_riego ||--o{ preferencias_notificacion : "1:N"
+    areas_riego ||--o{ reportes_ia : "1:N"
     nodos ||--o{ lecturas : "1:N"
     nodos ||--o{ alertas : "1:N"
     umbrales ||--o{ alertas : "1:N"
@@ -287,7 +310,7 @@ Se usa en dos casos específicos:
 ### BIGINT vs INT
 
 - **INT:** Soporta hasta ~2,147 millones de registros. Se usa en la mayoría de tablas (usuarios, clientes, predios, etc.) porque nunca vamos a tener millones de clientes.
-- **BIGINT:** Soporta hasta ~9.2 quintillones de registros. Se usa **solo en la tabla de lecturas** (`lecturas`) porque cada nodo genera 144 registros al día. Con muchos nodos y varios años de operación, los números crecen rápido.
+- **BIGINT:** Soporta hasta ~9.2 quintillones de registros. Se usa en las tablas de alto volumen o trazabilidad: `lecturas`, `alertas`, `audit_log` y `reportes_ia` — porque cada nodo genera 144 registros al día y las alertas/auditoría acumulan muchas filas con el tiempo.
 
 ### Índices
 
@@ -662,6 +685,16 @@ Estas tablas gestionan las notificaciones automáticas cuando algo va mal o se r
 | `alertas` | `(area_riego_id, leida, marca_tiempo)` | Acelera bandeja de no leídas con orden por tiempo. |
 | `audit_log` | `(usuario_id)` | Acelera consultas de actividad por usuario. |
 | `audit_log` | `(entidad, creado_en)` | Acelera trazabilidad por entidad y ventana de tiempo. |
+| `tokens_recuperacion` | `(token)` | Acelera la validación del token de reset al confirmar el restablecimiento. |
+| `tokens_recuperacion` | `(usuario_id)` | Acelera listar/revocar tokens de un usuario (single-use por usuario). |
+| `usuarios` | `(rol)` | Acelera listados por rol ("dame los clientes"). |
+| `clientes` | `(usuario_id)` | Acelera el join usuario→cliente al resolver ownership. |
+| `ciclos_cultivo` | `(area_riego_id)` | Acelera "todos los ciclos del área X" en la gestión de temporadas. |
+| `preferencias_notificacion` | `(cliente_id)` | Acelera cargar preferencias del cliente al despachar. |
+| `preferencias_notificacion` | `(area_riego_id)` | Acelera preferencias por área (bulk en UI de notificaciones). |
+| `reportes_ia` | `(cliente_id, rango_inicio, rango_fin)` | Acelera listado de reportes por cliente y ventana. |
+| `reportes_ia` | `(area_riego_id, rango_inicio, rango_fin)` | Acelera reportes filtrados por área. |
+| `reportes_ia` | `(estado, creado_en)` | Acelera el scheduler (buscar pendientes/procesando). |
 
 ---
 
@@ -701,7 +734,7 @@ Además, se evaluará agregar un campo `ndvi` a `lecturas` cuando se defina una 
 
 ---
 
-## Referencia Rápida — 14 Tablas Activas
+## Referencia Rápida — 15 Tablas Activas
 
 | # | Tabla | Grupo | Propósito en una línea | ID tipo |
 |---|-------|-------|----------------------|---------|
@@ -719,6 +752,7 @@ Además, se evaluará agregar un campo `ndvi` a `lecturas` cuando se defina una 
 | 12 | `alertas` | Alertas | Eventos de umbral/inactividad y estado de lectura | BIGINT |
 | 13 | `preferencias_notificacion` | Alertas | Preferencias por cliente/área/severidad/canal para notificaciones | INT |
 | 14 | `audit_log` | Auditoría | Registro de acciones de sistema y usuarios | BIGINT |
+| 15 | `reportes_ia` | IA | Reportes de analítica asíncrona (resumen/hallazgos/recomendación) | BIGINT |
 
 ---
 

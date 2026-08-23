@@ -34,7 +34,6 @@
 
 - IA conversacional y reportes automáticos (dormidos tras flags).
 - Alertas de umbral/inactividad y notificaciones email/WhatsApp (dormidos tras flags).
-- Configuración de umbrales por parte del Cliente (solo Admin en MVP extendido actual).
 - NDVI.
 - Recuperación de contraseña y auditoría: **implementadas** como utilidades de seguridad (no son objetivo de negocio del MVP pero existen y son necesarias).
 

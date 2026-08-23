@@ -47,6 +47,7 @@ Comportamiento del sistema, por capacidad. Todo cambio de comportamiento parte d
 | `security.md` | Mecanismos de seguridad y pendientes |
 | `design-system.md` | Design system del frontend (tokens reales) |
 | `deployment.md` | Despliegue en Dokploy |
+| `operations.md` | Operación: demo reproducible, simulador, schedulers, scripts |
 | `testing.md` | Estrategia de testing (pytest, vitest) + CI + pendientes |
 | `deliverables/` | Entregables al cliente (SRS, Reporte QA, Entregable Word) — congelados |
 

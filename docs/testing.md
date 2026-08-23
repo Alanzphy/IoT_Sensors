@@ -8,7 +8,7 @@ Estrategia de **pirámide de dos niveles** contra la API REST, sin dependencias 
 
 - **Integración** — HTTP end-to-end con `TestClient` de FastAPI: flujos request→BD, roles y permisos (401/403), rutas REST.
 - **Unitario** — Lógica de negocio aislada en la capa de servicios (con BD en memoria).
-- **Principios**: aislamiento entre tests (transacciones con rollback), ~280 tests en ~1 minuto, fixtures reutilizables en `conftest.py`.
+- **Principios**: aislamiento entre tests (transacciones con rollback), 327 tests en ~1 minuto, fixtures reutilizables en `conftest.py`.
 
 ### Stack
 
@@ -50,7 +50,7 @@ backend/tests/
 
 ### Cobertura
 
-Suite de ~280 tests al 100% de éxito, cobertura transaccional >80% (excluyendo migraciones Alembic y seed). Cubre flujos positivos y restrictivos (404/401/422/409).
+Suite de 327 tests al 100% de éxito, cobertura transaccional >80% (excluyendo migraciones Alembic y seed). Cubre flujos positivos y restrictivos (404/401/422/409).
 
 ## Frontend (vitest)
 
