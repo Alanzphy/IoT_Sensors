@@ -1,4 +1,4 @@
-import { Loader2, Mail, User } from "lucide-react";
+import { Mail, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BentoCard } from "../../components/BentoCard";
 import { PageTransition } from "../../components/PageTransition";

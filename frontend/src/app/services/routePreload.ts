@@ -10,7 +10,9 @@ export function loadAdminMapPage() {
 
 export function preloadMapRoutes(): Promise<void> {
   if (!mapsPreloadPromise) {
-    mapsPreloadPromise = Promise.all([loadClientMapPage(), loadAdminMapPage()]).then(() => undefined);
+    mapsPreloadPromise = Promise.all([loadClientMapPage(), loadAdminMapPage()]).then(
+      (): void => undefined,
+    );
   }
 
   return mapsPreloadPromise;
