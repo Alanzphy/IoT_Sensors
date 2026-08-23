@@ -719,3 +719,36 @@ Además, se evaluará agregar un campo `ndvi` a `lecturas` cuando se defina una 
 | 12 | `alertas` | Alertas | Eventos de umbral/inactividad y estado de lectura | BIGINT |
 | 13 | `preferencias_notificacion` | Alertas | Preferencias por cliente/área/severidad/canal para notificaciones | INT |
 | 14 | `audit_log` | Auditoría | Registro de acciones de sistema y usuarios | BIGINT |
+
+---
+
+## Consultas de Referencia
+
+SQL directo para las operaciones más comunes (los servicios usan SQLAlchemy; esto es equivalente en SQL puro).
+
+**Dashboard — última lectura de un nodo (frescura):**
+```sql
+SELECT l.id, l.marca_tiempo, l.suelo_humedad, l.riego_flujo_por_minuto, l.ambiental_eto
+FROM lecturas l
+WHERE l.nodo_id = ?
+ORDER BY l.marca_tiempo DESC
+LIMIT 1;
+```
+
+**Histórico — lecturas por rango de fechas:**
+```sql
+SELECT l.*
+FROM lecturas l
+WHERE l.nodo_id = ?
+  AND l.marca_tiempo BETWEEN ? AND ?
+ORDER BY l.marca_tiempo ASC
+LIMIT ? OFFSET ?;
+```
+
+**Validación de API Key en ingesta:**
+```sql
+SELECT n.id, n.area_riego_id, n.activo
+FROM nodos n
+WHERE n.api_key = ?
+  AND n.eliminado_en IS NULL;
+```

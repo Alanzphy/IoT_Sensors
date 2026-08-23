@@ -83,3 +83,9 @@ npm run build           # Vite/Rollup: detecta imports rotos y dependencias muer
 
 - **Backend** — `uv sync --frozen` → `ruff check app tests` → `uv run pytest -q`.
 - **Frontend** — `npm ci` → `npm run typecheck` → `npm run test -- --run` → `npm run build`.
+
+## Pendientes conocidos
+
+- **E2E de UI** para el chat IA (`/cliente/asistente-ia`) y flujos de reportes — no existe suite de E2E (Playwright); los módulos IA solo tienen tests de integración backend.
+- **Pruebas de carga ligeras** para ingesta a 144 lecturas/día/nodo (volumen objetivo) — pendiente recomendado.
+- **Cobertura de schedulers**: `inactivity_scheduler` y `notification_scheduler` no tienen tests unitarios (el de `ai_report_scheduler` sí).
