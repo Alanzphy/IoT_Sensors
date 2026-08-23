@@ -1,6 +1,5 @@
 """Tests de integración para /api/v1/users (solo admin)."""
 
-import pytest
 
 
 NEW_USER = {

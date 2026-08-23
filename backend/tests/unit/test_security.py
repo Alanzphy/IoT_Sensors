@@ -1,8 +1,6 @@
 """Tests unitarios para app.core.security."""
 
-import time
 
-import pytest
 from jose import jwt
 
 from app.core.config import settings

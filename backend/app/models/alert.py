@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 from decimal import Decimal
 
 from sqlalchemy import (
@@ -18,6 +19,13 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.session import Base
 from app.models.base import TimestampMixin
 
+
+
+
+if TYPE_CHECKING:
+    from app.models.irrigation_area import IrrigationArea
+    from app.models.node import Node
+    from app.models.threshold import Threshold
 
 class Alert(Base, TimestampMixin):
     __tablename__ = "alertas"

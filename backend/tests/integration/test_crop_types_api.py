@@ -1,6 +1,5 @@
 """Tests de integración para /api/v1/crop-types."""
 
-import pytest
 
 
 class TestListCropTypes:

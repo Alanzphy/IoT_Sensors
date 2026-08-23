@@ -3,8 +3,7 @@
 import pytest
 from fastapi import HTTPException
 
-from app.core.security import hash_password, verify_password
-from app.models.user import User
+from app.core.security import verify_password
 from app.schemas.user import UserCreate, UserUpdate
 from app.services import user as user_service
 
@@ -105,7 +104,7 @@ class TestUpdateUser:
         assert verify_password("new_pass", fresh.contrasena_hash)
 
     def test_update_email_to_existing_raises_409(self, db):
-        u1 = user_service.create_user(db, _make_user_create(email="first@test.com"))
+        user_service.create_user(db, _make_user_create(email="first@test.com"))
         u2 = user_service.create_user(db, _make_user_create(email="second@test.com"))
         with pytest.raises(HTTPException) as exc:
             user_service.update_user(db, u2.id, UserUpdate(email="first@test.com"))

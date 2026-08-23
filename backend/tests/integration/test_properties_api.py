@@ -1,6 +1,5 @@
 """Tests de integración para /api/v1/properties."""
 
-import pytest
 
 
 class TestListProperties:

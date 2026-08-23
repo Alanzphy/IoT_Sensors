@@ -1,6 +1,5 @@
 """Tests de integración para /api/v1/clients."""
 
-import pytest
 
 
 NEW_CLIENT = {

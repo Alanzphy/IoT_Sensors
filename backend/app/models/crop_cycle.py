@@ -1,4 +1,5 @@
 from datetime import date
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Date, ForeignKey, Index, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -6,6 +7,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.session import Base
 from app.models.base import SoftDeleteMixin, TimestampMixin
 
+
+
+
+if TYPE_CHECKING:
+    from app.models.irrigation_area import IrrigationArea
 
 class CropCycle(Base, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "ciclos_cultivo"

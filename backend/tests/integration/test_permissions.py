@@ -4,7 +4,6 @@ Verifica que los clientes solo pueden ver sus propios datos
 y que el admin puede ver todo.
 """
 
-import pytest
 
 
 SENSOR_PAYLOAD = {

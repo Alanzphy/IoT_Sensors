@@ -1,9 +1,16 @@
 from sqlalchemy import ForeignKey, Index, Integer, String
+from typing import TYPE_CHECKING
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
 from app.models.base import SoftDeleteMixin, TimestampMixin
 
+
+
+
+if TYPE_CHECKING:
+    from app.models.client import Client
+    from app.models.irrigation_area import IrrigationArea
 
 class Property(Base, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "predios"

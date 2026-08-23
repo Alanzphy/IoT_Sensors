@@ -1,6 +1,5 @@
 """Tests de integración para /api/v1/irrigation-areas."""
 
-import pytest
 
 
 class TestListIrrigationAreas:

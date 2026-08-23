@@ -26,7 +26,7 @@ os.environ.setdefault("DEBUG", "true")
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import BigInteger, Integer, create_engine, event
+from sqlalchemy import BigInteger, create_engine, event
 from sqlalchemy.orm import sessionmaker
 
 from app.core.security import hash_password, create_access_token
@@ -50,7 +50,6 @@ from app.models import (  # noqa: F401 – importar todos para que Base los regi
 # Compatibilidad SQLite: BigInteger → INTEGER para autoincrement
 # ---------------------------------------------------------------------------
 
-from sqlalchemy.dialects import sqlite as sqlite_dialect
 
 BigInteger.__visit_name__ = "big_integer"  # type: ignore[attr-defined]
 

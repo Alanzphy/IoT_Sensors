@@ -3,9 +3,7 @@
 import pytest
 from fastapi import HTTPException
 
-from app.models.client import Client
 from app.models.property import Property
-from app.models.user import User
 from app.schemas.client import ClientCreate, ClientUpdate
 from app.services import client as client_service
 

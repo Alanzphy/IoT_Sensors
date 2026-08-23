@@ -1,9 +1,18 @@
 from sqlalchemy import Boolean, Enum, Index, Integer, String
+from typing import TYPE_CHECKING
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
 from app.models.base import SoftDeleteMixin, TimestampMixin
 
+
+
+
+if TYPE_CHECKING:
+    from app.models.audit_log import AuditLog
+    from app.models.client import Client
+    from app.models.password_reset_token import PasswordResetToken
+    from app.models.refresh_token import RefreshToken
 
 class User(Base, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "usuarios"

@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import BigInteger, DateTime, Enum, ForeignKey, Index, Integer, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -6,6 +7,12 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.session import Base
 from app.models.base import TimestampMixin
 
+
+
+
+if TYPE_CHECKING:
+    from app.models.client import Client
+    from app.models.irrigation_area import IrrigationArea
 
 class AIReport(Base, TimestampMixin):
     __tablename__ = "reportes_ia"

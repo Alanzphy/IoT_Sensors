@@ -3,7 +3,6 @@
 import pytest
 from fastapi import HTTPException
 
-from app.models.node import Node
 from app.schemas.node import NodeCreate, NodeUpdate
 from app.services import node as node_service
 

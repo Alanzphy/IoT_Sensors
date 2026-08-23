@@ -1,8 +1,6 @@
 """Tests de integración para /api/v1/readings (POST ingesta + GET historia + export)."""
 
-from datetime import datetime, timezone
 
-import pytest
 
 
 SENSOR_PAYLOAD = {

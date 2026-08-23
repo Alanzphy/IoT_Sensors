@@ -1,4 +1,5 @@
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DECIMAL, Enum, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -6,6 +7,12 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.session import Base
 from app.models.base import SoftDeleteMixin, TimestampMixin
 
+
+
+
+if TYPE_CHECKING:
+    from app.models.alert import Alert
+    from app.models.irrigation_area import IrrigationArea
 
 class Threshold(Base, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "umbrales"

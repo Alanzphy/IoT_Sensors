@@ -2,7 +2,6 @@
 
 from datetime import date
 
-import pytest
 
 from app.core.security import hash_password
 from app.models.client import Client

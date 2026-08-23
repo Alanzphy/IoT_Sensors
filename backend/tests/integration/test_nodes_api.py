@@ -1,6 +1,5 @@
 """Tests de integración para /api/v1/nodes."""
 
-import pytest
 
 
 SENSOR_PAYLOAD = {

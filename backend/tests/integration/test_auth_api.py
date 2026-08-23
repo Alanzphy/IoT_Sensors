@@ -2,7 +2,6 @@
 
 from datetime import UTC, datetime, timedelta
 
-import pytest
 from sqlalchemy import delete, select
 
 from app.core.config import settings

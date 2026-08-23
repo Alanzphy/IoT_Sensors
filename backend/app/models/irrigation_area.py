@@ -1,4 +1,5 @@
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DECIMAL, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -6,6 +7,18 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.session import Base
 from app.models.base import SoftDeleteMixin, TimestampMixin
 
+
+
+
+if TYPE_CHECKING:
+    from app.models.ai_report import AIReport
+    from app.models.alert import Alert
+    from app.models.crop_cycle import CropCycle
+    from app.models.crop_type import CropType
+    from app.models.node import Node
+    from app.models.notificationpreference import NotificationPreference
+    from app.models.property import Property
+    from app.models.threshold import Threshold
 
 class IrrigationArea(Base, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "areas_riego"
