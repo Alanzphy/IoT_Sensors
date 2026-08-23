@@ -503,20 +503,21 @@ Observabilidad de uso IA:
 - Vista admin: `/admin/consumo-ia`
 - Se registran por request: `source`, `provider`, `model`, `tokens_prompt`, `tokens_completion`, `latency_ms`, `status_code`.
 
-## Política de Documentación (Trabajo por Hitos)
+## Política de Documentación (SDD + Trabajo por Hitos)
 
-Para evitar pérdida de contexto y desfase entre implementación y docs, este repositorio usa una estrategia híbrida:
+El repo usa **OpenSpec (spec-driven development)**: todo cambio de comportamiento parte de un cambio en `openspec/changes/` (proposal → delta specs → design → tasks) y se archiva al cerrarlo, sincronizando `openspec/specs/`. La documentación de referencia vive en `docs/` y se actualiza en el mismo bloque de trabajo:
 
 1. **Actualización mínima inmediata:** cuando cambia contrato técnico (API, BD, flujo visible), se actualiza la documentación en el mismo bloque de trabajo.
-2. **Cierre por hito/módulo:** al terminar un bloque funcional, se revisa consistencia cruzada entre arquitectura, API, BD y SRS.
+2. **Cierre por hito/módulo:** al terminar un bloque funcional, se revisa consistencia cruzada entre specs, arquitectura, API y BD.
 3. **Pulido final de release:** al final del ciclo, se realiza limpieza editorial (formato, duplicados, pendientes).
+
+CI: GitHub Actions corre en cada push/PR — backend (ruff + pytest) y frontend (typecheck + vitest + build).
 
 Checklist mínimo por cambio técnico:
 
-- ¿Cambió endpoint, parámetro o respuesta JSON? → actualizar `docs/documentacion_api.md`.
-- ¿Cambió tabla, relación, índice o regla de negocio? → actualizar `docs/documentacion_base_de_datos.md`.
-- ¿Cambió flujo operativo o componentes activos/futuros? → actualizar `docs/arquitectura.md` y/o `docs/arquitectura_frontend.md`.
-- ¿Cambió alcance funcional del producto? → actualizar `docs/deliverables/` (SRS).
+- ¿Cambió contrato técnico (API, BD, flujo visible)? → cambio OpenSpec (`openspec new change <nombre>`) + `docs/documentacion_api.md` / `docs/documentacion_base_de_datos.md`.
+- ¿Cambió flujo operativo o componentes activos/futuros? → `docs/arquitectura.md` y/o `docs/arquitectura_frontend.md`.
+- ¿Cambió alcance funcional del producto? → `docs/deliverables/` (SRS).
 
 ### Plantilla DoD Documental (Por Feature/Hito)
 
@@ -528,10 +529,11 @@ Usar esta plantilla al cerrar cada módulo para asegurar trazabilidad documental
 
 Checklist DoD:
 
+- [ ] Cambio OpenSpec creado y archivado (`openspec/specs/` sincronizado).
 - [ ] API actualizada (`docs/documentacion_api.md`): endpoints, payloads, validaciones, errores, ejemplos.
 - [ ] BD actualizada (`docs/documentacion_base_de_datos.md`): tablas, relaciones, índices, reglas de negocio.
 - [ ] Arquitectura actualizada (`docs/arquitectura.md` y/o `docs/arquitectura_frontend.md`): flujo activo, componentes, límites de alcance.
-- [ ] SRS actualizado (`docs/deliverables/`): requisitos activos vs roadmap, roles y restricciones.
+- [ ] CI verde: backend (ruff + pytest) y frontend (typecheck + vitest + build).
 - [ ] Consistencia transversal validada: misma terminología, mismos nombres de endpoint/campos, mismos estados de fase.
 
 ### Sincronizar OpenAPI (Contrato Runtime -> Archivos)
