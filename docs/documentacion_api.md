@@ -94,7 +94,7 @@ FastAPI genera el spec OpenAPI a partir del código Python. Cuando defines un en
 > **Nota:** El archivo `openapi.yaml` incluido en este repo es el spec de **diseño** — define cómo DEBE quedar la API. Cuando el backend esté implementado, FastAPI generará su propia versión automáticamente desde el código. Ambos deben coincidir.
 
 **Estado de sincronización (2026-04-18):**
-- `openapi.yaml` y `docs/openapi.yaml` están alineados con el spec generado desde `app.main`.
+- `openapi.yaml` (raíz) está alineado con el spec generado desde `app.main` (se regenera con `make openapi-sync`).
 - Conteo actual del spec: **39 paths** y **65 operaciones**.
 
 ---
@@ -981,7 +981,7 @@ Los datos de los sensores. Tiene 5 operaciones con comportamientos diferentes:
 }
 ```
 
-**Internamente:** Se ejecuta una transacción atómica que inserta 1 fila en `lecturas` + 1 fila en `lecturas_suelo` + 1 fila en `lecturas_riego` + 1 fila en `lecturas_ambiental`. Si algo falla, se hace rollback completo.
+**Internamente:** Se ejecuta una transacción atómica que inserta **1 fila en `lecturas`** (wide table con los 12 campos). Si algo falla, se hace rollback completo.
 
 #### Histórico — `GET /api/v1/readings`
 

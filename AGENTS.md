@@ -171,6 +171,7 @@ La arquitectura de la base de datos y la API del MVP deben diseñarse preparando
 - Las alertas críticas podrán configurarse para ser enviadas por **correo electrónico** y/o **WhatsApp**.
 - Requiere integración con servicio de email (SMTP o servicio cloud) y API de WhatsApp Business.
 - El usuario podrá elegir qué alertas envían notificación y por qué canal.
+- **Notificaciones Avanzadas (pendiente):** reglas de horario y ventanas de silencio por cliente/área/canal (preferencias extendidas + motor de despacho horario). Actualmente `preferencias_notificacion` solo modela tipo_alerta/severidad/canal/habilitado, sin ventana horaria.
 
 4.4. ALERTA ACTIVA POR INACTIVIDAD DE NODO
 - En el MVP existe un indicador visual pasivo de frescura (último timestamp + tiempo transcurrido). En Fase 2 se implementará una **alerta backend activa** cuando un nodo lleve ≥20 minutos (2 lecturas consecutivas perdidas) sin enviar datos, generando una notificación push al usuario.
@@ -178,7 +179,7 @@ La arquitectura de la base de datos y la API del MVP deben diseñarse preparando
 4.5. NDVI (ÍNDICE DE VEGETACIÓN)
 - Parámetro de desarrollo vegetativo (% normalizado 0-1). Excluido del MVP por falta de fuente de datos definida.
 - En Fase 2 se evaluará integración con servicios de imágenes satelitales o datos proporcionados por hardware del cliente.
-- Requiere nuevo campo en el payload del sensor y en la tabla `lecturas_suelo` o como tabla independiente.
+- Entregables del Sprint 2 (pendiente): migración de BD y modelos (columna nullable en la tabla `lecturas`), contrato API actualizado, y UI de histórico/dashboard y exportación con NDVI.
 
 4.6. VISUALIZACIÓN GEOESPACIAL (MAPAS)
 - Integración con API de mapas (Google Maps u otra) para renderizar ubicación de predios y nodos sobre mapa interactivo, tipo "Google Earth".

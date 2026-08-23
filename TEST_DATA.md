@@ -12,7 +12,7 @@ Tiene acceso a todas las pantallas, configuraciones de nodos, clientes, predios 
 ### Clientes (Usuarios Finales)
 Tienen acceso únicamente a ver sus propios predios, áreas de riego y dashboards.
 
-**1. Juan Perez (Recomendado para pruebas)**
+**1. Alan Test (Recomendado para pruebas)**
 Este usuario tiene estructuras demo y productivas del socio formador.
 - **Login:** `alan2203mx@gmail.com`
 - **Password:** `123`

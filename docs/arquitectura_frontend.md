@@ -7,7 +7,7 @@ Este documento describe la arquitectura, stack tecnológico, estado actual y reg
 
 ## 1. Stack Tecnológico General
 - **Framework Core**: React (v18+) configurado con Vite.
-- **Lenguaje**: TypeScript (Strict mode).
+- **Lenguaje**: TypeScript (tipado parcial; **no hay `tsconfig.json`** — el typecheck está pendiente de configurar).
 - **Rutas**: `react-router` (v7). Declarado estáticamente en `routes.tsx` con componentes `Layout` anidados.
 - **Estilos**: Tailwind CSS combinado con variables o valores hexadecimales estáticos derivados del *Design System Bento Box* pre-aprobado.
 - **Cliente HTTP**: `axios` (v1.x) con interceptores para JWT.
@@ -27,8 +27,7 @@ src/app/
 │   ├── navigation/   # Menús (DesktopSidebar.tsx, MobileTabBar.tsx)
 │   ├── notifications/ # Alertas en UI (AlertsPopover)
 │   └── ProtectedRoute.tsx # HOC para blindar rutas según el Rol y JWT.
-├── context/          # React Context API para estado global (AuthContext, SelectionContext)
-├── data/             # (Deprecado/Migración) Datos estáticos 'mockData'. Se eliminarán.
+├── context/          # React Context API para estado global (AuthContext, SelectionContext, ThemeContext)
 ├── hooks/            # Custom hooks (e.g., useIsMobile.ts, useAuth.ts, usePageVisibility.ts)
 ├── layouts/          # Envoltorios de interfaz (RootLayout, AdminLayout, ClientLayout)
 ├── pages/            # Vistas enrutadas
@@ -49,7 +48,8 @@ Actualmente el frontend está en fase de **transición de datos estáticos hacia
 - **Fase 1 (Completada)**: Autenticación. `LoginPage` conecta a `/api/v1/auth/login`. El JWT se decodifica con `jwt-decode`, se guarda en `localStorage` y se gestiona mediante `AuthContext`. El `api.ts` de Axios inyecta automáticamente el header `Authorization: Bearer <token>` y maneja las redirecciones por `401 Unauthorized`.
 - **Fase 2 Lite (Finalizada)**: Centro de alertas y popover conectados a `/api/v1/alerts`, bitácora administrativa en `/api/v1/audit-logs`, gestión de umbrales para Admin y Cliente (ownership por área), preferencias de notificación del cliente y flujo de recuperación de contraseña (`/api/v1/auth/forgot-password`, `/api/v1/auth/reset-password`).
 - **Fase 2 Completa - Sprint 1 (Completado)**: módulo geoespacial en cliente y admin con consumo de `/api/v1/nodes/geo`, filtros jerárquicos globales para admin, y optimizaciones de carga (lazy/prefetch/chunking).
-- **Fase 3 (En proceso)**: Reemplazo gradual de `mockData` en dashboard/histórico por datos reales (`/api/v1/readings`, `/api/v1/readings/latest`, `/api/v1/readings/availability`).
+- **Fase 2 Completa - Sprints 4 y 5 (Completados)**: módulos de IA — reportes (`/api/v1/ai-reports`) y asistente conversacional (`/api/v1/ai-assistant/chat`) + consumo de uso IA (`/admin/consumo-ia`).
+- **Fase 3 (Completada)**: reemplazo de `mockData` por datos reales (`/api/v1/readings`, `/api/v1/readings/latest`, `/api/v1/readings/availability`). Quedan stubs estáticos conocidos: `ProfilePage` y `PropertyDetail` (pendientes de conectar al API).
 - **Fase 4 (Parcial)**: Semáforos de estado para datos prioritarios en dashboard cliente usando estado en tiempo real de lectura + umbral activo.
 
 ### 3.1 Módulo de Alertas en UI (Activo)
@@ -103,9 +103,9 @@ Actualmente el frontend está en fase de **transición de datos estáticos hacia
 ### 3.7 Estrategia de Polling en UI (Optimizada)
 
 - `hooks/usePageVisibility.ts`: pausa el polling cuando la pestaña no está visible.
-- `pages/client/ClientDashboard.tsx`: refresco cada 30s, solo en pestaña visible, con guardas para evitar solicitudes simultáneas.
+- `pages/client/ClientDashboard.tsx`: refresco periódico, solo en pestaña visible, con guardas para evitar solicitudes simultáneas. Nota: el intervalo quedó en 3s para pruebas de tiempo real; debe restablecerse a 30s.
 - `components/notifications/AlertsPopover.tsx`: polling deshabilitado en la ruta de centro de alertas y cuando la pestaña está oculta; también evita solicitudes concurrentes y usa `/api/v1/alerts/unread-count` para el badge de no leídas.
-- `pages/shared/AlertsCenterPage.tsx`: mantiene auto-refresh cada 30s solo en pestaña visible y evita solapamiento de peticiones.
+- `pages/shared/AlertsCenterPage.tsx`: auto-refresh periódico solo en pestaña visible y evita solapamiento de peticiones (mismo pendiente de 3s → 30s).
 
 ### 3.8 Módulo Geoespacial Base (Fase 2 Sprint 1)
 
@@ -117,6 +117,14 @@ Actualmente el frontend está en fase de **transición de datos estáticos hacia
 - `routes.tsx`: carga diferida (lazy) de pantallas geoespaciales con `Suspense`.
 - `components/navigation/DesktopSidebar.tsx` y `components/navigation/MobileTabBar.tsx`: acceso de navegación al mapa + prefetch condicional en interacción.
 - Fallback UX: cuando un nodo no tiene coordenadas, se muestra en listado lateral de "Nodos sin GPS".
+
+### 3.9 Módulo IA (Fase 2, Sprints 4-5)
+
+- `pages/shared/AIChatPage.tsx`: asistente conversacional para ambos roles (`/cliente/asistente-ia`, `/admin/asistente-ia`) con texto + widgets dinámicos (KPIs, tabla, gráfica).
+- `pages/shared/AIReportsPage.tsx` y `AIReportDetailPage.tsx`: listado y detalle de reportes IA (`/api/v1/ai-reports`).
+- `pages/admin/AIAssistantUsagePage.tsx`: observabilidad de consumo IA (`/admin/consumo-ia`).
+- `services/aiAssistant.ts`, `services/aiReports.ts`, `services/aiAssistantUsage.ts`: clientes HTTP tipados.
+- Nota: el streaming del chat es simulado en el frontend; la respuesta completa llega del backend.
 
 ---
 
@@ -133,6 +141,6 @@ El sistema usa un "Design System" estricto tipo *Bento Box* orgánico:
 1. **Gestión de Estado**: Usa `React Context` y Custom Hooks para estado transversal. NO intentes introducir Redux o Zustand a menos que el usuario lo exija explícitamente.
 2. **Peticiones HTTP**: Jamás uses `fetch()`. Usa siempre la instancia preconfigurada de `axios` ubicada en `src/app/services/api.ts` importándola como `api`.
 3. **Manejo de Rutas**: Toda validación de acceso de usuarios debe basarse en el rol provisto por el JWT (`admin` o `cliente`) procesado a través de `<ProtectedRoute allowedRole="..." />`.
-4. **Respetar Modelo de Base de Datos**: El backend envía los datos de las lecturas en estructura "Wide-Table". En el dashboard, referirse a campos aplastados como `suelo_humedad`, `riego_activo`, `ambiental_eto` (tal como lo define la respuesta en Pydantic `ReadingResponse`).
+4. **Respetar Modelo de Base de Datos**: El backend envía las lecturas en estructura "Wide-Table" en BD, pero la respuesta JSON (`ReadingResponse`) es **anidada por categoría y en inglés**: `soil.humidity`, `irrigation.flow_per_minute`, `environmental.eto`. Referirse siempre a los campos JSON anidados.
 5. **UI no destructiva**: Al actualizar un componente de `mockData` a API, no destruyas la estructura CSS Tailwind original del layout y estilo. Solo reemplaza de dónde provienen las variables/arrays y agrega control de estados de carga (`isLoading`) y error.
-6. **URLs relativas**: Las peticiones desde axios al backend deben hacerse relativas, ej. `api.get("/readings/latest?irrigation_area_id=xx")`, ya que el `baseURL` en config ya tiene `http://localhost:5050/api/v1`.
+6. **URLs relativas**: Las peticiones desde axios al backend deben hacerse relativas, ej. `api.get("/readings/latest?irrigation_area_id=xx")`. El `baseURL` es `VITE_API_BASE_URL || "/api/v1"` (relativo por defecto; el proxy de Vite y Nginx resuelven `/api`).

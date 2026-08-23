@@ -5,7 +5,6 @@ Sistema web para el monitoreo de sensores de riego agrícola. Recibe lecturas de
 ## Estructura del Proyecto
 
 ```
-sensorestest/
 ├── AGENTS.md                # Contexto principal para agentes IA
 ├── README.md                # Este archivo
 ├── TEST_DATA.md             # Credenciales de prueba y API Keys
@@ -16,7 +15,9 @@ sensorestest/
 │   ├── design_system.md         # Paleta, tipografía, tokens del frontend
 │   ├── documentacion_api.md     # Guía de la API REST
 │   ├── documentacion_base_de_datos.md  # Modelo de datos explicado
-│   └── srs/                     # Especificación de Requisitos
+│   └── deliverables/            # Entregables al cliente (SRS, QA, Word)
+│
+├── openspec/                # Specs del sistema (SDD: capacidades + cambios)
 │
 ├── backend/                 # API REST (FastAPI + Python 3.11+)
 │   ├── app/                     # Código fuente del servidor
@@ -36,7 +37,7 @@ sensorestest/
 ├── assets/                  # Recursos estáticos globales
 │   └── imgs/                    # Logotipos
 │
-├── docker-compose.yml       # Orquestación de 3 contenedores (Dokploy/Traefik)
+├── docker-compose.yml       # Orquestación (MySQL, backend, frontend, schedulers)
 ├── .env.docker.example      # Plantilla de variables de entorno (Producción)
 └── openapi.yaml             # Spec OpenAPI 3.1 autogenerado
 ```
@@ -208,6 +209,19 @@ Notas:
 - El script excluye automáticamente áreas sin nodo activo.
 - Solo toca datos dinámicos del cliente objetivo (lecturas/alertas/umbrales).
 - Conserva entidades estáticas y `notification_preferences`.
+
+#### Orden seguro de purga (si se hace manual)
+
+Si necesitas purgar y recargar datos demo sin usar `seed_demo run-all`, respeta este orden (scoped por áreas/nodos del cliente):
+
+1. Resolver IDs reales en runtime: `user → client → properties → irrigation_areas → nodes`.
+2. Eliminar alertas del cliente (por `area_riego_id` y/o `nodo_id` del cliente).
+3. Eliminar lecturas del cliente (por `nodo_id` del cliente).
+4. Limpiar preferencias de notificación del cliente solo si se requiere reset completo de demo.
+5. Limpiar umbrales previos del cliente para no mezclar reglas (respetando la convención de soft delete del proyecto).
+6. Validar conteos en cero para lecturas/alertas del scope antes de recargar.
+
+Preflight obligatorio: confirmar usuario objetivo, lista explícita de áreas/nodos activos, snapshot/backup de conteos y min/max timestamps antes de purgar, y generación de timestamps en UTC. Nunca tocar datos de otros clientes.
 
 ### Encender simulación en vivo (multi-nodo)
 
@@ -492,7 +506,7 @@ Checklist mínimo por cambio técnico:
 - ¿Cambió endpoint, parámetro o respuesta JSON? → actualizar `docs/documentacion_api.md`.
 - ¿Cambió tabla, relación, índice o regla de negocio? → actualizar `docs/documentacion_base_de_datos.md`.
 - ¿Cambió flujo operativo o componentes activos/futuros? → actualizar `docs/arquitectura.md` y/o `docs/arquitectura_frontend.md`.
-- ¿Cambió alcance funcional del producto? → actualizar `docs/srs/`.
+- ¿Cambió alcance funcional del producto? → actualizar `docs/deliverables/` (SRS).
 
 ### Plantilla DoD Documental (Por Feature/Hito)
 
@@ -507,12 +521,12 @@ Checklist DoD:
 - [ ] API actualizada (`docs/documentacion_api.md`): endpoints, payloads, validaciones, errores, ejemplos.
 - [ ] BD actualizada (`docs/documentacion_base_de_datos.md`): tablas, relaciones, índices, reglas de negocio.
 - [ ] Arquitectura actualizada (`docs/arquitectura.md` y/o `docs/arquitectura_frontend.md`): flujo activo, componentes, límites de alcance.
-- [ ] SRS actualizado (`docs/srs/`): requisitos activos vs roadmap, roles y restricciones.
+- [ ] SRS actualizado (`docs/deliverables/`): requisitos activos vs roadmap, roles y restricciones.
 - [ ] Consistencia transversal validada: misma terminología, mismos nombres de endpoint/campos, mismos estados de fase.
 
 ### Sincronizar OpenAPI (Contrato Runtime -> Archivos)
 
-Cuando el backend ya está levantado, puedes regenerar ambos archivos de contrato (`openapi.yaml` y `docs/openapi.yaml`) desde el schema real expuesto por FastAPI:
+Cuando el backend ya está levantado, puedes regenerar el contrato (`openapi.yaml`) desde el schema real expuesto por FastAPI:
 
 ```bash
 ./scripts/sync_openapi.sh
@@ -565,8 +579,9 @@ CLIENT_OWN_AREA_ID="2" \
 | [`TEST_DATA.md`](TEST_DATA.md) | **NUEVO:** Credenciales de prueba (admin/cliente) y API Keys |
 | [`docs/arquitectura.md`](docs/arquitectura.md) | Diagramas de infraestructura, flujos de datos, autenticación |
 | [`docs/documentacion_api.md`](docs/documentacion_api.md) | Guía completa de la API REST |
-| [`docs/openapi.yaml`](docs/openapi.yaml) | Spec técnico OpenAPI 3.1 |
+| [`openapi.yaml`](openapi.yaml) | Spec técnico OpenAPI 3.1 (autogenerado con `make openapi-sync`) |
 | [`docs/documentacion_base_de_datos.md`](docs/documentacion_base_de_datos.md) | Modelo de datos, tablas, relaciones |
 | [`docs/design_system.md`](docs/design_system.md) | Design system del frontend |
 | [`docs/dokploy_despliegue.md`](docs/dokploy_despliegue.md) | Checklist operativo de deploy en Dokploy |
-| [`docs/srs/`](docs/srs/) | Especificación de Requisitos de Software |
+| [`docs/deliverables/`](docs/deliverables/) | Entregables al cliente: SRS, Reporte Ejecutivo QA, Entregable Word |
+| [`openspec/specs/`](openspec/specs/) | **Specs SDD del sistema** (capacidades baseline; cada cambio de código parte de aquí) |

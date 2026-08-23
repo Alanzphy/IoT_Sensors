@@ -2,7 +2,7 @@
 
 help:
 	@echo "Targets disponibles:"
-	@echo "  make openapi-sync   Regenera openapi.yaml y docs/openapi.yaml desde el backend activo"
+	@echo "  make openapi-sync   Regenera openapi.yaml desde el backend activo"
 	@echo "  make demo-seed      Ejecuta seed_demo real para cuenta demo por defecto"
 	@echo "  make demo-seed-dry  Ejecuta seed_demo en dry-run"
 	@echo "  make demo-live      Ejecuta simulator_fast en --quick-demo"

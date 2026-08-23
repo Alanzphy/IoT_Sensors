@@ -24,10 +24,7 @@ Cada nodo IoT envía **12 campos** organizados en **3 categorías**:
            ├── 📋 Tipo de Cultivo (del catálogo: Nogal, Alfalfa, etc.)
            ├── 📅 Ciclos de Cultivo (temporadas: 2025, 2026...)
            └── 📡 Nodo IoT (sensor físico, relación 1:1)
-                └── 📊 Lecturas (cada 10 min = 144/día)
-                     ├── 🟤 Lectura Suelo
-                     ├── 💧 Lectura Riego
-                     └── 🌤️ Lectura Ambiental
+                └── 📊 Lecturas (cada 10 min = 144/día, wide table con los 12 campos)
 ```
 
 ## Roles del sistema
@@ -40,23 +37,20 @@ Cada nodo IoT envía **12 campos** organizados en **3 categorías**:
 ## Flujo de datos
 ```
 Simulador → POST /api/v1/readings (X-API-Key) → Backend valida API Key
-  → INSERT en tabla lecturas (parent)
-  → INSERT en lecturas_suelo
-  → INSERT en lecturas_riego
-  → INSERT en lecturas_ambiental
-  → Todo en una sola transacción atómica
+  → INSERT en tabla lecturas (wide table: los 12 campos en 1 fila)
+  → Transacción atómica (1 solo INSERT)
 ```
 
 ```
 Cliente abre dashboard → Frontend pide GET /api/v1/readings (JWT)
   → Backend verifica permisos (solo sus predios/áreas)
-  → SELECT con JOINs a las 3 tablas de categoría
+  → SELECT sobre lecturas con filtros por nodo y rango de fechas
   → Responde JSON con los 12 campos + marca_tiempo
 ```
 
 ## Volumen estimado
 - **144 lecturas/día** por nodo (1 cada 10 minutos)
-- Cada lectura = 1 fila en `lecturas` + 1 en cada tabla de categoría (4 filas total)
+- Cada lectura = **1 fila** en `lecturas` (wide table, no hay tablas por categoría)
 - Con 10 nodos: **1,440 lecturas/día** → **525,600/año** → por eso los IDs son BIGINT
 
 ---
@@ -67,7 +61,7 @@ Cliente abre dashboard → Frontend pide GET /api/v1/readings (JWT)
 |----------|----------|---------------|
 | Relación Usuario-Cliente | Tablas separadas `usuarios` + `clientes` | Separar auth de datos de negocio. Extensible. |
 | Campo "tamaño" | En `areas_riego.tamano_area` | Es la superficie del terreno irrigado, pertenece al área. |
-| Almacenamiento de lecturas | 3 tablas por categoría + tabla parent `lecturas` | Más normalizado. Permite consultas por categoría sin cargar datos innecesarios. |
+| Almacenamiento de lecturas | Wide table única `lecturas` (12 campos en 1 fila) | Simplifica ingesta y consultas por rango; evita JOINs por categoría. (Antes se usaron 3 subtablas; se unificaron en la migración `7a66ef728239`.) |
 | Eliminación | Soft delete (`eliminado_en`) en entidades principales | Preserva historial para trazabilidad y Fase 2 IA. |
 | Catálogo de cultivos | Tabla `tipos_cultivo` con CRUD (administrable por Admin) | Valores iniciales como seed. Admin agrega/edita/elimina. |
 | Auditoría | `creado_en` + `actualizado_en` en todas las tablas | Trazabilidad completa. |
@@ -602,13 +596,15 @@ WHERE n.api_key = ?
 # 9. NOTAS PARA IMPLEMENTACIÓN
 
 - **ORM:** SQLAlchemy 2.0 con modelos declarativos. Cada tabla = un modelo Python. Los nombres de clase del modelo van en inglés (PEP 8), con `__tablename__` en español apuntando a la tabla real.
-- **Migraciones:** Alembic. La migración inicial crea las 12 tablas + seed data.
+- **Migraciones:** Alembic. La migración inicial crea las 9 tablas base + seed data.
 - **Ingesta de lectura (POST):** Un solo INSERT a la tabla `lecturas` que ya contiene todas las métricas "aplanadas" a partir del JSON que viene agrupado en 3 categorías.
 - **Soft delete:** Implementar como mixin de SQLAlchemy (`SoftDeleteMixin`) con `eliminado_en` y override de queries por defecto.
 - **Timestamps:** Almacenar siempre en UTC. La conversión a timezone local se hace en el frontend.
 - **Serialización:** Los schemas Pydantic mapean columnas en español (BD) a campos en inglés (API JSON). Ejemplo: `nombre_empresa` → `company_name` en la respuesta JSON.
 
-# 9.1. SCHEMA PREVISTO PARA FASE 2 (NO IMPLEMENTAR AÚN)
+# 9.1. SCHEMA DE FASE 2 (IMPLEMENTADO)
+
+> **Nota de estado:** Estas tablas ya están **implementadas** en el código (modelos SQLAlchemy + migraciones Alembic). El DDL de abajo es referencia; la fuente de verdad son los modelos en `backend/app/models/`. Incluye además la tabla `reportes_ia` (sprint de analítica asíncrona).
 
 > **IMPORTANTE:** Las siguientes tablas NO se crean en el MVP. Se documentan aquí para que el diseño actual las soporte sin fricción cuando se implementen. Las FKs apuntan a tablas que ya existen en el MVP.
 
@@ -730,15 +726,47 @@ CREATE TABLE audit_log (
 );
 ```
 
-## Decisión sobre NDVI (Fase 2 — sección 4.5 de AGENTS.md)
+## `reportes_ia` — Reportes generados por analítica asíncrona (Fase 2 — sección 4.1 de AGENTS.md)
 
-Cuando se integre NDVI, se recomienda agregar el campo directamente a `lecturas_suelo` como columna nullable, evitando JOINs adicionales:
+Persistencia de los reportes nocturnos/semanales generados por el scheduler `ai_report_scheduler` (resumen, hallazgos y recomendación por cliente/área en un rango de fechas).
 
 ```sql
-ALTER TABLE lecturas_suelo ADD COLUMN ndvi DECIMAL(5,4) NULL DEFAULT NULL;
+CREATE TABLE reportes_ia (
+    id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
+    cliente_id          INT NOT NULL,
+    area_riego_id       INT NULL,
+    rango_inicio        DATETIME NOT NULL,
+    rango_fin           DATETIME NOT NULL,
+    estado              ENUM('pending','processing','completed','failed') NOT NULL DEFAULT 'pending',
+    resumen             TEXT NULL,
+    hallazgos           TEXT NULL,
+    recomendacion       TEXT NULL,
+    metadatos_generacion TEXT NULL,
+    error_detalle       TEXT NULL,
+    generado_en         DATETIME NULL,
+    creado_en           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    INDEX idx_reportes_ia_cliente_rango (cliente_id, rango_inicio, rango_fin),
+    INDEX idx_reportes_ia_area_rango (area_riego_id, rango_inicio, rango_fin),
+    INDEX idx_reportes_ia_estado_creado (estado, creado_en),
+
+    CONSTRAINT fk_reportes_ia_cliente
+        FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE,
+    CONSTRAINT fk_reportes_ia_area
+        FOREIGN KEY (area_riego_id) REFERENCES areas_riego(id) ON DELETE SET NULL
+);
 ```
 
-> **Nota:** Estas tablas son un **boceto de diseño** para garantizar compatibilidad futura. Los detalles exactos (columnas, índices, constraints) se revisarán al momento de implementar cada funcionalidad de Fase 2.
+## Decisión sobre NDVI (Fase 2 — sección 4.5 de AGENTS.md)
+
+Cuando se integre NDVI, se recomienda agregar el campo directamente a la tabla `lecturas` (wide table) como columna nullable, evitando JOINs adicionales:
+
+```sql
+ALTER TABLE lecturas ADD COLUMN ndvi DECIMAL(5,4) NULL DEFAULT NULL;
+```
+
+> **Nota:** Estas tablas ya están implementadas y migradas. Los detalles exactos viven en los modelos SQLAlchemy (`backend/app/models/`) y migraciones Alembic (`backend/alembic/versions/`).
 
 # 10. GLOSARIO
 
@@ -749,7 +777,7 @@ ALTER TABLE lecturas_suelo ADD COLUMN ndvi DECIMAL(5,4) NULL DEFAULT NULL;
 | **JWT** | JSON Web Token. El mecanismo de autenticación para usuarios web. El frontend envía el token en cada petición. |
 | **API Key** | Credencial fija (string largo) que identifica a un nodo IoT. No expira. Se envía en el header `X-API-Key`. |
 | **Marca de tiempo (timestamp)** | Fecha y hora exacta en formato UTC. Ejemplo: `2026-02-24 14:30:00`. |
-| **Transacción atómica** | Las 4 inserciones de una lectura (1 parent + 3 categorías) se ejecutan como una sola operación. Si una falla, todas se revierten. No quedan datos parciales. |
+| **Transacción atómica** | La inserción de una lectura (1 fila en `lecturas` con los 12 campos) se ejecuta como una sola operación. Si falla, se revierte. No quedan datos parciales. |
 | **BIGINT** | Tipo de dato numérico que soporta hasta 9.2 quintillones de registros. Se usa en lecturas porque pueden acumularse millones de filas con el tiempo. |
 | **ON DELETE CASCADE** | Si se borra el registro padre, se borran automáticamente los hijos. Ej: borrar un usuario borra su cliente, predios, áreas, nodos y lecturas en cadena. |
 | **ON DELETE RESTRICT** | Impide borrar el registro padre si tiene hijos. Ej: no se puede borrar un tipo de cultivo si hay áreas que lo usan. |

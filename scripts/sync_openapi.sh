@@ -21,7 +21,7 @@ trap cleanup EXIT
 echo "Fetching OpenAPI from: $OPENAPI_URL"
 curl -fsS "$OPENAPI_URL" -o "$TMP_JSON"
 
-"$BACKEND_DIR/.venv/bin/python" - "$TMP_JSON" "$ROOT_DIR/openapi.yaml" "$ROOT_DIR/docs/openapi.yaml" <<'PY'
+"$BACKEND_DIR/.venv/bin/python" - "$TMP_JSON" "$ROOT_DIR/openapi.yaml" <<'PY'
 import json
 import sys
 from pathlib import Path
