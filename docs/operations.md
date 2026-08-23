@@ -231,6 +231,7 @@ Azure OpenAI (opcional): `AZURE_OPENAI_ENABLED`, `AZURE_OPENAI_ENDPOINT`, `AZURE
 ## 6. Scripts de mantenimiento
 
 - **Sincronizar OpenAPI** (contrato runtime → archivos): `./scripts/sync_openapi.sh` o `make openapi-sync` (URL por defecto `http://127.0.0.1:5050/api/v1/openapi.json`; override con `OPENAPI_URL`).
+- **Upsert de umbrales del socio** (para que `demo-alerts` dispare consistentemente en Granja Hogar / Campus Reforestado): `./scripts/upsert_partner_thresholds.py` (vía API admin).
 - **Smoke backend** (incluye check multi-tenant): `./scripts/smoke_backend.sh` con `CLIENT_EMAIL`, `CLIENT_PASSWORD`, `CLIENT_FOREIGN_AREA_ID` (debe dar 403), `CLIENT_OWN_AREA_ID` (200).
 - **Smoke post-deploy**: `./scripts/dokploy_smoke_check.sh <tu-dominio>`.
 - **Smoke IA reports** (login + generate + list + detail): `./scripts/smoke_ai_reports.sh --base-url https://sensores.alanrz.bond --admin-password 'TU_PASSWORD'`.

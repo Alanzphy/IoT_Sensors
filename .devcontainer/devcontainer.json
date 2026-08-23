@@ -14,7 +14,7 @@
     "DB_PASSWORD": "rootpass"
   },
 
-  "postCreateCommand": "cd /workspace/backend && pip install . && alembic upgrade head && python -m app.db.seed",
+  "postCreateCommand": "cd /workspace/backend && uv sync && uv run alembic upgrade head && uv run python -m app.db.seed",
 
   "customizations": {
     "vscode": {
