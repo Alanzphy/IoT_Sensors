@@ -1,32 +1,85 @@
-# Testing del Sistema — Sensor IoT Agrícolas
+# Testing del Sistema — IoT de Riego Agrícola
 
-Esta documentación sirve como índice central para todas las estrategias, infraestructuras y lineamientos de pruebas automáticas y manuales construidas para asegurar la confiabilidad del Producto Mínimo Viable (MVP) y sentar las bases para la Fase 2.
+Guía única de estrategias, comandos e infraestructura de pruebas del MVP. El backend (FastAPI) y el frontend (React/Vite) se prueban por separado.
 
-Dado que la arquitectura se compone de un Backend API (FastAPI) y un Frontend Desacoplado (React/Vite), las definiciones y protocolos de testing están rigurosamente separados por entorno.
+## Backend (pytest)
 
----
+Estrategia de **pirámide de dos niveles** contra la API REST, sin dependencias externas: SQLite en memoria (`sqlite:///:memory:`), sin MySQL ni Docker para correr la suite.
 
-## 1. Testing del Backend (FastAPI / Pytest)
+- **Integración** — HTTP end-to-end con `TestClient` de FastAPI: flujos request→BD, roles y permisos (401/403), rutas REST.
+- **Unitario** — Lógica de negocio aislada en la capa de servicios (con BD en memoria).
+- **Principios**: aislamiento entre tests (transacciones con rollback), ~280 tests en ~1 minuto, fixtures reutilizables en `conftest.py`.
 
-La infraestructura de validación del servicio en el puerto 5050 está cubierta en su totalidad por **Pytest** con una base de datos in-memory (SQLite) de muy alta velocidad transaccional. Esto abarca desde validaciones de seguridad atómicas hasta flujos End-To-End HTTP simulando clientes y sensores IoT.
+### Stack
 
-➡️ **Ver estructura, métodos de ejecución, coverage y fixtures detallados:**
-[docs/testing_backend.md](./testing_backend.md)
+Dependencias de testing en el grupo `dev` de `backend/pyproject.toml`: `httpx` (transporte async del TestClient), `pytest`, `pytest-cov`.
 
----
+### Ejecución (desde `backend/`)
 
-## 2. Testing del Frontend (React / Vitest)
+```bash
+uv run pytest tests/ -v                    # Toda la suite
+uv run pytest tests/ --cov=app --cov-report=term-missing   # Con cobertura en terminal
+uv run pytest tests/ --cov=app --cov-report=html:htmlcov   # Reporte HTML (htmlcov/index.html)
+uv run pytest tests/unit/ -v               # Solo unitarios
+uv run pytest tests/integration/ -v        # Solo integración e2e
+uv run pytest tests/ -v -k "test_login_admin_success"   # Test por keyword
+uv run pytest tests/ -x                    # Detener al primer fallo
+```
 
-La aplicación de interfaz de usuario cuenta con un plan de pruebas adaptado al navegador, la validación del DOM y el control de estado reactivo mediante **Vitest**, **React Testing Library** y simulaciones asíncronas con **JSDOM**. El plan incluye también protocolos de tipado estático (TypeScript) y pruebas manuales obligatorias.
+### Estructura
 
-➡️ **Ver definición, configuraciones estáticas y unitarias detalladas:**
-[docs/testing_frontend.md](./testing_frontend.md)
+```text
+backend/tests/
+├── conftest.py          # Fixtures globales: BD, TestClient, tokens, entidades default
+├── unit/                # Tests de la capa de servicios (security, users, clients, readings...)
+└── integration/         # Tests HTTP de red (auth, readings, users, permissions...)
+```
 
----
+### Fixtures principales (`conftest.py`)
 
-## Resumen del Ecosistema de QA
+| Fixture | Descripción |
+|---------|-------------|
+| `create_tables` (session) | Crea el schema SQLAlchemy una vez por sesión pytest |
+| `db` (function) | Sesión activa con rollback al concluir la prueba |
+| `client` (function) | `TestClient` con sobreescritura de `get_db()` |
+| `admin_user` / `client_user` | Registros instanciados en BD |
+| `admin_token` / `client_token` | JWTs literales para flujos de autenticación |
+| `admin_headers` / `client_headers` | Headers HTTP listos para `client.post(..., headers=...)` |
+| `node_headers` | Emula el header `X-API-Key` de los dispositivos IoT |
+| `sample_*` (cascada) | Pide `sample_crop_cycle` y crea en cadena User → Property → CropType → IrrigationArea → CropCycle |
 
-| Entidad    | Entorno / Framework | Cobertura / Alcance | CI/CD Ready | Comandos Ágiles |
-|------------|---------------------|----------------------|-------------|-----------------|
-| **Backend** | Pytest / httpx      | Pruebas de Integración (Rutas HTTP), Unitarias (Capa Servicios ORM) y Fixtures Jerárquicos. | Sí (SQLite in-memory aislada) | `uv run pytest tests/` |
-| **Frontend** | Vitest / Jest-DOM   | Testing Unitario en Componentes UI/Hooks, Typescript Estático y testing E2E Funcional interactivo. | Sí | `npm run test` / `npm run typecheck` |
+### Cobertura
+
+Suite de ~280 tests al 100% de éxito, cobertura transaccional >80% (excluyendo migraciones Alembic y seed). Cubre flujos positivos y restrictivos (404/401/422/409).
+
+## Frontend (vitest)
+
+Pruebas unitarias de componentes/hooks con **Vitest** (motor), **React Testing Library** (DOM virtual) y **JSDOM**; sin peticiones reales.
+
+- **Componentes puros de UI**: tarjetas, botones, indicadores, EmptyStates — accesibilidad (`roles`), clases condicionales, disabling en asincrónicos.
+- **Custom hooks**: `useIsMobile`, `usePageVisibility` — falseando APIs web (`window.innerWidth`, eventos `visibilitychange`).
+- **Estándar**: cada test corre pareado con su artefacto (`<Nombre>.test.tsx/.ts`): `describe()` → mocks `vi.fn()` → `render()` → `it()` → `act()`/`fireEvent` → `expect()`.
+
+### Ejecución (desde `frontend/`)
+
+```bash
+npm run test            # Validación rápida
+npm run test:ui         # Panel web con cada test desgranado
+npm run test:coverage   # Mapa de porcentaje del código verificado
+npm run typecheck       # TypeScript estático (tsc --noEmit)
+npm run build           # Vite/Rollup: detecta imports rotos y dependencias muertas
+```
+
+### Pruebas manuales (QA)
+
+- **ESC-01 Autenticación** — login admin, rebote con Toast en contraseñas malas, cerrar sesión destruyendo tokens.
+- **ESC-02 Dashboard & tiempo real** — con `simulator.py` corriendo, la tarjeta de "Humedad del Suelo" y el indicador de frescura actualizan sin recargar (flicker-free).
+- **ESC-03 Histórico y filtros** — selector de fechas repinta la gráfica; "Exportar" descarga CSV/PDF del backend.
+- **ESC-04 Formularios Admin** — correo duplicado al crear Cliente bloquea y avisa (HTTP 409).
+
+## CI (GitHub Actions)
+
+`.github/workflows/ci.yml` corre en cada push a `main` y PR:
+
+- **Backend** — `uv sync --frozen` → `ruff check app tests` → `uv run pytest -q`.
+- **Frontend** — `npm ci` → `npm run typecheck` → `npm run test -- --run` → `npm run build`.

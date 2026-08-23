@@ -588,12 +588,14 @@ CLIENT_OWN_AREA_ID="2" \
 
 | Documento | Descripción |
 |-----------|-------------|
-| [`TEST_DATA.md`](TEST_DATA.md) | **NUEVO:** Credenciales de prueba (admin/cliente) y API Keys |
-| [`docs/arquitectura.md`](docs/arquitectura.md) | Diagramas de infraestructura, flujos de datos, autenticación |
-| [`docs/documentacion_api.md`](docs/documentacion_api.md) | Guía completa de la API REST |
-| [`openapi.yaml`](openapi.yaml) | Spec técnico OpenAPI 3.1 (autogenerado con `make openapi-sync`) |
+| [`openspec/specs/`](openspec/specs/) | **Specs SDD del sistema** — 6 capacidades: data-model, security, readings, alerting, ai-modules, geo-visualization. Cada cambio de comportamiento parte de aquí |
+| [`TEST_DATA.md`](TEST_DATA.md) | Credenciales de prueba (admin/cliente) y API Keys |
+| [`openapi.yaml`](openapi.yaml) | Contrato OpenAPI 3.1 autogenerado (`make openapi-sync`) |
+| [`docs/documentacion_api.md`](docs/documentacion_api.md) | Guía rápida de la API REST (convenciones, auth, recursos) |
 | [`docs/documentacion_base_de_datos.md`](docs/documentacion_base_de_datos.md) | Modelo de datos, tablas, relaciones |
-| [`docs/design_system.md`](docs/design_system.md) | Design system del frontend |
+| [`docs/arquitectura.md`](docs/arquitectura.md) | Diagramas de infraestructura, flujos de datos, autenticación |
+| [`docs/arquitectura_frontend.md`](docs/arquitectura_frontend.md) | Stack, estructura y reglas del frontend |
+| [`docs/design_system.md`](docs/design_system.md) | Design system del frontend (tokens reales) |
+| [`docs/testing.md`](docs/testing.md) | Estrategia de testing: backend (pytest) + frontend (vitest) + CI |
 | [`docs/dokploy_despliegue.md`](docs/dokploy_despliegue.md) | Checklist operativo de deploy en Dokploy |
 | [`docs/deliverables/`](docs/deliverables/) | Entregables al cliente: SRS, Reporte Ejecutivo QA, Entregable Word |
-| [`openspec/specs/`](openspec/specs/) | **Specs SDD del sistema** (capacidades baseline; cada cambio de código parte de aquí) |
