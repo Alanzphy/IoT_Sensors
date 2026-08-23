@@ -39,10 +39,6 @@ export default defineConfig({
             return 'vendor-charts'
           }
 
-          if (id.includes('@mui/')) {
-            return 'vendor-mui'
-          }
-
           if (id.includes('@radix-ui/')) {
             return 'vendor-radix'
           }
