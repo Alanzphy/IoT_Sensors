@@ -59,4 +59,4 @@ Comportamiento del sistema, por capacidad. Todo cambio de comportamiento parte d
 5. **Para cambiar el comportamiento**: crear un cambio OpenSpec (los specs son la fuente de verdad del "qué").
 6. **El contrato técnico**: `openapi.yaml` se regenera con `make openapi-sync` desde el backend activo.
 
-> Contexto del agente: `AGENTS.md` (raíz) contiene las reglas y restricciones de desarrollo; `TEST_DATA.md` las credenciales de prueba.
+> Contexto del agente: `AGENTS.md` (raíz) contiene las reglas y restricciones de desarrollo; `docs/test-data.md` las credenciales de prueba.

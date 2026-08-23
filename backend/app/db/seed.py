@@ -35,7 +35,7 @@ from app.models.property import Property
 from app.models.user import User
 
 # ---------------------------------------------------------------------------
-# Datos de prueba — deben coincidir con TEST_DATA.md
+# Datos de prueba — deben coincidir con docs/test-data.md
 # ---------------------------------------------------------------------------
 
 CROP_TYPES = ["Nogal", "Alfalfa", "Manzana", "Maíz", "Chile", "Algodón"]
@@ -66,7 +66,7 @@ USERS = [
 ]
 
 # Estructura demo legado del cliente de prueba principal.
-# API Keys deben coincidir exactamente con TEST_DATA.md
+# API Keys deben coincidir exactamente con docs/test-data.md
 DEMO_PROPERTY_NAME = f"{DEMO_PREFIX}Rancho Norte"
 DEMO_AREAS_Y_NODOS = [
     {

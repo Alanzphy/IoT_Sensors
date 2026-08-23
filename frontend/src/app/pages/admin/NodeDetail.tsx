@@ -249,7 +249,7 @@ export function NodeDetail() {
               <p className="text-sm text-[var(--text-muted)]">
                 La API Key se muestra una sola vez al crear el nodo (respuesta del POST
                 /api/v1/nodes). Si la pierdes, genera una nueva o consulta el seed del
-                entorno de prueba (TEST_DATA.md).
+                entorno de prueba (docs/test-data.md).
               </p>
             </div>
           </BentoCard>
