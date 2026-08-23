@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.authz import get_client_area_ids
 from app.core.deps import get_current_user, require_admin
 from app.db.session import get_db
 from app.models.client import Client
@@ -21,39 +22,11 @@ from app.services import node as node_service
 router = APIRouter()
 
 
-def _get_client_area_ids(user: User, db: Session) -> list[int]:
-    client = db.execute(
-        select(Client).where(
-            Client.usuario_id == user.id, Client.eliminado_en.is_(None)
-        )
-    ).scalar_one_or_none()
-    if client is None:
-        return []
-    prop_ids = list(
-        db.execute(
-            select(Property.id).where(
-                Property.cliente_id == client.id,
-                Property.eliminado_en.is_(None),
-            )
-        ).scalars()
-    )
-    if not prop_ids:
-        return []
-    return list(
-        db.execute(
-            select(IrrigationArea.id).where(
-                IrrigationArea.predio_id.in_(prop_ids),
-                IrrigationArea.eliminado_en.is_(None),
-            )
-        ).scalars()
-    )
-
-
 def _check_node_ownership(user: User, db: Session, node_id: int) -> None:
     if user.rol == "admin":
         return
     node = node_service.get_node(db, node_id)
-    area_ids = _get_client_area_ids(user, db)
+    area_ids = get_client_area_ids(user, db)
     if node.area_riego_id not in area_ids:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -72,14 +45,14 @@ def list_nodes(
     allowed_area_ids: list[int] | None = None
 
     if current_user.rol != "admin" and irrigation_area_id is not None:
-        area_ids = _get_client_area_ids(current_user, db)
+        area_ids = get_client_area_ids(current_user, db)
         if irrigation_area_id not in area_ids:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied to this irrigation area",
             )
     elif current_user.rol != "admin":
-        allowed_area_ids = _get_client_area_ids(current_user, db)
+        allowed_area_ids = get_client_area_ids(current_user, db)
 
     items, total = node_service.list_nodes(
         db,

@@ -8,7 +8,7 @@ import { ReadingDateRangeSelector } from "../../components/ReadingDateRangeSelec
 import { SelectionScopeBar } from "../../components/selection/SelectionScopeBar";
 import { useToast } from "../../components/Toast";
 import { useSelection } from "../../context/SelectionContext";
-import { api } from "../../services/api";
+import { downloadBlobExport } from "../../utils/export";
 
 export function ExportData() {
   const { selectedArea } = useSelection();
@@ -34,18 +34,8 @@ export function ExportData() {
         format: exportFormat
       });
 
-      const response = await api.get(`/readings/export?${params}`, {
-        responseType: "blob"
-      });
-
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `export_${selectedArea.name}_${format(new Date(), "yyyy-MM-dd")}.${exportFormat}`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      const fileName = `export_${selectedArea.name}_${format(new Date(), "yyyy-MM-dd")}.${exportFormat}`;
+      await downloadBlobExport(`/readings/export?${params}`, fileName);
       showToast("Exportación completada correctamente.", "success");
     } catch (err) {
       console.error("Export failed", err);

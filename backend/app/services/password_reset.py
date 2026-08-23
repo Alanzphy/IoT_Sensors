@@ -1,15 +1,15 @@
 import hashlib
 import secrets
-import smtplib
-from datetime import UTC, datetime, timedelta
-from email.message import EmailMessage
+from datetime import timedelta
 from urllib.parse import quote
 
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.emailer import send_email
 from app.core.security import hash_password
+from app.core.time import utc_now
 from app.models.audit_log import AuditLog
 from app.models.password_reset_token import PasswordResetToken
 from app.models.refresh_token import RefreshToken
@@ -36,31 +36,21 @@ def _generate_raw_reset_token() -> str:
 
 
 def _send_reset_email(*, recipient_email: str, reset_link: str) -> bool:
-    from_email = settings.SMTP_FROM_EMAIL or settings.SMTP_USERNAME
-    if not settings.SMTP_HOST or not from_email:
-        return False
-
-    msg = EmailMessage()
-    msg["Subject"] = (
+    subject = (
         f"{settings.NOTIFICATION_EMAIL_SUBJECT_PREFIX} Recuperacion de contrasena"
     )
-    msg["From"] = from_email
-    msg["To"] = recipient_email
-    msg.set_content(
-        "\n".join(
-            [
-                "Recibimos una solicitud para restablecer tu contrasena.",
-                "Si no la solicitaste, puedes ignorar este mensaje.",
-                "",
-                f"Enlace de recuperacion: {reset_link}",
-                "",
-                f"Este enlace expira en {settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES} minutos.",
-            ]
-        )
+    body = "\n".join(
+        [
+            "Recibimos una solicitud para restablecer tu contrasena.",
+            "Si no la solicitaste, puedes ignorar este mensaje.",
+            "",
+            f"Enlace de recuperacion: {reset_link}",
+            "",
+            f"Este enlace expira en {settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES} minutos.",
+        ]
     )
 
-    msg.add_alternative(
-        f"""
+    html_body = f"""
         <html>
           <body style=\"margin:0;padding:0;background:#F4F1EB;font-family:Segoe UI,Arial,sans-serif;color:#2C2621;\">
             <table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" style=\"padding:24px 0;\">
@@ -83,31 +73,14 @@ def _send_reset_email(*, recipient_email: str, reset_link: str) -> bool:
             </table>
           </body>
         </html>
-        """,
-        subtype="html",
+        """
+
+    return send_email(
+        recipient_email=recipient_email,
+        subject=subject,
+        body=body,
+        html_body=html_body,
     )
-
-    try:
-        if settings.SMTP_USE_SSL:
-            with smtplib.SMTP_SSL(
-                settings.SMTP_HOST, settings.SMTP_PORT, timeout=20
-            ) as smtp:
-                if settings.SMTP_USERNAME and settings.SMTP_PASSWORD:
-                    smtp.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
-                smtp.send_message(msg)
-            return True
-
-        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=20) as smtp:
-            smtp.ehlo()
-            if settings.SMTP_USE_TLS:
-                smtp.starttls()
-                smtp.ehlo()
-            if settings.SMTP_USERNAME and settings.SMTP_PASSWORD:
-                smtp.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
-            smtp.send_message(msg)
-        return True
-    except Exception:
-        return False
 
 
 def _rate_limit_count(
@@ -117,7 +90,7 @@ def _rate_limit_count(
     entity_id: str,
     window_minutes: int,
 ) -> int:
-    cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(minutes=window_minutes)
+    cutoff = utc_now() - timedelta(minutes=window_minutes)
     return (
         db.execute(
             select(func.count())
@@ -225,7 +198,7 @@ def request_password_reset(
         )
         return
 
-    now_utc = datetime.now(UTC).replace(tzinfo=None)
+    now_utc = utc_now()
 
     # Keep only one active token per user.
     db.execute(
@@ -295,7 +268,7 @@ def reset_password(
         detail=None,
     )
 
-    now_utc = datetime.now(UTC).replace(tzinfo=None)
+    now_utc = utc_now()
     token_hash = _hash_reset_token(raw_token)
 
     token = db.execute(

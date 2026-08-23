@@ -1,98 +1,36 @@
-import smtplib
 import json
-import logging
-from datetime import UTC, date, datetime, timedelta
-from email.message import EmailMessage
+from datetime import datetime
 from urllib import error, request
 
-from fastapi import HTTPException, status
-from sqlalchemy import desc, func, or_, select
+from sqlalchemy import desc, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.time import utc_now
 from app.models.alert import Alert
-from app.models.client import Client
 from app.models.crop_cycle import CropCycle
 from app.models.crop_type import CropType
 from app.models.irrigation_area import IrrigationArea
 from app.models.node import Node
-from app.models.notification_preference import NotificationPreference
 from app.models.property import Property
 from app.models.reading import Reading
 from app.models.threshold import Threshold
-from app.models.user import User
-from app.services.whatsapp import WhatsAppAlertContext, send_whatsapp_alert
 
-logger = logging.getLogger(__name__)
-
-
-def _build_email_subject(alert: Alert) -> str:
-    return (
-        f"{settings.NOTIFICATION_EMAIL_SUBJECT_PREFIX} "
-        f"{alert.severidad.upper()} - Nodo {alert.nodo_id}"
-    )
-
-
-def _build_notification_message(
-    *,
-    alert: Alert,
-    area_name: str,
-    property_name: str,
-    node_name: str,
-) -> str:
-    lines = [
-        "Alerta de monitoreo de riego",
-        f"Severidad: {alert.severidad.upper()}",
-        f"Tipo: {alert.tipo}",
-        f"Predio: {property_name}",
-        f"Area: {area_name}",
-        f"Nodo: {node_name}",
-    ]
-
-    if alert.parametro:
-        lines.append(f"Parametro: {alert.parametro}")
-    if alert.valor_detectado is not None:
-        lines.append(f"Valor detectado: {float(alert.valor_detectado)}")
-
-    lines.extend(
-        [
-            f"Mensaje: {alert.mensaje}",
-            f"Timestamp UTC: {alert.marca_tiempo.isoformat()}",
-        ]
-    )
-    return "\n".join(lines)
-
-
-def _build_alert_recommendation_url(alert: Alert) -> str:
-    base_url = settings.FRONTEND_PUBLIC_URL.rstrip("/")
-    return f"{base_url}/cliente/alertas/{alert.id}"
-
-
-def _normalize_phone_number(raw_phone: str | None) -> str | None:
-    if raw_phone is None:
-        return None
-    cleaned = "".join(ch for ch in raw_phone if ch.isdigit())
-    return cleaned or None
+from app.services.alerts.queries import get_alert
 
 
 def _to_float(value) -> float | None:
     if value is None:
         return None
     return float(value)
-
-
 def _to_bool(value) -> bool | None:
     if value is None:
         return None
     return bool(value)
-
-
 def _round_number(value: float | None, digits: int = 3) -> float | None:
     if value is None:
         return None
     return round(value, digits)
-
-
 def _classify_delta_trend(
     latest: float | None,
     previous: float | None,
@@ -110,14 +48,10 @@ def _classify_delta_trend(
     if delta < -threshold:
         return "down", _round_number(delta)
     return "stable", _round_number(delta)
-
-
 def _avg(values: list[float]) -> float | None:
     if not values:
         return None
     return _round_number(sum(values) / len(values))
-
-
 def _metric_summary_from_readings(
     rows_desc: list[Reading],
     *,
@@ -158,8 +92,6 @@ def _metric_summary_from_readings(
         "min": _round_number(min(values)),
         "max": _round_number(max(values)),
     }
-
-
 def _resolve_alert_scope_context(
     db: Session,
     *,
@@ -197,7 +129,7 @@ def _resolve_alert_scope_context(
         }
 
     property_name, area_name, node_name, crop_type_name, area_size = row
-    today = datetime.now(UTC).date()
+    today = utc_now().date()
     active_cycle = db.execute(
         select(CropCycle)
         .where(
@@ -229,8 +161,6 @@ def _resolve_alert_scope_context(
         "area_size": _to_float(area_size),
         "active_crop_cycle": cycle_data,
     }
-
-
 def _resolve_alert_threshold_context(
     db: Session,
     *,
@@ -307,8 +237,6 @@ def _resolve_alert_threshold_context(
         "breach_type": breach_type,
         "distance_to_bound": distance_to_bound,
     }
-
-
 def _is_azure_alert_recommendation_enabled() -> bool:
     return (
         settings.AI_ALERT_RECOMMENDATIONS_ENABLED
@@ -317,8 +245,6 @@ def _is_azure_alert_recommendation_enabled() -> bool:
         and bool(settings.AZURE_OPENAI_API_KEY)
         and bool(settings.AZURE_OPENAI_DEPLOYMENT)
     )
-
-
 def _build_deterministic_recommendation(
     alert: Alert,
     *,
@@ -382,8 +308,6 @@ def _build_deterministic_recommendation(
         "2. Revisa tendencia y coherencia con lecturas recientes del nodo para descartar ruido de sensor.\n"
         "3. Aplica ajuste operativo gradual y valida efecto en la siguiente ventana de telemetria."
     )
-
-
 def _collect_recent_readings_context(db: Session, *, alert: Alert) -> dict:
     max_rows = max(1, settings.AI_ALERT_RECOMMENDATIONS_MAX_RECENT_READINGS)
     rows = list(
@@ -443,7 +367,7 @@ def _collect_recent_readings_context(db: Session, *, alert: Alert) -> dict:
     coverage_minutes = int((last_timestamp - first_timestamp).total_seconds() // 60)
     freshness_minutes = int(
         (
-            datetime.now(UTC).replace(tzinfo=None) - last_timestamp
+            utc_now() - last_timestamp
         ).total_seconds()
         // 60
     )
@@ -552,8 +476,6 @@ def _collect_recent_readings_context(db: Session, *, alert: Alert) -> dict:
         },
         "recent_samples": recent_samples,
     }
-
-
 def _call_azure_alert_recommendation(
     *,
     alert: Alert,
@@ -619,555 +541,6 @@ def _call_azure_alert_recommendation(
         "alert_id": alert.id,
     }
     return content, metadata
-
-
-def _resolve_alert_contact_data(
-    db: Session,
-    *,
-    alert: Alert,
-) -> tuple[str | None, str | None, str, str, str, int, bool] | None:
-    row = db.execute(
-        select(
-            User.correo,
-            Client.telefono,
-            Property.nombre,
-            IrrigationArea.nombre,
-            Node.nombre,
-            Client.id,
-            Client.notificaciones_habilitadas,
-        )
-        .select_from(IrrigationArea)
-        .join(
-            Property,
-            Property.id == IrrigationArea.predio_id,
-        )
-        .join(
-            Client,
-            Client.id == Property.cliente_id,
-        )
-        .join(
-            User,
-            User.id == Client.usuario_id,
-        )
-        .join(
-            Node,
-            Node.area_riego_id == IrrigationArea.id,
-        )
-        .where(
-            IrrigationArea.id == alert.area_riego_id,
-            Node.id == alert.nodo_id,
-            IrrigationArea.eliminado_en.is_(None),
-            Property.eliminado_en.is_(None),
-            Client.eliminado_en.is_(None),
-            User.eliminado_en.is_(None),
-            User.activo.is_(True),
-            Node.eliminado_en.is_(None),
-        )
-    ).first()
-
-    if row is None:
-        return None
-
-    (
-        email,
-        phone,
-        property_name,
-        area_name,
-        node_name,
-        client_id,
-        notifications_enabled,
-    ) = row
-    normalized_phone = _normalize_phone_number(phone)
-    resolved_node_name = node_name or f"Node {alert.nodo_id}"
-    return (
-        email,
-        normalized_phone,
-        property_name,
-        area_name,
-        resolved_node_name,
-        client_id,
-        notifications_enabled,
-    )
-
-
-def _is_notification_channel_allowed(
-    db: Session,
-    *,
-    cache: dict[tuple[int, int, str, str, str], bool],
-    client_id: int,
-    irrigation_area_id: int,
-    alert_type: str,
-    severity: str,
-    channel: str,
-) -> bool:
-    cache_key = (client_id, irrigation_area_id, alert_type, severity, channel)
-    if cache_key in cache:
-        return cache[cache_key]
-
-    configured = db.execute(
-        select(NotificationPreference.habilitado).where(
-            NotificationPreference.cliente_id == client_id,
-            NotificationPreference.area_riego_id == irrigation_area_id,
-            NotificationPreference.tipo_alerta == alert_type,
-            NotificationPreference.severidad == severity,
-            NotificationPreference.canal == channel,
-        )
-    ).scalar_one_or_none()
-
-    allowed = True if configured is None else bool(configured)
-    cache[cache_key] = allowed
-    return allowed
-
-
-def _send_email_notification(
-    *,
-    recipient_email: str,
-    subject: str,
-    body: str,
-) -> bool:
-    from_email = settings.SMTP_FROM_EMAIL or settings.SMTP_USERNAME
-
-    if not settings.SMTP_HOST or not from_email:
-        logger.warning(
-            "Email notification skipped: missing SMTP_HOST or from_email (to=%s)",
-            recipient_email,
-        )
-        return False
-
-    msg = EmailMessage()
-    msg["Subject"] = subject
-    msg["From"] = from_email
-    msg["To"] = recipient_email
-    msg.set_content(body)
-
-    try:
-        if settings.SMTP_USE_SSL:
-            with smtplib.SMTP_SSL(
-                settings.SMTP_HOST,
-                settings.SMTP_PORT,
-                timeout=20,
-            ) as smtp:
-                if settings.SMTP_USERNAME and settings.SMTP_PASSWORD:
-                    smtp.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
-                smtp.send_message(msg)
-            return True
-
-        with smtplib.SMTP(
-            settings.SMTP_HOST,
-            settings.SMTP_PORT,
-            timeout=20,
-        ) as smtp:
-            smtp.ehlo()
-            if settings.SMTP_USE_TLS:
-                smtp.starttls()
-                smtp.ehlo()
-            if settings.SMTP_USERNAME and settings.SMTP_PASSWORD:
-                smtp.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
-            smtp.send_message(msg)
-        return True
-    except Exception as exc:
-        logger.warning(
-            "Email notification failed: to=%s, host=%s, port=%s, tls=%s, ssl=%s, error=%s",
-            recipient_email,
-            settings.SMTP_HOST,
-            settings.SMTP_PORT,
-            settings.SMTP_USE_TLS,
-            settings.SMTP_USE_SSL,
-            exc,
-        )
-        return False
-
-
-def _send_whatsapp_notification(
-    *,
-    recipient_phone: str,
-    message: str,
-    alert: Alert,
-    area_name: str,
-    property_name: str,
-    node_name: str,
-) -> bool:
-    return send_whatsapp_alert(
-        WhatsAppAlertContext(
-            alert=alert,
-            recipient_phone=recipient_phone,
-            property_name=property_name,
-            area_name=area_name,
-            node_name=node_name,
-            recommendation_url=_build_alert_recommendation_url(alert),
-            message=message,
-        )
-    )
-
-
-def dispatch_pending_notifications(
-    db: Session,
-    *,
-    limit: int = 200,
-    only_unread: bool = False,
-    severity: str | None = None,
-    alert_type: str | None = None,
-) -> dict[str, int | bool | datetime]:
-    now_utc = datetime.now(UTC).replace(tzinfo=None)
-
-    notifications_enabled = settings.NOTIFICATIONS_ENABLED
-    email_enabled = notifications_enabled and settings.NOTIFICATIONS_EMAIL_ENABLED
-    whatsapp_enabled = notifications_enabled and settings.NOTIFICATIONS_WHATSAPP_ENABLED
-
-    if not email_enabled and not whatsapp_enabled:
-        return {
-            "notifications_enabled": notifications_enabled,
-            "email_enabled": email_enabled,
-            "whatsapp_enabled": whatsapp_enabled,
-            "pending_alerts": 0,
-            "processed_alerts": 0,
-            "skipped_alerts": 0,
-            "emailed_alerts": 0,
-            "whatsapp_alerts": 0,
-            "email_failures": 0,
-            "whatsapp_failures": 0,
-            "executed_at": now_utc,
-        }
-
-    conditions = []
-    if only_unread:
-        conditions.append(Alert.leida.is_(False))
-    if severity is not None:
-        conditions.append(Alert.severidad == severity)
-    if alert_type is not None:
-        conditions.append(Alert.tipo == alert_type)
-
-    pending_by_channel_conditions = []
-    if email_enabled:
-        pending_by_channel_conditions.append(Alert.notificada_email.is_(False))
-    if whatsapp_enabled:
-        pending_by_channel_conditions.append(Alert.notificada_whatsapp.is_(False))
-
-    conditions.append(or_(*pending_by_channel_conditions))
-
-    pending_alerts = (
-        db.execute(select(func.count()).select_from(Alert).where(*conditions)).scalar()
-        or 0
-    )
-
-    alerts = list(
-        db.execute(
-            select(Alert)
-            .where(*conditions)
-            .order_by(Alert.marca_tiempo.asc(), Alert.id.asc())
-            .limit(limit)
-        ).scalars()
-    )
-
-    processed_alerts = 0
-    skipped_alerts = 0
-    emailed_alerts = 0
-    whatsapp_alerts = 0
-    email_failures = 0
-    whatsapp_failures = 0
-    has_updates = False
-    preference_cache: dict[tuple[int, int, str, str, str], bool] = {}
-
-    for alert in alerts:
-        processed_alerts += 1
-        contact_data = _resolve_alert_contact_data(db, alert=alert)
-        if contact_data is None:
-            skipped_alerts += 1
-            continue
-
-        (
-            recipient_email,
-            recipient_phone,
-            property_name,
-            area_name,
-            node_name,
-            client_id,
-            notifications_enabled_for_client,
-        ) = contact_data
-
-        if not notifications_enabled_for_client:
-            skipped_alerts += 1
-            continue
-
-        message = _build_notification_message(
-            alert=alert,
-            area_name=area_name,
-            property_name=property_name,
-            node_name=node_name,
-        )
-
-        attempted_any = False
-        if email_enabled and not alert.notificada_email:
-            email_allowed = _is_notification_channel_allowed(
-                db,
-                cache=preference_cache,
-                client_id=client_id,
-                irrigation_area_id=alert.area_riego_id,
-                alert_type=alert.tipo,
-                severity=alert.severidad,
-                channel="email",
-            )
-            if email_allowed and recipient_email:
-                attempted_any = True
-                email_sent = _send_email_notification(
-                    recipient_email=recipient_email,
-                    subject=_build_email_subject(alert),
-                    body=message,
-                )
-                if email_sent:
-                    alert.notificada_email = True
-                    emailed_alerts += 1
-                    has_updates = True
-                else:
-                    email_failures += 1
-
-        if whatsapp_enabled and not alert.notificada_whatsapp:
-            whatsapp_allowed = _is_notification_channel_allowed(
-                db,
-                cache=preference_cache,
-                client_id=client_id,
-                irrigation_area_id=alert.area_riego_id,
-                alert_type=alert.tipo,
-                severity=alert.severidad,
-                channel="whatsapp",
-            )
-            if whatsapp_allowed and recipient_phone:
-                attempted_any = True
-                whatsapp_sent = _send_whatsapp_notification(
-                    recipient_phone=recipient_phone,
-                    message=message,
-                    alert=alert,
-                    area_name=area_name,
-                    property_name=property_name,
-                    node_name=node_name,
-                )
-                if whatsapp_sent:
-                    alert.notificada_whatsapp = True
-                    whatsapp_alerts += 1
-                    has_updates = True
-                else:
-                    whatsapp_failures += 1
-
-        if not attempted_any:
-            skipped_alerts += 1
-
-    if has_updates:
-        db.commit()
-
-    return {
-        "notifications_enabled": notifications_enabled,
-        "email_enabled": email_enabled,
-        "whatsapp_enabled": whatsapp_enabled,
-        "pending_alerts": pending_alerts,
-        "processed_alerts": processed_alerts,
-        "skipped_alerts": skipped_alerts,
-        "emailed_alerts": emailed_alerts,
-        "whatsapp_alerts": whatsapp_alerts,
-        "email_failures": email_failures,
-        "whatsapp_failures": whatsapp_failures,
-        "executed_at": now_utc,
-    }
-
-
-def create_alert(
-    db: Session,
-    *,
-    node_id: int,
-    irrigation_area_id: int,
-    threshold_id: int | None,
-    alert_type: str,
-    parameter: str | None,
-    detected_value: float | None,
-    severity: str,
-    message: str,
-    timestamp: datetime,
-) -> Alert:
-    alert = Alert(
-        nodo_id=node_id,
-        area_riego_id=irrigation_area_id,
-        umbral_id=threshold_id,
-        tipo=alert_type,
-        parametro=parameter,
-        valor_detectado=detected_value,
-        severidad=severity,
-        mensaje=message,
-        marca_tiempo=timestamp,
-    )
-    db.add(alert)
-    db.flush()
-    return alert
-
-
-def get_alert(db: Session, alert_id: int) -> Alert:
-    alert = db.execute(select(Alert).where(Alert.id == alert_id)).scalar_one_or_none()
-    if alert is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Alert with id {alert_id} not found",
-        )
-    return alert
-
-
-def _build_alert_conditions(
-    *,
-    irrigation_area_id: int | None = None,
-    node_id: int | None = None,
-    severity: str | None = None,
-    read: bool | None = None,
-    alert_type: str | None = None,
-    start_date: date | None = None,
-    end_date: date | None = None,
-    allowed_area_ids: list[int] | None = None,
-    only_unread: bool = False,
-) -> list:
-    conditions = []
-
-    if allowed_area_ids is not None:
-        if not allowed_area_ids:
-            return [Alert.id == -1]
-        conditions.append(Alert.area_riego_id.in_(allowed_area_ids))
-
-    if irrigation_area_id is not None:
-        conditions.append(Alert.area_riego_id == irrigation_area_id)
-    if node_id is not None:
-        conditions.append(Alert.nodo_id == node_id)
-    if severity is not None:
-        conditions.append(Alert.severidad == severity)
-    if read is not None:
-        conditions.append(Alert.leida.is_(read))
-    if alert_type is not None:
-        conditions.append(Alert.tipo == alert_type)
-    if start_date is not None:
-        conditions.append(
-            Alert.marca_tiempo >= datetime.combine(start_date, datetime.min.time())
-        )
-    if end_date is not None:
-        conditions.append(
-            Alert.marca_tiempo <= datetime.combine(end_date, datetime.max.time())
-        )
-    if only_unread:
-        conditions.append(Alert.leida.is_(False))
-
-    return conditions
-
-
-def list_alerts(
-    db: Session,
-    page: int,
-    per_page: int,
-    irrigation_area_id: int | None = None,
-    node_id: int | None = None,
-    severity: str | None = None,
-    read: bool | None = None,
-    alert_type: str | None = None,
-    start_date: date | None = None,
-    end_date: date | None = None,
-    allowed_area_ids: list[int] | None = None,
-) -> tuple[list[Alert], int]:
-    conditions = _build_alert_conditions(
-        irrigation_area_id=irrigation_area_id,
-        node_id=node_id,
-        severity=severity,
-        read=read,
-        alert_type=alert_type,
-        start_date=start_date,
-        end_date=end_date,
-        allowed_area_ids=allowed_area_ids,
-    )
-
-    total = (
-        db.execute(select(func.count()).select_from(Alert).where(*conditions)).scalar()
-        or 0
-    )
-
-    items = list(
-        db.execute(
-            select(Alert)
-            .where(*conditions)
-            .order_by(Alert.marca_tiempo.desc(), Alert.id.desc())
-            .offset((page - 1) * per_page)
-            .limit(per_page)
-        ).scalars()
-    )
-    return items, total
-
-
-def count_unread_alerts(
-    db: Session,
-    irrigation_area_id: int | None = None,
-    node_id: int | None = None,
-    severity: str | None = None,
-    alert_type: str | None = None,
-    start_date: date | None = None,
-    end_date: date | None = None,
-    allowed_area_ids: list[int] | None = None,
-) -> int:
-    conditions = _build_alert_conditions(
-        irrigation_area_id=irrigation_area_id,
-        node_id=node_id,
-        severity=severity,
-        alert_type=alert_type,
-        start_date=start_date,
-        end_date=end_date,
-        allowed_area_ids=allowed_area_ids,
-        only_unread=True,
-    )
-
-    return (
-        db.execute(select(func.count()).select_from(Alert).where(*conditions)).scalar()
-        or 0
-    )
-
-
-def mark_alert_read(db: Session, alert_id: int, read: bool = True) -> Alert:
-    alert = get_alert(db, alert_id)
-    alert.leida = read
-    alert.leida_en = datetime.now(UTC).replace(tzinfo=None) if read else None
-    db.commit()
-    db.refresh(alert)
-    return alert
-
-
-def mark_alerts_read_bulk(
-    db: Session,
-    *,
-    irrigation_area_id: int | None = None,
-    node_id: int | None = None,
-    severity: str | None = None,
-    alert_type: str | None = None,
-    start_date: date | None = None,
-    end_date: date | None = None,
-    allowed_area_ids: list[int] | None = None,
-) -> int:
-    conditions = _build_alert_conditions(
-        irrigation_area_id=irrigation_area_id,
-        node_id=node_id,
-        severity=severity,
-        alert_type=alert_type,
-        start_date=start_date,
-        end_date=end_date,
-        allowed_area_ids=allowed_area_ids,
-        only_unread=True,
-    )
-    alerts = list(
-        db.execute(
-            select(Alert)
-            .where(*conditions)
-            .order_by(Alert.marca_tiempo.desc(), Alert.id.desc())
-        ).scalars()
-    )
-    if not alerts:
-        return 0
-
-    read_at = datetime.now(UTC).replace(tzinfo=None)
-    for item in alerts:
-        item.leida = True
-        item.leida_en = read_at
-
-    db.commit()
-    return len(alerts)
-
-
 def generate_alert_recommendation(
     db: Session,
     *,
@@ -1258,7 +631,7 @@ def generate_alert_recommendation(
             readings_context=readings_context,
         )
 
-    generated_at = datetime.now(UTC).replace(tzinfo=None)
+    generated_at = utc_now()
     alert.recomendacion_ia = recommendation
     alert.recomendacion_ia_error = error_detail
     alert.recomendacion_ia_generada_en = generated_at
@@ -1276,92 +649,4 @@ def generate_alert_recommendation(
         "source": source,
         "generated_at": generated_at,
         "error_detail": error_detail,
-    }
-
-
-def _has_inactivity_alert_for_current_outage(
-    db: Session,
-    *,
-    node_id: int,
-    last_reading_at: datetime,
-) -> bool:
-    existing = db.execute(
-        select(Alert.id).where(
-            Alert.nodo_id == node_id,
-            Alert.tipo == "inactivity",
-            Alert.marca_tiempo >= last_reading_at,
-        )
-    ).scalar_one_or_none()
-    return existing is not None
-
-
-def scan_inactivity_alerts(
-    db: Session,
-    *,
-    minutes_without_data: int = 20,
-    node_id: int | None = None,
-    irrigation_area_id: int | None = None,
-) -> dict[str, int | datetime]:
-    now_utc = datetime.now(UTC).replace(tzinfo=None)
-    inactive_delta = timedelta(minutes=minutes_without_data)
-
-    query = select(Node).where(
-        Node.eliminado_en.is_(None),
-        Node.activo.is_(True),
-    )
-    if node_id is not None:
-        query = query.where(Node.id == node_id)
-    if irrigation_area_id is not None:
-        query = query.where(Node.area_riego_id == irrigation_area_id)
-
-    nodes = list(db.execute(query).scalars())
-
-    inactive_nodes = 0
-    created_alerts = 0
-
-    for node in nodes:
-        last_reading_at = db.execute(
-            select(func.max(Reading.marca_tiempo)).where(Reading.nodo_id == node.id)
-        ).scalar_one_or_none()
-        if last_reading_at is None:
-            continue
-
-        if now_utc - last_reading_at < inactive_delta:
-            continue
-
-        inactive_nodes += 1
-
-        if _has_inactivity_alert_for_current_outage(
-            db,
-            node_id=node.id,
-            last_reading_at=last_reading_at,
-        ):
-            continue
-
-        elapsed_minutes = int((now_utc - last_reading_at).total_seconds() // 60)
-        create_alert(
-            db,
-            node_id=node.id,
-            irrigation_area_id=node.area_riego_id,
-            threshold_id=None,
-            alert_type="inactivity",
-            parameter=None,
-            detected_value=None,
-            severity="critical",
-            message=(
-                f"Node without data for {elapsed_minutes} minutes. "
-                f"Last reading at {last_reading_at.isoformat()}"
-            ),
-            timestamp=now_utc,
-        )
-        created_alerts += 1
-
-    if created_alerts > 0:
-        db.commit()
-
-    return {
-        "scanned_nodes": len(nodes),
-        "inactive_nodes": inactive_nodes,
-        "created_alerts": created_alerts,
-        "executed_at": now_utc,
     }

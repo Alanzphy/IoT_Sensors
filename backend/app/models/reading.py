@@ -71,15 +71,3 @@ class Reading(Base):
         Index("idx_lecturas_nodo_tiempo", "nodo_id", "marca_tiempo"),
         Index("idx_lecturas_tiempo", "marca_tiempo"),
     )
-
-    @property
-    def soil(self):
-        return self
-
-    @property
-    def irrigation(self):
-        return self
-
-    @property
-    def environmental(self):
-        return self

@@ -1,17 +1,25 @@
 import { MapPin, RefreshCw, TriangleAlert } from "lucide-react";
-import maplibregl, { LngLatBoundsLike, Map as MapLibreMap, Marker } from "maplibre-gl";
+import maplibregl, { Map as MapLibreMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PageTransition } from "../../components/PageTransition";
 import { PillButton } from "../../components/PillButton";
+import {
+  communicationStatusClass,
+  communicationStatusLabel,
+  fitMapToNodes,
+  freshnessText,
+  removeClusterLayers,
+  renderNodeLayer,
+} from "../../components/maps/mapHelpers";
+import { useGeoNodesData, useMapSelectedNodeSync } from "../../components/maps/useGeoNodesData";
 import { useTheme } from "../../context/ThemeContext";
 import { api } from "../../services/api";
-import { GeoNode, getGeoNodes } from "../../services/nodes";
+import { GeoNode } from "../../services/nodes";
 import { parseBackendTimestamp } from "../../utils/datetime";
 
 const DEFAULT_LIGHT_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 const DEFAULT_DARK_STYLE_URL = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
-const MAP_AUTO_REFRESH_MS = 30_000;
 
 interface ClientOption {
   id: number;
@@ -30,41 +38,6 @@ interface AreaOption {
 
 type ViewMode = "markers" | "clusters";
 
-const CLUSTER_SOURCE_ID = "admin-geo-nodes";
-const CLUSTER_LAYER_ID = "admin-geo-nodes-clusters";
-const CLUSTER_COUNT_LAYER_ID = "admin-geo-nodes-cluster-count";
-const UNCLUSTERED_LAYER_ID = "admin-geo-nodes-unclustered";
-
-function markerColorByStatus(status: GeoNode["freshness_status"]): string {
-  if (status === "fresh") return "var(--accent-primary)";
-  if (status === "stale") return "var(--status-warning)";
-  return "var(--text-subtle)";
-}
-
-function freshnessText(node: GeoNode): string {
-  if (node.minutes_since_last_reading === null) {
-    return "Sin lecturas";
-  }
-  if (node.minutes_since_last_reading < 60) {
-    return `Hace ${node.minutes_since_last_reading} min`;
-  }
-  const hours = Math.floor(node.minutes_since_last_reading / 60);
-  const mins = node.minutes_since_last_reading % 60;
-  return `Hace ${hours}h ${mins}min`;
-}
-
-function communicationStatusLabel(status: GeoNode["freshness_status"]): string {
-  if (status === "fresh") return "Reportando";
-  if (status === "stale") return "Sin reporte reciente";
-  return "Sin lecturas";
-}
-
-function communicationStatusClass(status: GeoNode["freshness_status"]): string {
-  if (status === "fresh") return "text-[var(--status-active)]";
-  if (status === "stale") return "text-[var(--status-warning)]";
-  return "text-[var(--text-muted)]";
-}
-
 export function AdminMapPage() {
   const { theme } = useTheme();
 
@@ -76,11 +49,9 @@ export function AdminMapPage() {
   const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
   const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null);
 
-  const [nodes, setNodes] = useState<GeoNode[]>([]);
   const [selectedNode, setSelectedNode] = useState<GeoNode | null>(null);
   const [loadingFilters, setLoadingFilters] = useState(true);
-  const [loadingNodes, setLoadingNodes] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [filterError, setFilterError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("markers");
   const [visibleFresh, setVisibleFresh] = useState(true);
   const [visibleStale, setVisibleStale] = useState(true);
@@ -89,31 +60,25 @@ export function AdminMapPage() {
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
-  const markersRef = useRef<Marker[]>([]);
   const mapStyleUrlRef = useRef<string | null>(null);
-  const fetchRequestSeqRef = useRef(0);
+  const renderCleanupRef = useRef<(() => void) | null>(null);
 
   const runtimeEnv = (import.meta as unknown as { env?: Record<string, string | undefined> }).env;
   const lightMapStyleUrl = runtimeEnv?.VITE_MAP_STYLE_URL || DEFAULT_LIGHT_STYLE_URL;
   const darkMapStyleUrl = runtimeEnv?.VITE_MAP_DARK_STYLE_URL || DEFAULT_DARK_STYLE_URL;
   const activeMapStyleUrl = theme === "dark" ? darkMapStyleUrl : lightMapStyleUrl;
 
-  const removeClusterLayers = useCallback(() => {
-    if (!mapRef.current) return;
+  const { nodes, loading: loadingNodes, error, refresh: fetchNodes } = useGeoNodesData({
+    clientId: selectedClientId,
+    propertyId: selectedPropertyId,
+    areaId: selectedAreaId,
+    errorMessage: "No se pudo cargar la capa geoespacial para administración.",
+    clearOnError: true,
+  });
 
-    if (mapRef.current.getLayer(CLUSTER_LAYER_ID)) {
-      mapRef.current.removeLayer(CLUSTER_LAYER_ID);
-    }
-    if (mapRef.current.getLayer(CLUSTER_COUNT_LAYER_ID)) {
-      mapRef.current.removeLayer(CLUSTER_COUNT_LAYER_ID);
-    }
-    if (mapRef.current.getLayer(UNCLUSTERED_LAYER_ID)) {
-      mapRef.current.removeLayer(UNCLUSTERED_LAYER_ID);
-    }
-    if (mapRef.current.getSource(CLUSTER_SOURCE_ID)) {
-      mapRef.current.removeSource(CLUSTER_SOURCE_ID);
-    }
-  }, []);
+  const displayedError = error ?? filterError;
+
+  useMapSelectedNodeSync(nodes, selectedAreaId, selectedNode, setSelectedNode);
 
   const visibleStatuses = useMemo(() => {
     const list: GeoNode["freshness_status"][] = [];
@@ -179,33 +144,6 @@ export function AdminMapPage() {
     setAreas(response.data.data || []);
   }, []);
 
-  const fetchNodes = useCallback(async () => {
-    const requestSeq = ++fetchRequestSeqRef.current;
-    try {
-      setLoadingNodes(true);
-      setError(null);
-
-      const response = await getGeoNodes({
-        per_page: 200,
-        include_without_coordinates: true,
-        client_id: selectedClientId ?? undefined,
-        property_id: selectedPropertyId ?? undefined,
-        irrigation_area_id: selectedAreaId ?? undefined,
-      });
-
-      if (requestSeq !== fetchRequestSeqRef.current) return;
-      setNodes(response.data);
-    } catch (err) {
-      if (requestSeq !== fetchRequestSeqRef.current) return;
-      console.error("Error fetching admin geo nodes", err);
-      setError("No se pudo cargar la capa geoespacial para administración.");
-      setNodes([]);
-    } finally {
-      if (requestSeq !== fetchRequestSeqRef.current) return;
-      setLoadingNodes(false);
-    }
-  }, [selectedClientId, selectedPropertyId, selectedAreaId]);
-
   useEffect(() => {
     const bootstrap = async () => {
       try {
@@ -214,7 +152,7 @@ export function AdminMapPage() {
         await loadProperties(null);
       } catch (err) {
         console.error("Error bootstrapping admin map filters", err);
-        setError("No se pudieron cargar los filtros globales.");
+        setFilterError("No se pudieron cargar los filtros globales.");
       } finally {
         setLoadingFilters(false);
       }
@@ -226,7 +164,7 @@ export function AdminMapPage() {
   useEffect(() => {
     loadProperties(selectedClientId).catch((err) => {
       console.error("Error loading properties", err);
-      setError("No se pudieron cargar los predios para el cliente seleccionado.");
+      setFilterError("No se pudieron cargar los predios para el cliente seleccionado.");
     });
     setSelectedPropertyId(null);
     setSelectedAreaId(null);
@@ -236,59 +174,10 @@ export function AdminMapPage() {
   useEffect(() => {
     loadAreas(selectedPropertyId).catch((err) => {
       console.error("Error loading areas", err);
-      setError("No se pudieron cargar las áreas para el predio seleccionado.");
+      setFilterError("No se pudieron cargar las áreas para el predio seleccionado.");
     });
     setSelectedAreaId(null);
   }, [selectedPropertyId, loadAreas]);
-
-  useEffect(() => {
-    fetchNodes();
-  }, [fetchNodes]);
-
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      if (document.hidden) return;
-      void fetchNodes();
-    }, MAP_AUTO_REFRESH_MS);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [fetchNodes]);
-
-  useEffect(() => {
-    if (nodes.length === 0) {
-      if (selectedNode !== null) {
-        setSelectedNode(null);
-      }
-      return;
-    }
-
-    const preferredByArea =
-      selectedAreaId !== null
-        ? nodes.find((node) => node.irrigation_area_id === selectedAreaId) || null
-        : null;
-
-    if (!selectedNode) {
-      setSelectedNode(preferredByArea ?? nodes[0]);
-      return;
-    }
-
-    const latestSelectedNode = nodes.find((node) => node.id === selectedNode.id) || null;
-    if (!latestSelectedNode) {
-      setSelectedNode(preferredByArea ?? nodes[0]);
-      return;
-    }
-
-    if (preferredByArea && latestSelectedNode.id !== preferredByArea.id) {
-      setSelectedNode(preferredByArea);
-      return;
-    }
-
-    if (latestSelectedNode !== selectedNode) {
-      setSelectedNode(latestSelectedNode);
-    }
-  }, [nodes, selectedAreaId, selectedNode]);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
@@ -311,14 +200,12 @@ export function AdminMapPage() {
 
     return () => {
       mapRef.current?.off("style.load", onStyleLoad);
-      markersRef.current.forEach((marker) => marker.remove());
-      markersRef.current = [];
-      removeClusterLayers();
+      removeClusterLayers(mapRef.current);
       mapRef.current?.remove();
       mapRef.current = null;
       mapStyleUrlRef.current = null;
     };
-  }, [activeMapStyleUrl, removeClusterLayers]);
+  }, [activeMapStyleUrl]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -361,203 +248,24 @@ export function AdminMapPage() {
       };
     }
 
-    markersRef.current.forEach((marker) => marker.remove());
-    markersRef.current = [];
+    renderCleanupRef.current?.();
+    renderCleanupRef.current = renderNodeLayer(map, filteredNodesWithCoordinates, {
+      enableClusters: viewMode === "clusters",
+      includeClientInPopup: true,
+      noDataColor: "var(--text-subtle)",
+      onSelectNode: setSelectedNode,
+    });
 
-    removeClusterLayers();
-
-    let onClusterClick: ((event: maplibregl.MapMouseEvent) => void) | null = null;
-    let onUnclusteredClick: ((event: maplibregl.MapMouseEvent) => void) | null = null;
-    let onClusterMouseEnter: (() => void) | null = null;
-    let onClusterMouseLeave: (() => void) | null = null;
-    let onUnclusteredMouseEnter: (() => void) | null = null;
-    let onUnclusteredMouseLeave: (() => void) | null = null;
-
-    if (viewMode === "clusters") {
-      const featureCollection = {
-        type: "FeatureCollection",
-        features: filteredNodesWithCoordinates.map((node) => ({
-          type: "Feature",
-          geometry: {
-            type: "Point",
-            coordinates: [node.longitude as number, node.latitude as number],
-          },
-          properties: {
-            node_id: node.id,
-            freshness_status: node.freshness_status,
-          },
-        })),
-      } as GeoJSON.FeatureCollection<GeoJSON.Point, { node_id: number; freshness_status: GeoNode["freshness_status"] }>;
-
-      map.addSource(CLUSTER_SOURCE_ID, {
-        type: "geojson",
-        data: featureCollection,
-        cluster: true,
-        clusterMaxZoom: 14,
-        clusterRadius: 40,
-      });
-
-      map.addLayer({
-        id: CLUSTER_LAYER_ID,
-        type: "circle",
-        source: CLUSTER_SOURCE_ID,
-        filter: ["has", "point_count"],
-        paint: {
-          "circle-color": ["step", ["get", "point_count"], "#9CA3AF", 20, "#8CA478", 60, "#6D7E5E"],
-          "circle-radius": ["step", ["get", "point_count"], 18, 20, 24, 60, 30],
-          "circle-stroke-width": 1,
-          "circle-stroke-color": "#FFFFFF",
-        },
-      });
-
-      map.addLayer({
-        id: CLUSTER_COUNT_LAYER_ID,
-        type: "symbol",
-        source: CLUSTER_SOURCE_ID,
-        filter: ["has", "point_count"],
-        layout: {
-          "text-field": ["get", "point_count_abbreviated"],
-          "text-font": ["Open Sans Bold"],
-          "text-size": 11,
-        },
-        paint: {
-          "text-color": "#FFFFFF",
-        },
-      });
-
-      map.addLayer({
-        id: UNCLUSTERED_LAYER_ID,
-        type: "circle",
-        source: CLUSTER_SOURCE_ID,
-        filter: ["!", ["has", "point_count"]],
-        paint: {
-          "circle-color": ["match", ["get", "freshness_status"], "fresh", "#8CA478", "stale", "#D97706", "#6E6359"],
-          "circle-radius": 7,
-          "circle-stroke-width": 2,
-          "circle-stroke-color": "#FFFFFF",
-        },
-      });
-
-      onClusterClick = (event) => {
-        const features = map.queryRenderedFeatures(event.point, {
-          layers: [CLUSTER_LAYER_ID],
-        });
-        const feature = features[0];
-        if (!feature || !feature.properties) return;
-
-        const clusterId = feature.properties.cluster_id;
-        const source = map.getSource(CLUSTER_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
-        if (!source || clusterId === undefined) return;
-
-        source
-          .getClusterExpansionZoom(clusterId)
-          .then((zoom) => {
-            if (!feature.geometry || feature.geometry.type !== "Point") return;
-            map.easeTo({
-              center: feature.geometry.coordinates as [number, number],
-              zoom,
-              duration: 400,
-            });
-          })
-          .catch(() => {
-            // noop: keep current zoom on failure
-          });
-      };
-
-      onUnclusteredClick = (event) => {
-        const features = map.queryRenderedFeatures(event.point, {
-          layers: [UNCLUSTERED_LAYER_ID],
-        });
-        const feature = features[0];
-        const nodeId = feature?.properties?.node_id;
-        if (!nodeId) return;
-
-        const node = nodes.find((item) => item.id === Number(nodeId));
-        if (node) setSelectedNode(node);
-      };
-
-      onClusterMouseEnter = () => {
-        map.getCanvas().style.cursor = "pointer";
-      };
-      onClusterMouseLeave = () => {
-        map.getCanvas().style.cursor = "";
-      };
-      onUnclusteredMouseEnter = () => {
-        map.getCanvas().style.cursor = "pointer";
-      };
-      onUnclusteredMouseLeave = () => {
-        map.getCanvas().style.cursor = "";
-      };
-
-      map.on("click", CLUSTER_LAYER_ID, onClusterClick);
-      map.on("click", UNCLUSTERED_LAYER_ID, onUnclusteredClick);
-      map.on("mouseenter", CLUSTER_LAYER_ID, onClusterMouseEnter);
-      map.on("mouseleave", CLUSTER_LAYER_ID, onClusterMouseLeave);
-      map.on("mouseenter", UNCLUSTERED_LAYER_ID, onUnclusteredMouseEnter);
-      map.on("mouseleave", UNCLUSTERED_LAYER_ID, onUnclusteredMouseLeave);
-    } else {
-      for (const node of filteredNodesWithCoordinates) {
-        const markerElement = document.createElement("button");
-        markerElement.type = "button";
-        markerElement.className = "w-4 h-4 rounded-full border-2 border-white shadow-md";
-        markerElement.style.backgroundColor = markerColorByStatus(node.freshness_status);
-        markerElement.title = node.name || `Nodo #${node.id}`;
-
-        const popupHtml = `
-          <div class="iot-map-popup-content">
-            <div class="iot-map-popup-title">${node.name || `Nodo #${node.id}`}</div>
-            <div><strong>Cliente:</strong> ${node.client_company_name}</div>
-            <div><strong>Predio:</strong> ${node.property_name}</div>
-            <div><strong>Área:</strong> ${node.irrigation_area_name}</div>
-            <div><strong>Cultivo:</strong> ${node.crop_type_name}</div>
-            <div><strong>Frescura:</strong> ${freshnessText(node)}</div>
-          </div>
-        `;
-
-        const marker = new maplibregl.Marker({ element: markerElement, anchor: "bottom" })
-          .setLngLat([node.longitude as number, node.latitude as number])
-          .setPopup(new maplibregl.Popup({ offset: 16, className: "iot-map-popup" }).setHTML(popupHtml))
-          .addTo(map);
-
-        markerElement.addEventListener("click", () => setSelectedNode(node));
-        markersRef.current.push(marker);
-      }
-    }
-
-    if (filteredNodesWithCoordinates.length === 1) {
-      const oneNode = filteredNodesWithCoordinates[0];
-      map.flyTo({
-        center: [oneNode.longitude as number, oneNode.latitude as number],
-        zoom: 12,
-        essential: true,
-      });
-    } else if (filteredNodesWithCoordinates.length > 1) {
-      const bounds = new maplibregl.LngLatBounds();
-      filteredNodesWithCoordinates.forEach((node) => {
-        bounds.extend([node.longitude as number, node.latitude as number]);
-      });
-      map.fitBounds(bounds as LngLatBoundsLike, {
-        padding: 60,
-        maxZoom: 13,
-        duration: 700,
-      });
-    }
+    fitMapToNodes(map, filteredNodesWithCoordinates);
 
     return () => {
-      markersRef.current.forEach((marker) => marker.remove());
-      markersRef.current = [];
-
-      if (onClusterClick) map.off("click", CLUSTER_LAYER_ID, onClusterClick);
-      if (onUnclusteredClick) map.off("click", UNCLUSTERED_LAYER_ID, onUnclusteredClick);
-      if (onClusterMouseEnter) map.off("mouseenter", CLUSTER_LAYER_ID, onClusterMouseEnter);
-      if (onClusterMouseLeave) map.off("mouseleave", CLUSTER_LAYER_ID, onClusterMouseLeave);
-      if (onUnclusteredMouseEnter) map.off("mouseenter", UNCLUSTERED_LAYER_ID, onUnclusteredMouseEnter);
-      if (onUnclusteredMouseLeave) map.off("mouseleave", UNCLUSTERED_LAYER_ID, onUnclusteredMouseLeave);
-
-      removeClusterLayers();
-      map.getCanvas().style.cursor = "";
+      if (mapRef.current) {
+        renderCleanupRef.current?.();
+        map.getCanvas().style.cursor = "";
+      }
+      renderCleanupRef.current = null;
     };
-  }, [filteredNodesWithCoordinates, mapStyleVersion, nodes, removeClusterLayers, viewMode]);
+  }, [filteredNodesWithCoordinates, mapStyleVersion, viewMode]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -736,10 +444,10 @@ export function AdminMapPage() {
             )}
           </div>
 
-          {error && (
+          {displayedError && (
             <div className="mt-3 rounded-xl border border-[var(--status-danger)]/25 bg-[var(--status-danger-bg)] text-[var(--status-danger)] px-4 py-3 text-sm flex items-center gap-2">
               <TriangleAlert className="w-4 h-4" />
-              {error}
+              {displayedError}
             </div>
           )}
         </div>

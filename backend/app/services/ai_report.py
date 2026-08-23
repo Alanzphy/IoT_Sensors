@@ -1,7 +1,5 @@
 import json
-import smtplib
 from datetime import UTC, date, datetime, time, timedelta
-from email.message import EmailMessage
 from urllib import error, request
 
 from fastapi import HTTPException, status
@@ -9,6 +7,8 @@ from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.emailer import send_email
+from app.core.time import utc_now
 from app.models.ai_report import AIReport
 from app.models.alert import Alert
 from app.models.client import Client
@@ -18,10 +18,6 @@ from app.models.property import Property
 from app.models.reading import Reading
 from app.models.user import User
 from app.services.whatsapp import send_whatsapp_text_message
-
-
-def _utc_now_naive() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _to_utc_naive(value: datetime) -> datetime:
@@ -51,7 +47,7 @@ def _normalize_range(
             )
         return start, end
 
-    now_utc = _utc_now_naive()
+    now_utc = utc_now()
     today_utc = now_utc.date()
     start = datetime.combine(today_utc - timedelta(days=1), time.min)
     end = datetime.combine(today_utc, time.min)
@@ -382,7 +378,7 @@ def _collect_report_context(
             .group_by(Reading.nodo_id)
         ).all()
 
-        now_utc = _utc_now_naive()
+        now_utc = utc_now()
         with_data = 0
         stale_20m = 0
         stale_60m = 0
@@ -576,38 +572,6 @@ def _build_report_url(report_id: int) -> str:
     return f"{settings.FRONTEND_PUBLIC_URL.rstrip('/')}/cliente/reportes-ia/{report_id}"
 
 
-def _send_email_notification(*, recipient_email: str, subject: str, body: str) -> bool:
-    from_email = settings.SMTP_FROM_EMAIL or settings.SMTP_USERNAME
-    if not settings.SMTP_HOST or not from_email:
-        return False
-
-    msg = EmailMessage()
-    msg["Subject"] = subject
-    msg["From"] = from_email
-    msg["To"] = recipient_email
-    msg.set_content(body)
-
-    try:
-        if settings.SMTP_USE_SSL:
-            with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=20) as smtp:
-                if settings.SMTP_USERNAME and settings.SMTP_PASSWORD:
-                    smtp.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
-                smtp.send_message(msg)
-            return True
-
-        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=20) as smtp:
-            smtp.ehlo()
-            if settings.SMTP_USE_TLS:
-                smtp.starttls()
-                smtp.ehlo()
-            if settings.SMTP_USERNAME and settings.SMTP_PASSWORD:
-                smtp.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
-            smtp.send_message(msg)
-        return True
-    except Exception:
-        return False
-
-
 def _notify_report(
     db: Session,
     *,
@@ -646,7 +610,7 @@ def _notify_report(
     )
 
     if settings.NOTIFICATIONS_EMAIL_ENABLED and email:
-        notification_state["email_sent"] = _send_email_notification(
+        notification_state["email_sent"] = send_email(
             recipient_email=email,
             subject=subject,
             body=body,
@@ -791,7 +755,7 @@ def generate_ai_reports(
             report.hallazgos = findings
             report.recomendacion = recommendation
             report.error_detalle = None
-            report.generado_en = _utc_now_naive()
+            report.generado_en = utc_now()
 
             metadata = {
                 **generation_metadata,
@@ -820,7 +784,7 @@ def generate_ai_reports(
         except Exception as exc:
             report.estado = "failed"
             report.error_detalle = str(exc)[:2000]
-            report.generado_en = _utc_now_naive()
+            report.generado_en = utc_now()
             report.metadatos_generacion = json.dumps(
                 {
                     "provider": "azure-openai" if _azure_openai_enabled() else "rules-fallback",
@@ -838,5 +802,5 @@ def generate_ai_reports(
         "report_ids": report_ids,
         "range_start": range_start,
         "range_end": range_end,
-        "executed_at": _utc_now_naive(),
+        "executed_at": utc_now(),
     }

@@ -5,13 +5,14 @@ import json
 import math
 import random
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 from sqlalchemy import delete, func, insert, select, update
 from sqlalchemy.orm import Session
 
+from app.core.time import utc_now_naive
 from app.db.session import SessionLocal
 from app.models.alert import Alert
 from app.models.client import Client
@@ -54,10 +55,6 @@ class NodeGenerationState:
     accumulated_liters: float
     flow_base: float
     temp_offset: float
-
-
-def utc_now_naive() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def floor_to_10min(dt: datetime) -> datetime:

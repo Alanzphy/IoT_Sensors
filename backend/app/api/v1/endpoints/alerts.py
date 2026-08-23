@@ -1,14 +1,11 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
 
+from app.core.authz import get_client_area_ids, require_admin, validate_area_access
 from app.core.deps import get_current_user
 from app.db.session import get_db
-from app.models.client import Client
-from app.models.irrigation_area import IrrigationArea
-from app.models.property import Property
 from app.models.user import User
 from app.schemas.alert import (
     AlertBulkReadResponse,
@@ -25,58 +22,6 @@ from app.services import alert as alert_service
 from app.services import audit_log as audit_log_service
 
 router = APIRouter()
-
-
-def _get_client_area_ids(user: User, db: Session) -> list[int]:
-    client = db.execute(
-        select(Client).where(
-            Client.usuario_id == user.id,
-            Client.eliminado_en.is_(None),
-        )
-    ).scalar_one_or_none()
-    if client is None:
-        return []
-
-    property_ids = list(
-        db.execute(
-            select(Property.id).where(
-                Property.cliente_id == client.id,
-                Property.eliminado_en.is_(None),
-            )
-        ).scalars()
-    )
-    if not property_ids:
-        return []
-
-    return list(
-        db.execute(
-            select(IrrigationArea.id).where(
-                IrrigationArea.predio_id.in_(property_ids),
-                IrrigationArea.eliminado_en.is_(None),
-            )
-        ).scalars()
-    )
-
-
-def _validate_client_area_access(
-    user: User, db: Session, irrigation_area_id: int
-) -> None:
-    if user.rol == "admin":
-        return
-    area_ids = _get_client_area_ids(user, db)
-    if irrigation_area_id not in area_ids:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this irrigation area",
-        )
-
-
-def _require_admin(user: User) -> None:
-    if user.rol != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required",
-        )
 
 
 @router.get("", response_model=PaginatedResponse[AlertResponse])
@@ -101,9 +46,9 @@ def list_alerts(
     allowed_area_ids: list[int] | None = None
 
     if current_user.rol != "admin":
-        allowed_area_ids = _get_client_area_ids(current_user, db)
+        allowed_area_ids = get_client_area_ids(current_user, db)
         if irrigation_area_id is not None:
-            _validate_client_area_access(current_user, db, irrigation_area_id)
+            validate_area_access(current_user, db, irrigation_area_id)
 
     items, total = alert_service.list_alerts(
         db=db,
@@ -145,9 +90,9 @@ def get_unread_alert_count(
     allowed_area_ids: list[int] | None = None
 
     if current_user.rol != "admin":
-        allowed_area_ids = _get_client_area_ids(current_user, db)
+        allowed_area_ids = get_client_area_ids(current_user, db)
         if irrigation_area_id is not None:
-            _validate_client_area_access(current_user, db, irrigation_area_id)
+            validate_area_access(current_user, db, irrigation_area_id)
 
     unread_count = alert_service.count_unread_alerts(
         db=db,
@@ -176,9 +121,9 @@ def mark_all_alerts_read(
     allowed_area_ids: list[int] | None = None
 
     if current_user.rol != "admin":
-        allowed_area_ids = _get_client_area_ids(current_user, db)
+        allowed_area_ids = get_client_area_ids(current_user, db)
         if irrigation_area_id is not None:
-            _validate_client_area_access(current_user, db, irrigation_area_id)
+            validate_area_access(current_user, db, irrigation_area_id)
 
     updated_count = alert_service.mark_alerts_read_bulk(
         db=db,
@@ -218,7 +163,7 @@ def get_alert(
 
     alert = alert_service.get_alert(db, alert_id)
     if current_user.rol != "admin":
-        _validate_client_area_access(current_user, db, alert.area_riego_id)
+        validate_area_access(current_user, db, alert.area_riego_id)
     return AlertResponse.model_validate(alert)
 
 
@@ -231,7 +176,7 @@ def generate_alert_recommendation(
 ):
     alert = alert_service.get_alert(db, alert_id)
     if current_user.rol != "admin":
-        _validate_client_area_access(current_user, db, alert.area_riego_id)
+        validate_area_access(current_user, db, alert.area_riego_id)
 
     result = alert_service.generate_alert_recommendation(
         db,
@@ -258,7 +203,7 @@ def mark_alert_read(
 ):
     alert = alert_service.get_alert(db, alert_id)
     if current_user.rol != "admin":
-        _validate_client_area_access(current_user, db, alert.area_riego_id)
+        validate_area_access(current_user, db, alert.area_riego_id)
     updated = alert_service.mark_alert_read(db, alert_id, read=payload.read)
     audit_log_service.create_audit_log(
         db,
@@ -279,7 +224,7 @@ def scan_inactivity_alerts(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    _require_admin(current_user)
+    require_admin(current_user)
 
     result = alert_service.scan_inactivity_alerts(
         db,
@@ -313,7 +258,7 @@ def dispatch_alert_notifications(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    _require_admin(current_user)
+    require_admin(current_user)
 
     result = alert_service.dispatch_pending_notifications(
         db,

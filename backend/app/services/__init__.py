@@ -1,7 +1,7 @@
 from app.services import (
     ai_chat,
     ai_report,
-    alert,
+    alerts,
     audit_log,
     client,
     crop_cycle,
@@ -15,6 +15,8 @@ from app.services import (
     threshold,
     user,
 )
+
+alert = alerts
 
 __all__ = [
     "user",

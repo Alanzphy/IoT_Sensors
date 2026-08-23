@@ -1,16 +1,14 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.responses import Response, StreamingResponse
+from fastapi import APIRouter, Depends, Query
+from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.authz import get_client_area_ids, validate_area_access
 from app.core.deps import get_current_user, validate_api_key
 from app.db.session import get_db
-from app.models.client import Client
-from app.models.irrigation_area import IrrigationArea
 from app.models.node import Node
-from app.models.property import Property
 from app.models.user import User
 from app.schemas.base import PaginatedResponse
 from app.schemas.reading import (
@@ -25,47 +23,8 @@ from app.services import reading as reading_service
 router = APIRouter()
 
 
-def _get_client_area_ids(user: User, db: Session) -> list[int]:
-    client = db.execute(
-        select(Client).where(
-            Client.usuario_id == user.id, Client.eliminado_en.is_(None)
-        )
-    ).scalar_one_or_none()
-    if client is None:
-        return []
-    prop_ids = list(
-        db.execute(
-            select(Property.id).where(
-                Property.cliente_id == client.id,
-                Property.eliminado_en.is_(None),
-            )
-        ).scalars()
-    )
-    if not prop_ids:
-        return []
-    return list(
-        db.execute(
-            select(IrrigationArea.id).where(
-                IrrigationArea.predio_id.in_(prop_ids),
-                IrrigationArea.eliminado_en.is_(None),
-            )
-        ).scalars()
-    )
-
-
-def _validate_area_access(user: User, db: Session, irrigation_area_id: int) -> None:
-    if user.rol == "admin":
-        return
-    area_ids = _get_client_area_ids(user, db)
-    if irrigation_area_id not in area_ids:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this irrigation area",
-        )
-
-
 def _get_client_node_ids(user: User, db: Session) -> list[int]:
-    area_ids = _get_client_area_ids(user, db)
+    area_ids = get_client_area_ids(user, db)
     if not area_ids:
         return []
     return list(
@@ -100,7 +59,7 @@ def get_latest_reading(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    _validate_area_access(current_user, db, irrigation_area_id)
+    validate_area_access(current_user, db, irrigation_area_id)
     reading = reading_service.get_latest_reading(db, irrigation_area_id)
     if reading is None:
         return None
@@ -113,7 +72,7 @@ def get_priority_status(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    _validate_area_access(current_user, db, irrigation_area_id)
+    validate_area_access(current_user, db, irrigation_area_id)
     payload = reading_service.get_priority_status(
         db=db,
         irrigation_area_id=irrigation_area_id,
@@ -130,7 +89,7 @@ def get_readings_availability(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    _validate_area_access(current_user, db, irrigation_area_id)
+    validate_area_access(current_user, db, irrigation_area_id)
     min_date, max_date, available_dates = reading_service.get_readings_availability(
         db=db,
         irrigation_area_id=irrigation_area_id,
@@ -156,7 +115,7 @@ def export_readings(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    _validate_area_access(current_user, db, irrigation_area_id)
+    validate_area_access(current_user, db, irrigation_area_id)
 
     if format == "csv":
         content = reading_service.export_readings_csv(
@@ -210,7 +169,7 @@ def list_readings(
     node_ids: list[int] | None = None
 
     if irrigation_area_id is not None:
-        _validate_area_access(current_user, db, irrigation_area_id)
+        validate_area_access(current_user, db, irrigation_area_id)
     elif current_user.rol != "admin":
         node_ids = _get_client_node_ids(current_user, db)
         if not node_ids:

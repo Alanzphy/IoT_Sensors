@@ -1,28 +1,9 @@
-import {
-  Activity,
-  Bot,
-  Bell,
-  BellRing,
-  ClipboardList,
-  Clock,
-  Download,
-  LayoutDashboard,
-  LogOut,
-  MessageCircle,
-  MapPin,
-  Moon,
-  Radio,
-  SlidersHorizontal,
-  Sprout,
-  Sun,
-  User,
-  Users,
-  Warehouse,
-} from "lucide-react";
+import { LogOut, Moon, Sun } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import { preloadMapRoutes } from "../../services/routePreload";
+import { adminNavItems, clientNavItems } from "./items";
 
 interface MobileTabBarProps {
   role: "client" | "admin";
@@ -40,34 +21,7 @@ export function MobileTabBar({ role }: MobileTabBarProps) {
     }
   };
 
-  const clientTabs = [
-    { path: "/cliente",                icon: LayoutDashboard,  label: "Inicio" },
-    { path: "/cliente/areas",          icon: Warehouse,         label: "Predios" },
-    { path: "/cliente/mapa",           icon: MapPin,            label: "Mapa" },
-    { path: "/cliente/historico",      icon: Clock,             label: "Histórico" },
-    { path: "/cliente/exportar",       icon: Download,          label: "Exportar" },
-    { path: "/cliente/asistente-ia",   icon: MessageCircle,     label: "Chat IA" },
-    { path: "/cliente/reportes-ia",    icon: Bot,               label: "IA" },
-    { path: "/cliente/umbrales",       icon: SlidersHorizontal, label: "Umbrales" },
-    { path: "/cliente/notificaciones", icon: BellRing,          label: "Notifs" },
-    { path: "/cliente/perfil",         icon: User,              label: "Perfil" },
-  ];
-
-  const adminTabs = [
-    { path: "/admin",           icon: LayoutDashboard,  label: "Inicio" },
-    { path: "/admin/clientes",  icon: Users,            label: "Clientes" },
-    { path: "/admin/mapa",      icon: MapPin,           label: "Mapa" },
-    { path: "/admin/nodos",     icon: Radio,            label: "Nodos" },
-    { path: "/admin/cultivos",  icon: Sprout,           label: "Catálogo" },
-    { path: "/admin/umbrales",  icon: SlidersHorizontal, label: "Umbrales" },
-    { path: "/admin/alertas",   icon: Bell,             label: "Alertas" },
-    { path: "/admin/asistente-ia", icon: MessageCircle, label: "Chat IA" },
-    { path: "/admin/consumo-ia", icon: Activity,        label: "Uso IA" },
-    { path: "/admin/reportes-ia", icon: Bot,            label: "IA" },
-    { path: "/admin/auditoria", icon: ClipboardList,    label: "Auditoría" },
-  ];
-
-  const tabs = role === "client" ? clientTabs : adminTabs;
+  const tabs = role === "client" ? clientNavItems : adminNavItems;
 
   const handleLogout = () => {
     logout();
@@ -102,7 +56,7 @@ export function MobileTabBar({ role }: MobileTabBarProps) {
                 onFocus={() => maybePreloadMaps(tab.path)}
                 onTouchStart={() => maybePreloadMaps(tab.path)}
                 aria-current={isActive ? "page" : undefined}
-                aria-label={tab.label}
+                aria-label={tab.mobileLabel ?? tab.label}
                 className={`
                   flex flex-col items-center gap-0.5 px-3 py-2 rounded-2xl
                   transition-colors flex-shrink-0 min-w-[56px]
@@ -118,7 +72,7 @@ export function MobileTabBar({ role }: MobileTabBarProps) {
                     isActive ? "text-sidebar-primary" : "text-sidebar-foreground/70"
                   }`}
                 >
-                  {tab.label}
+                  {tab.mobileLabel ?? tab.label}
                 </span>
               </Link>
             );

@@ -1,10 +1,9 @@
-from datetime import UTC, datetime
-
 from fastapi import HTTPException, status
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
+from app.core.time import utc_now
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
@@ -92,7 +91,7 @@ def update_user(db: Session, user_id: int, data: UserUpdate) -> User:
                 RefreshToken.usuario_id == user.id,
                 RefreshToken.revocado_en.is_(None),
             )
-            .values(revocado_en=datetime.now(UTC).replace(tzinfo=None))
+            .values(revocado_en=utc_now())
         )
     if "full_name" in update_data:
         user.nombre_completo = update_data["full_name"]

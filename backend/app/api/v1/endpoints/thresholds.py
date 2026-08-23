@@ -1,12 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from app.core.authz import get_client_area_ids, validate_area_access
 from app.core.deps import get_current_user
 from app.db.session import get_db
-from app.models.client import Client
-from app.models.irrigation_area import IrrigationArea
-from app.models.property import Property
 from app.models.user import User
 from app.schemas.base import PaginatedResponse
 from app.schemas.threshold import ThresholdCreate, ThresholdResponse, ThresholdUpdate
@@ -14,53 +11,6 @@ from app.services import audit_log as audit_log_service
 from app.services import threshold as threshold_service
 
 router = APIRouter()
-
-
-def _get_client_area_ids(user: User, db: Session) -> list[int]:
-    client = db.execute(
-        select(Client).where(
-            Client.usuario_id == user.id,
-            Client.eliminado_en.is_(None),
-        )
-    ).scalar_one_or_none()
-    if client is None:
-        return []
-
-    property_ids = list(
-        db.execute(
-            select(Property.id).where(
-                Property.cliente_id == client.id,
-                Property.eliminado_en.is_(None),
-            )
-        ).scalars()
-    )
-    if not property_ids:
-        return []
-
-    return list(
-        db.execute(
-            select(IrrigationArea.id).where(
-                IrrigationArea.predio_id.in_(property_ids),
-                IrrigationArea.eliminado_en.is_(None),
-            )
-        ).scalars()
-    )
-
-
-def _validate_client_area_access(
-    user: User,
-    db: Session,
-    irrigation_area_id: int,
-) -> None:
-    if user.rol == "admin":
-        return
-
-    area_ids = _get_client_area_ids(user, db)
-    if irrigation_area_id not in area_ids:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this irrigation area",
-        )
 
 
 @router.get("", response_model=PaginatedResponse[ThresholdResponse])
@@ -76,9 +26,9 @@ def list_thresholds(
     allowed_area_ids: list[int] | None = None
 
     if current_user.rol != "admin":
-        allowed_area_ids = _get_client_area_ids(current_user, db)
+        allowed_area_ids = get_client_area_ids(current_user, db)
         if irrigation_area_id is not None:
-            _validate_client_area_access(current_user, db, irrigation_area_id)
+            validate_area_access(current_user, db, irrigation_area_id)
 
     items, total = threshold_service.list_thresholds(
         db=db,
@@ -104,7 +54,7 @@ def create_threshold(
     db: Session = Depends(get_db),
 ):
     if current_user.rol != "admin":
-        _validate_client_area_access(current_user, db, data.irrigation_area_id)
+        validate_area_access(current_user, db, data.irrigation_area_id)
 
     threshold = threshold_service.create_threshold(db, data)
     actor_scope = "admin" if current_user.rol == "admin" else "client-self-service"
@@ -130,7 +80,7 @@ def get_threshold(
 ):
     threshold = threshold_service.get_threshold(db, threshold_id)
     if current_user.rol != "admin":
-        _validate_client_area_access(current_user, db, threshold.area_riego_id)
+        validate_area_access(current_user, db, threshold.area_riego_id)
     return ThresholdResponse.model_validate(threshold)
 
 
@@ -143,9 +93,9 @@ def update_threshold(
 ):
     if current_user.rol != "admin":
         current_threshold = threshold_service.get_threshold(db, threshold_id)
-        _validate_client_area_access(current_user, db, current_threshold.area_riego_id)
+        validate_area_access(current_user, db, current_threshold.area_riego_id)
         if data.irrigation_area_id is not None:
-            _validate_client_area_access(current_user, db, data.irrigation_area_id)
+            validate_area_access(current_user, db, data.irrigation_area_id)
 
     threshold = threshold_service.update_threshold(db, threshold_id, data)
     actor_scope = "admin" if current_user.rol == "admin" else "client-self-service"
@@ -171,7 +121,7 @@ def delete_threshold(
 ):
     threshold = threshold_service.get_threshold(db, threshold_id)
     if current_user.rol != "admin":
-        _validate_client_area_access(current_user, db, threshold.area_riego_id)
+        validate_area_access(current_user, db, threshold.area_riego_id)
 
     threshold = threshold_service.soft_delete_threshold(db, threshold_id)
     actor_scope = "admin" if current_user.rol == "admin" else "client-self-service"

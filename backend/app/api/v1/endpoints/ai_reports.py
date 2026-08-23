@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.authz import require_admin
 from app.core.config import settings
 from app.core.deps import get_current_user
 from app.db.session import get_db
@@ -26,14 +27,6 @@ def _ensure_ai_reports_enabled() -> None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="AI reports feature is disabled",
-        )
-
-
-def _require_admin(user: User) -> None:
-    if user.rol != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required",
         )
 
 
@@ -121,7 +114,7 @@ def generate_ai_reports(
     db: Session = Depends(get_db),
 ):
     _ensure_ai_reports_enabled()
-    _require_admin(current_user)
+    require_admin(current_user)
 
     result = ai_report_service.generate_ai_reports(
         db=db,

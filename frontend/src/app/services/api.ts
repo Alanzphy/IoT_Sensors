@@ -1,33 +1,5 @@
 import axios, { InternalAxiosRequestConfig } from "axios";
-
-const ISO_DATETIME_NO_TZ =
-  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?$/;
-
-function normalizeBackendDateString(value: string): string {
-  return ISO_DATETIME_NO_TZ.test(value) ? `${value}Z` : value;
-}
-
-function normalizeBackendDates<T>(data: T): T {
-  if (data == null) return data;
-
-  if (typeof data === "string") {
-    return normalizeBackendDateString(data) as T;
-  }
-
-  if (Array.isArray(data)) {
-    return data.map((item) => normalizeBackendDates(item)) as T;
-  }
-
-  if (typeof data === "object" && data.constructor === Object) {
-    const normalized: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(data)) {
-      normalized[key] = normalizeBackendDates(value);
-    }
-    return normalized as T;
-  }
-
-  return data;
-}
+import { normalizeBackendDates } from "../utils/datetime";
 
 // Create Axios Instance
 // In Docker (behind Nginx): VITE_API_BASE_URL="/api/v1"

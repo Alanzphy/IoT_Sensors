@@ -1,5 +1,5 @@
 import json
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 from time import perf_counter
 from typing import Any
 
@@ -7,8 +7,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.authz import require_admin
 from app.core.config import settings
 from app.core.deps import get_current_user
+from app.core.time import utc_now
 from app.db.session import get_db
 from app.models.audit_log import AuditLog
 from app.models.user import User
@@ -31,18 +33,6 @@ def _ensure_ai_assistant_enabled() -> None:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="AI assistant feature is disabled",
         )
-
-
-def _require_admin(user: User) -> None:
-    if user.rol != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required",
-        )
-
-
-def _utc_now_naive() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _to_int(value: Any) -> int | None:
@@ -78,7 +68,7 @@ def _enforce_rate_limit(
     if max_requests <= 0 or window_minutes <= 0:
         return
 
-    since = _utc_now_naive() - timedelta(minutes=window_minutes)
+    since = utc_now() - timedelta(minutes=window_minutes)
     recent_count = audit_log_service.count_audit_logs(
         db,
         user_id=current_user.id,
@@ -198,9 +188,9 @@ def get_ai_assistant_usage(
     db: Session = Depends(get_db),
 ):
     _ensure_ai_assistant_enabled()
-    _require_admin(current_user)
+    require_admin(current_user)
 
-    now_utc = _utc_now_naive()
+    now_utc = utc_now()
     since = now_utc - timedelta(hours=hours)
     conditions = [
         AuditLog.entidad == "ai_assistant_chat",

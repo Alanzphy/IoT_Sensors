@@ -1,31 +1,16 @@
 import {
-  Activity,
-  Bot,
-  Bell,
-  BellRing,
   ChevronLeft,
   ChevronRight,
-  ClipboardList,
-  Clock,
-  Download,
-  LayoutDashboard,
   LogOut,
-  MessageCircle,
-  MapPin,
   Moon,
-  Radio,
-  SlidersHorizontal,
-  Sprout,
   Sun,
-  User,
-  Users,
-  Warehouse,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import { preloadMapRoutes } from "../../services/routePreload";
+import { adminNavItems, clientNavItems } from "./items";
 
 interface DesktopSidebarProps {
   role: "client" | "admin";
@@ -58,34 +43,6 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
       void preloadMapRoutes();
     }
   };
-
-  const clientNavItems = [
-    { path: "/cliente",              icon: LayoutDashboard,  label: "Dashboard" },
-    { path: "/cliente/areas",        icon: Warehouse,         label: "Predios" },
-    { path: "/cliente/mapa",         icon: MapPin,            label: "Mapa" },
-    { path: "/cliente/historico",    icon: Clock,             label: "Histórico" },
-    { path: "/cliente/exportar",     icon: Download,          label: "Exportar" },
-    { path: "/cliente/alertas",      icon: Bell,              label: "Alertas" },
-    { path: "/cliente/asistente-ia", icon: MessageCircle,     label: "Asistente IA" },
-    { path: "/cliente/reportes-ia",  icon: Bot,               label: "Reportes IA" },
-    { path: "/cliente/umbrales",     icon: SlidersHorizontal, label: "Umbrales" },
-    { path: "/cliente/notificaciones", icon: BellRing,        label: "Notificaciones" },
-    { path: "/cliente/perfil",       icon: User,              label: "Perfil" },
-  ];
-
-  const adminNavItems = [
-    { path: "/admin",           icon: LayoutDashboard,  label: "Dashboard" },
-    { path: "/admin/clientes",  icon: Users,            label: "Clientes" },
-    { path: "/admin/mapa",      icon: MapPin,           label: "Mapa" },
-    { path: "/admin/nodos",     icon: Radio,            label: "Nodos" },
-    { path: "/admin/cultivos",  icon: Sprout,           label: "Catálogo" },
-    { path: "/admin/umbrales",  icon: SlidersHorizontal, label: "Umbrales" },
-    { path: "/admin/alertas",   icon: Bell,             label: "Alertas" },
-    { path: "/admin/asistente-ia", icon: MessageCircle, label: "Asistente IA" },
-    { path: "/admin/consumo-ia", icon: Activity, label: "Consumo IA" },
-    { path: "/admin/reportes-ia", icon: Bot,            label: "Reportes IA" },
-    { path: "/admin/auditoria", icon: ClipboardList,    label: "Auditoría" },
-  ];
 
   const navItems = role === "client" ? clientNavItems : adminNavItems;
   const homePath = role === "client" ? "/cliente" : "/admin";

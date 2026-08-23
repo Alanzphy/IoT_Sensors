@@ -18,7 +18,7 @@ import { useSelection } from "../../context/SelectionContext";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { usePageVisibility } from "../../hooks/usePageVisibility";
 import { api } from "../../services/api";
-import { parseBackendTimestamp } from "../../utils/datetime";
+import { formatElapsed, parseBackendTimestamp } from "../../utils/datetime";
 
 type PriorityKey = "soil.humidity" | "irrigation.flow_per_minute" | "environmental.eto";
 type SemaphoreLevel = "optimal" | "warning" | "critical";
@@ -47,23 +47,6 @@ function getConnectionState(lastUpdate: Date | null): ConnectionState {
   if (minutesAgo < FRESH_MINUTES_THRESHOLD) return "online";
   if (minutesAgo < 120) return "warning";
   return "offline";
-}
-
-function formatElapsedSince(lastUpdate: Date | null): string {
-  if (!lastUpdate) return "Sin datos";
-
-  const minutesAgo = Math.max(0, Math.floor((Date.now() - lastUpdate.getTime()) / (1000 * 60)));
-  if (minutesAgo < 1) return "Ahora";
-  if (minutesAgo < 60) return `Hace ${minutesAgo} min`;
-
-  const hours = Math.floor(minutesAgo / 60);
-  const minutes = minutesAgo % 60;
-  if (hours < 24) {
-    return minutes > 0 ? `Hace ${hours} h ${minutes} min` : `Hace ${hours} h`;
-  }
-
-  const days = Math.floor(hours / 24);
-  return days === 1 ? "Hace 1 dia" : `Hace ${days} dias`;
 }
 
 function getIrrigationDisplayState(
@@ -194,7 +177,7 @@ export function ClientDashboard() {
               accumulatedWater: latestData.irrigation?.accumulated_liters ?? '-',
               eto: latestData.environmental?.eto ?? '-',
               irrigationActive: latestData.irrigation?.active ?? false,
-              irrigationElapsedTime: formatElapsedSince(parseBackendTimestamp(latestData.timestamp)),
+              irrigationElapsedTime: formatElapsed(parseBackendTimestamp(latestData.timestamp)),
               soilConductivity: latestData.soil?.conductivity ?? '-',
               soilTemp: latestData.soil?.temperature ?? '-',
               waterPotential: latestData.soil?.water_potential ?? '-',

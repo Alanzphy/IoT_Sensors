@@ -6,6 +6,7 @@ import { PageTransition } from "../../components/PageTransition";
 import { PillButton } from "../../components/PillButton";
 import { useToast } from "../../components/Toast";
 import { api } from "../../services/api";
+import { getErrorMessage } from "../../utils/errors";
 
 interface IrrigationArea {
   id: number;
@@ -40,20 +41,6 @@ function parseCoordinateInput(
     throw new Error(`${label} debe estar entre ${min} y ${max}.`);
   }
   return numericValue;
-}
-
-function getErrorMessage(error: any, fallback: string): string {
-  const errorDetail = error?.response?.data?.detail;
-  if (typeof errorDetail === "string") {
-    return errorDetail;
-  }
-  if (Array.isArray(errorDetail)) {
-    return errorDetail.map((item: any) => item.msg || JSON.stringify(item)).join(", ");
-  }
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-  return fallback;
 }
 
 export function NodeManagement() {

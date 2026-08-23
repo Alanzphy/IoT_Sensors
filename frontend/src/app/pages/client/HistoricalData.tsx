@@ -12,6 +12,8 @@ import { SelectionScopeBar } from "../../components/selection/SelectionScopeBar"
 import { useSelection } from "../../context/SelectionContext";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { api } from "../../services/api";
+import { downloadBlobExport } from "../../utils/export";
+import { normalizeTimestamp, parseBackendTimestamp } from "../../utils/datetime";
 import { ReadingResponse } from "../../types/api";
 
 type QuickDateRange = "Hoy" | "Últimos 7 días" | "Últimos 30 días" | "Este mes";
@@ -71,12 +73,6 @@ function chooseBucketMs(daySpan: number, rangeMs: number): number {
   return desiredBucketMs;
 }
 
-function parseReadingTimestamp(value: string): Date {
-  const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/.test(value);
-  const normalized = hasTimezone ? value : `${value}Z`;
-  return parseISO(normalized);
-}
-
 function toUtcDateParam(value: Date): string {
   const year = value.getUTCFullYear();
   const month = String(value.getUTCMonth() + 1).padStart(2, "0");
@@ -106,7 +102,8 @@ function aggregateReadingsForChart(
   }>();
 
   for (const reading of readings) {
-    const parsedDate = parseReadingTimestamp(reading.timestamp);
+    const parsedDate = parseBackendTimestamp(reading.timestamp);
+    if (!parsedDate) continue;
     const readingMs = parsedDate.getTime();
 
     if (!Number.isFinite(readingMs) || readingMs < startMs || readingMs > endMs) {
@@ -393,18 +390,8 @@ export function HistoricalData() {
         format: formatType
       });
 
-      const response = await api.get(`/readings/export?${params}`, {
-        responseType: 'blob'
-      });
-
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      const extension = formatType;
-      link.setAttribute('download', `export_${selectedArea.name}_${format(new Date(), 'yyyy-MM-dd')}.${extension}`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      const fileName = `export_${selectedArea.name}_${format(new Date(), 'yyyy-MM-dd')}.${formatType}`;
+      await downloadBlobExport(`/readings/export?${params}`, fileName);
     } catch (err) {
       console.error("Export failed", err);
     }
@@ -765,7 +752,7 @@ export function HistoricalData() {
               {readings.map((r, i) => (
                 <tr key={r.id} className={i % 2 === 0 ? "bg-[var(--surface-card-primary)]/60 hover:bg-[var(--hover-overlay)]" : "hover:bg-[var(--hover-overlay)] transition-colors"}>
                   <td className="py-3 px-4 text-sm text-[var(--text-body)]">
-                    {format(parseISO(r.timestamp + (r.timestamp.endsWith("Z") ? "" : "Z")), "dd MMM yyyy, HH:mm", { locale: es })}
+                    {format(parseISO(normalizeTimestamp(r.timestamp)), "dd MMM yyyy, HH:mm", { locale: es })}
                   </td>
                   <td className="py-3 px-4 text-sm text-[var(--text-body)] font-mono-data font-medium">
                     {r.soil?.humidity?.toFixed(1) ?? "-"}

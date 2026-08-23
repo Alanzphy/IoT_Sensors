@@ -1,12 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.authz import get_client_area_ids
 from app.core.deps import get_current_user
 from app.db.session import get_db
-from app.models.client import Client
-from app.models.irrigation_area import IrrigationArea
-from app.models.property import Property
 from app.models.user import User
 from app.schemas.base import PaginatedResponse
 from app.schemas.crop_cycle import CropCycleCreate, CropCycleResponse, CropCycleUpdate
@@ -15,41 +12,11 @@ from app.services import crop_cycle as cycle_service
 router = APIRouter()
 
 
-def _get_client_area_ids(user: User, db: Session) -> list[int]:
-    """Return irrigation area IDs owned by a client user."""
-    client = db.execute(
-        select(Client).where(
-            Client.usuario_id == user.id, Client.eliminado_en.is_(None)
-        )
-    ).scalar_one_or_none()
-    if client is None:
-        return []
-    prop_ids = list(
-        db.execute(
-            select(Property.id).where(
-                Property.cliente_id == client.id,
-                Property.eliminado_en.is_(None),
-            )
-        ).scalars()
-    )
-    if not prop_ids:
-        return []
-    area_ids = list(
-        db.execute(
-            select(IrrigationArea.id).where(
-                IrrigationArea.predio_id.in_(prop_ids),
-                IrrigationArea.eliminado_en.is_(None),
-            )
-        ).scalars()
-    )
-    return area_ids
-
-
 def _check_cycle_ownership(user: User, db: Session, cycle_id: int) -> None:
     if user.rol == "admin":
         return
     cycle = cycle_service.get_crop_cycle(db, cycle_id)
-    area_ids = _get_client_area_ids(user, db)
+    area_ids = get_client_area_ids(user, db)
     if cycle.area_riego_id not in area_ids:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -66,7 +33,7 @@ def list_crop_cycles(
     db: Session = Depends(get_db),
 ):
     if current_user.rol != "admin" and irrigation_area_id is not None:
-        area_ids = _get_client_area_ids(current_user, db)
+        area_ids = get_client_area_ids(current_user, db)
         if irrigation_area_id not in area_ids:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -75,7 +42,7 @@ def list_crop_cycles(
 
     allowed_area_ids: list[int] | None = None
     if current_user.rol != "admin" and irrigation_area_id is None:
-        allowed_area_ids = _get_client_area_ids(current_user, db)
+        allowed_area_ids = get_client_area_ids(current_user, db)
         if not allowed_area_ids:
             return PaginatedResponse(
                 page=page,

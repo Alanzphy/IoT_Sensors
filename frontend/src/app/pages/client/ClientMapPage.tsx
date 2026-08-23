@@ -1,45 +1,22 @@
 import { MapPin, RefreshCw, TriangleAlert } from "lucide-react";
-import maplibregl, { LngLatBoundsLike, Map as MapLibreMap, Marker } from "maplibre-gl";
+import maplibregl, { Map as MapLibreMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  communicationStatusClass,
+  communicationStatusLabel,
+  fitMapToNodes,
+  freshnessText,
+  renderNodeLayer,
+} from "../../components/maps/mapHelpers";
+import { useGeoNodesData, useMapSelectedNodeSync } from "../../components/maps/useGeoNodesData";
 import { useTheme } from "../../context/ThemeContext";
 import { useSelection } from "../../context/SelectionContext";
-import { GeoNode, getGeoNodes } from "../../services/nodes";
+import { GeoNode } from "../../services/nodes";
 import { parseBackendTimestamp } from "../../utils/datetime";
 
 const DEFAULT_LIGHT_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 const DEFAULT_DARK_STYLE_URL = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
-const MAP_AUTO_REFRESH_MS = 30_000;
-
-function markerColorByStatus(status: GeoNode["freshness_status"]): string {
-  if (status === "fresh") return "var(--accent-primary)";
-  if (status === "stale") return "var(--status-warning)";
-  return "var(--text-muted)";
-}
-
-function freshnessText(node: GeoNode): string {
-  if (node.minutes_since_last_reading === null) {
-    return "Sin lecturas";
-  }
-  if (node.minutes_since_last_reading < 60) {
-    return `Hace ${node.minutes_since_last_reading} min`;
-  }
-  const hours = Math.floor(node.minutes_since_last_reading / 60);
-  const mins = node.minutes_since_last_reading % 60;
-  return `Hace ${hours}h ${mins}min`;
-}
-
-function communicationStatusLabel(status: GeoNode["freshness_status"]): string {
-  if (status === "fresh") return "Reportando";
-  if (status === "stale") return "Sin reporte reciente";
-  return "Sin lecturas";
-}
-
-function communicationStatusClass(status: GeoNode["freshness_status"]): string {
-  if (status === "fresh") return "text-[var(--status-active)]";
-  if (status === "stale") return "text-[var(--status-warning)]";
-  return "text-[var(--text-muted)]";
-}
 
 export function ClientMapPage() {
   const { theme } = useTheme();
@@ -53,21 +30,25 @@ export function ClientMapPage() {
     setSelectedArea,
   } = useSelection();
 
-  const [nodes, setNodes] = useState<GeoNode[]>([]);
   const [selectedNode, setSelectedNode] = useState<GeoNode | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [mapStyleVersion, setMapStyleVersion] = useState(0);
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
-  const markersRef = useRef<Marker[]>([]);
   const mapStyleUrlRef = useRef<string | null>(null);
-  const fetchRequestSeqRef = useRef(0);
+  const renderCleanupRef = useRef<(() => void) | null>(null);
 
   const lightMapStyleUrl = import.meta.env.VITE_MAP_STYLE_URL || DEFAULT_LIGHT_STYLE_URL;
   const darkMapStyleUrl = import.meta.env.VITE_MAP_DARK_STYLE_URL || DEFAULT_DARK_STYLE_URL;
   const activeMapStyleUrl = theme === "dark" ? darkMapStyleUrl : lightMapStyleUrl;
+
+  const { nodes, loading, error, refresh: fetchNodes } = useGeoNodesData({
+    propertyId: selectedProperty?.id,
+    areaId: selectedArea?.id,
+    errorMessage: "No se pudo cargar la capa geoespacial. Intenta nuevamente.",
+  });
+
+  useMapSelectedNodeSync(nodes, selectedArea?.id, selectedNode, setSelectedNode);
 
   const filteredAreas = useMemo(() => {
     if (!selectedProperty) return areas;
@@ -96,77 +77,6 @@ export function ClientMapPage() {
     );
   }, [nodes]);
 
-  const fetchNodes = useCallback(async () => {
-    const requestSeq = ++fetchRequestSeqRef.current;
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await getGeoNodes({
-        per_page: 200,
-        include_without_coordinates: true,
-        property_id: selectedProperty?.id,
-        irrigation_area_id: selectedArea?.id,
-      });
-      if (requestSeq !== fetchRequestSeqRef.current) return;
-      setNodes(response.data);
-    } catch (err) {
-      if (requestSeq !== fetchRequestSeqRef.current) return;
-      console.error("Error fetching geo nodes", err);
-      setError("No se pudo cargar la capa geoespacial. Intenta nuevamente.");
-    } finally {
-      if (requestSeq !== fetchRequestSeqRef.current) return;
-      setLoading(false);
-    }
-  }, [selectedProperty?.id, selectedArea?.id]);
-
-  useEffect(() => {
-    fetchNodes();
-  }, [fetchNodes]);
-
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      if (document.hidden) return;
-      void fetchNodes();
-    }, MAP_AUTO_REFRESH_MS);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [fetchNodes]);
-
-  useEffect(() => {
-    if (nodes.length === 0) {
-      if (selectedNode !== null) {
-        setSelectedNode(null);
-      }
-      return;
-    }
-
-    const preferredByArea = selectedArea
-      ? nodes.find((node) => node.irrigation_area_id === selectedArea.id) || null
-      : null;
-
-    if (!selectedNode) {
-      setSelectedNode(preferredByArea ?? nodes[0]);
-      return;
-    }
-
-    const latestSelectedNode = nodes.find((node) => node.id === selectedNode.id) || null;
-    if (!latestSelectedNode) {
-      setSelectedNode(preferredByArea ?? nodes[0]);
-      return;
-    }
-
-    if (preferredByArea && latestSelectedNode.id !== preferredByArea.id) {
-      setSelectedNode(preferredByArea);
-      return;
-    }
-
-    if (latestSelectedNode !== selectedNode) {
-      setSelectedNode(latestSelectedNode);
-    }
-  }, [nodes, selectedArea?.id, selectedNode]);
-
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
@@ -189,8 +99,6 @@ export function ClientMapPage() {
 
     return () => {
       mapRef.current?.off("style.load", onStyleLoad);
-      markersRef.current.forEach((marker) => marker.remove());
-      markersRef.current = [];
       mapRef.current?.remove();
       mapRef.current = null;
       mapStyleUrlRef.current = null;
@@ -238,56 +146,22 @@ export function ClientMapPage() {
       };
     }
 
-    markersRef.current.forEach((marker) => marker.remove());
-    markersRef.current = [];
+    renderCleanupRef.current?.();
+    renderCleanupRef.current = renderNodeLayer(map, nodesWithCoordinates, {
+      enableClusters: false,
+      includeClientInPopup: false,
+      noDataColor: "var(--text-muted)",
+      onSelectNode: setSelectedNode,
+    });
 
-    for (const node of nodesWithCoordinates) {
-      const markerElement = document.createElement("button");
-      markerElement.type = "button";
-      markerElement.className = "w-4 h-4 rounded-full border-2 border-white shadow-md";
-      markerElement.style.backgroundColor = markerColorByStatus(node.freshness_status);
-      markerElement.title = node.name || `Nodo #${node.id}`;
+    fitMapToNodes(map, nodesWithCoordinates);
 
-      const popupHtml = `
-        <div class="iot-map-popup-content">
-          <div class="iot-map-popup-title">${node.name || `Nodo #${node.id}`}</div>
-          <div><strong>Predio:</strong> ${node.property_name}</div>
-          <div><strong>Área:</strong> ${node.irrigation_area_name}</div>
-          <div><strong>Cultivo:</strong> ${node.crop_type_name}</div>
-          <div><strong>Frescura:</strong> ${freshnessText(node)}</div>
-        </div>
-      `;
-
-      const marker = new maplibregl.Marker({ element: markerElement, anchor: "bottom" })
-        .setLngLat([node.longitude as number, node.latitude as number])
-        .setPopup(new maplibregl.Popup({ offset: 16, className: "iot-map-popup" }).setHTML(popupHtml))
-        .addTo(map);
-
-      markerElement.addEventListener("click", () => setSelectedNode(node));
-      markersRef.current.push(marker);
-    }
-
-    if (nodesWithCoordinates.length === 1) {
-      const oneNode = nodesWithCoordinates[0];
-      map.flyTo({
-        center: [oneNode.longitude as number, oneNode.latitude as number],
-        zoom: 12,
-        essential: true,
-      });
-      return;
-    }
-
-    if (nodesWithCoordinates.length > 1) {
-      const bounds = new maplibregl.LngLatBounds();
-      nodesWithCoordinates.forEach((node) => {
-        bounds.extend([node.longitude as number, node.latitude as number]);
-      });
-      map.fitBounds(bounds as LngLatBoundsLike, {
-        padding: 60,
-        maxZoom: 13,
-        duration: 700,
-      });
-    }
+    return () => {
+      if (mapRef.current) {
+        renderCleanupRef.current?.();
+      }
+      renderCleanupRef.current = null;
+    };
   }, [mapStyleVersion, nodesWithCoordinates]);
 
   useEffect(() => {
