@@ -2,7 +2,7 @@ Actúa como un arquitecto de software y desarrollador Senior. Estoy construyendo
 
 1. ESTADO ACTUAL Y RESTRICCIONES (MVP)
 - El alcance actual es un Producto Mínimo Viable (MVP) enfocado estrictamente en la ingesta de datos, gestión de usuarios y visualización.
-- RESTRICCIÓN ESTRICTA: Por el momento, NO incluyas, sugieras, ni diseñes nada relacionado con Inteligencia Artificial (Azure OpenAI), n8n, ni agentes autónomos en el código principal. Todo eso se implementará en una fase posterior.
+- RESTRICCIÓN: No diseñes ni implementes **nuevas** funcionalidades de Inteligencia Artificial (Azure OpenAI), n8n, ni agentes autónomos. **Nota de estado:** el código de Fase 2 (IA, alertas de umbral/inactividad, notificaciones email/WhatsApp, password reset, auditoría) **ya existe implementado**, pero está **dormido detrás de flags (OFF por defecto)** — ver sección 4 y `ALERTS_ENABLED`/`AI_ASSISTANT_ENABLED`/`AI_REPORTS_ENABLED` en `backend/app/core/config.py`. No lo borres ni lo expandas sin autorización; el MVP corre con todos esos flags apagados (los schedulers requieren `docker compose --profile phase2 up`).
 
 2. ARQUITECTURA TÉCNICA
 El sistema sigue una arquitectura cliente-servidor tradicional, separando la recolección de datos, el backend y el frontend.

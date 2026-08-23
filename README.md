@@ -295,10 +295,12 @@ Para validar **todo** (predios/áreas/nodos + umbrales + alertas + notificacione
 2. Inicia backend y frontend.
 3. Ejecuta `simulator_fast.py` con las 4 API keys (comando de arriba).
 4. Abre dashboard/centro de alertas y confirma que aumentan lecturas y alertas.
-5. Para correo/WhatsApp, valida en `backend/.env`:
+5. Para alertas de umbral en ingesta, valida en `backend/.env`: `ALERTS_ENABLED=true`.
+6. Para correo/WhatsApp, valida en `backend/.env`:
    `NOTIFICATIONS_ENABLED=true`, `NOTIFICATIONS_EMAIL_ENABLED=true`, `NOTIFICATIONS_WHATSAPP_ENABLED=true`
    y credenciales SMTP/WhatsApp válidas.
-6. Si no quieres `--quick-demo`, dispara manualmente el despacho:
+7. Para el reporte IA semanal del simulador (`--ai-weekly-report`), activa `AI_REPORTS_ENABLED=true` en `backend/.env` (si está apagado, `POST /ai-reports/generate` responde 503).
+8. Si no quieres `--quick-demo`, dispara manualmente el despacho:
 
 ```bash
 # 1) Login admin (copia el access_token de la respuesta)
@@ -365,6 +367,8 @@ Guía operativa paso a paso:
 
 ### Scheduler De Inactividad (Producción)
 
+> **Fase 2 (dormant):** los 3 schedulers viven detrás del profile `phase2` de compose. No arrancan con `docker compose up` normal; se activan con `docker compose --profile phase2 up -d`. Además, la generación de alertas de umbral en ingesta requiere `ALERTS_ENABLED=true`.
+
 El compose incluye el servicio `inactivity_scheduler`, que ejecuta de forma periódica el endpoint `POST /api/v1/alerts/scan-inactivity` para generar alertas por nodos inactivos.
 
 Variables requeridas en producción:
@@ -377,6 +381,8 @@ Variables requeridas en producción:
 El scheduler se conecta internamente a `http://backend:5050/api/v1` y se inicia cuando el backend ya está saludable.
 
 ### Scheduler De Notificaciones (Producción)
+
+> Requiere el profile `phase2` (`docker compose --profile phase2 up -d`).
 
 El compose también incluye `notification_scheduler`, que ejecuta periódicamente `POST /api/v1/alerts/dispatch-notifications` para enviar alertas pendientes por canales externos configurados.
 
@@ -429,6 +435,8 @@ En Dokploy cambia `FRONTEND_PUBLIC_URL` al dominio real, por ejemplo `https://se
 
 ### Scheduler De Reportes IA (Producción)
 
+> Requiere el profile `phase2` (`docker compose --profile phase2 up -d`) y `AI_REPORTS_SCHEDULER_ENABLED=true`.
+
 El compose incluye `ai_report_scheduler`, que ejecuta `POST /api/v1/ai-reports/generate` una vez por día en horario UTC configurable.
 
 Endpoints backend:
@@ -461,6 +469,8 @@ Integración Azure OpenAI (opcional):
 Si `AZURE_OPENAI_ENABLED=false`, el backend usa un fallback determinístico para resumen/hallazgos/recomendación y mantiene el flujo operativo en local y producción.
 
 ### Asistente Conversacional IA (Admin/Cliente)
+
+> **Dormant por defecto:** requiere `AI_ASSISTANT_ENABLED=true` (default `false`). Mientras esté apagado, `POST /api/v1/ai-assistant/chat` responde 503.
 
 Endpoint backend:
 

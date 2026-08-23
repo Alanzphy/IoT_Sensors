@@ -409,6 +409,35 @@ class TestAlertsApi:
         assert alert["parameter"] == "soil.humidity"
         assert alert["severity"] == "critical"
 
+    def test_ingest_breach_with_alerts_disabled_creates_no_alert(
+        self,
+        client,
+        admin_headers,
+        node_headers,
+        sample_irrigation_area,
+        monkeypatch,
+    ):
+        monkeypatch.setattr(settings, "ALERTS_ENABLED", False)
+        self._create_threshold(client, admin_headers, sample_irrigation_area.id)
+
+        payload = {
+            **SENSOR_PAYLOAD,
+            "timestamp": "2026-04-01T11:00:00Z",
+            "soil": {
+                **SENSOR_PAYLOAD["soil"],
+                "humidity": 35.0,
+            },
+        }
+        ingest = client.post("/api/v1/readings", headers=node_headers, json=payload)
+        assert ingest.status_code == 201
+
+        list_resp = client.get(
+            f"/api/v1/alerts?irrigation_area_id={sample_irrigation_area.id}",
+            headers=admin_headers,
+        )
+        assert list_resp.status_code == 200
+        assert list_resp.json()["total"] == 0
+
     def test_duplicate_alerts_are_deduplicated_in_10_minutes_window(
         self,
         client,

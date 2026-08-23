@@ -64,6 +64,7 @@ services:
       - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
       - REFRESH_TOKEN_EXPIRE_DAYS=${REFRESH_TOKEN_EXPIRE_DAYS:-7}
       - DEBUG=${DEBUG:-false}
+      - ALERTS_ENABLED=${ALERTS_ENABLED:-false}
       - NOTIFICATIONS_ENABLED=${NOTIFICATIONS_ENABLED:-false}
       - NOTIFICATIONS_EMAIL_ENABLED=${NOTIFICATIONS_EMAIL_ENABLED:-false}
       - SMTP_HOST=${SMTP_HOST:-}
@@ -94,7 +95,7 @@ services:
       - AI_REPORTS_DEFAULT_NOTIFY=${AI_REPORTS_DEFAULT_NOTIFY:-true}
       - AI_ALERT_RECOMMENDATIONS_ENABLED=${AI_ALERT_RECOMMENDATIONS_ENABLED:-true}
       - AI_ALERT_RECOMMENDATIONS_MAX_RECENT_READINGS=${AI_ALERT_RECOMMENDATIONS_MAX_RECENT_READINGS:-48}
-      - AI_ASSISTANT_ENABLED=${AI_ASSISTANT_ENABLED:-true}
+      - AI_ASSISTANT_ENABLED=${AI_ASSISTANT_ENABLED:-false}
       - AI_ASSISTANT_MAX_AREAS=${AI_ASSISTANT_MAX_AREAS:-25}
       - AI_ASSISTANT_MAX_ALERTS=${AI_ASSISTANT_MAX_ALERTS:-40}
       - AI_ASSISTANT_MAX_HISTORY_MESSAGES=${AI_ASSISTANT_MAX_HISTORY_MESSAGES:-8}
@@ -117,12 +118,14 @@ services:
       retries: 5
       start_period: 30s
   # --- Inactivity Scheduler (calls /api/v1/alerts/scan-inactivity) ---
+  # Fase 2 (dormant): solo arranca con `docker compose --profile phase2 up`.
   inactivity_scheduler:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: sensores_inactivity_scheduler
     restart: unless-stopped
+    profiles: ["phase2"]
     depends_on:
       backend:
         condition: service_healthy
@@ -136,12 +139,14 @@ services:
     command: ["python", "-m", "app.jobs.inactivity_scheduler"]
 
   # --- Notification Scheduler (calls /api/v1/alerts/dispatch-notifications) ---
+  # Fase 2 (dormant): solo arranca con `docker compose --profile phase2 up`.
   notification_scheduler:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: sensores_notification_scheduler
     restart: unless-stopped
+    profiles: ["phase2"]
     depends_on:
       backend:
         condition: service_healthy
@@ -156,12 +161,14 @@ services:
     command: ["python", "-m", "app.jobs.notification_scheduler"]
 
   # --- AI Reports Scheduler (calls /api/v1/ai-reports/generate) ---
+  # Fase 2 (dormant): solo arranca con `docker compose --profile phase2 up`.
   ai_report_scheduler:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: sensores_ai_report_scheduler
     restart: unless-stopped
+    profiles: ["phase2"]
     depends_on:
       backend:
         condition: service_healthy

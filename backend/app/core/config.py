@@ -41,6 +41,8 @@ class Settings(BaseSettings):
     MAX_PAGE_SIZE: int = 200
 
     # --- Alert generation behavior ---
+    # Fase 2: generation is dormant by default; enable with ALERTS_ENABLED=true.
+    ALERTS_ENABLED: bool = False
     ALERT_THRESHOLD_DUPLICATE_WINDOW_MINUTES: int = 10
 
     # --- Alert Notifications (Direct Backend Delivery) ---
@@ -87,7 +89,7 @@ class Settings(BaseSettings):
     AI_REPORTS_HTTP_TIMEOUT_SECONDS: int = 30
     AI_ALERT_RECOMMENDATIONS_ENABLED: bool = True
     AI_ALERT_RECOMMENDATIONS_MAX_RECENT_READINGS: int = 48
-    AI_ASSISTANT_ENABLED: bool = True
+    AI_ASSISTANT_ENABLED: bool = False
     AI_ASSISTANT_MAX_AREAS: int = 25
     AI_ASSISTANT_MAX_ALERTS: int = 40
     AI_ASSISTANT_MAX_HISTORY_MESSAGES: int = 8

@@ -14,6 +14,13 @@ Compatibilidad SQLite:
     en el dialecto de SQLite, permitiendo el autoincrement normal.
 """
 
+import os
+
+# Fase 2 flags: la suite asume alerting y AI habilitados (comportamiento previo).
+# Los tests individuales apagan flags con monkeypatch para probar el estado dormido.
+os.environ.setdefault("ALERTS_ENABLED", "true")
+os.environ.setdefault("AI_ASSISTANT_ENABLED", "true")
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import BigInteger, Integer, create_engine, event

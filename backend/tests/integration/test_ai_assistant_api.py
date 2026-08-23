@@ -212,6 +212,24 @@ class TestAIAssistantApi:
         )
         assert resp.status_code == 403
 
+    def test_assistant_disabled_returns_503(
+        self,
+        client,
+        admin_headers,
+        monkeypatch,
+    ):
+        monkeypatch.setattr(settings, "AI_ASSISTANT_ENABLED", False)
+
+        resp = client.post(
+            "/api/v1/ai-assistant/chat",
+            headers=admin_headers,
+            json={
+                "message": "Consulta con modulo dormido",
+                "hours_back": 24,
+            },
+        )
+        assert resp.status_code == 503
+
     def test_rate_limit_blocks_excessive_requests(
         self,
         client,

@@ -164,7 +164,8 @@ def create_reading(db: Session, node: Node, data: ReadingCreate) -> Reading:
     db.add(reading)
     db.flush()
 
-    _create_threshold_alerts(db, node, reading)
+    if settings.ALERTS_ENABLED:
+        _create_threshold_alerts(db, node, reading)
 
     db.commit()
     db.refresh(reading)

@@ -8,14 +8,20 @@ Defines the alerting subsystem: configurable thresholds per irrigation area and 
 
 ### Requirement: Feature flags and runtime gates
 
-- Threshold alert generation runs **always** during reading ingestion — there is currently no `ALERTS_ENABLED` flag; deduplication is controlled by `ALERT_THRESHOLD_DUPLICATE_WINDOW_MINUTES` (default 10).
+- Threshold alert generation SHALL be gated by `ALERTS_ENABLED` (default `false`): reading ingestion SHALL NOT generate threshold alerts while the flag is off.
 - External dispatch SHALL be gated: `NOTIFICATIONS_ENABLED` (default false), `NOTIFICATIONS_EMAIL_ENABLED`, `NOTIFICATIONS_WHATSAPP_ENABLED`.
-- The 3 schedulers SHALL run as separate compose services: `inactivity_scheduler` and `notification_scheduler` run whenever admin credentials are provided (no feature flag); `ai_report_scheduler` respects `AI_REPORTS_SCHEDULER_ENABLED` (default false). No compose profiles are used.
-- With notification flags off, the platform SHALL operate without external dispatch while still generating threshold/inactivity alerts in the database.
+- The 3 schedulers SHALL be compose services behind the `phase2` profile and SHALL NOT start with a plain `docker compose up`.
+- With all flags off, the platform SHALL operate as a Fase 1 MVP (ingest, query, visualization, freshness); thresholds CRUD and alert queries remain available but inert.
 
 #### Scenario: Alerts disabled
-- **WHEN** the platform runs with notification flags off
-- **THEN** reading ingestion still stores threshold alerts in the database, but no email/WhatsApp dispatch occurs and the notification scheduler does not send anything
+
+- **WHEN** the platform runs with `ALERTS_ENABLED=false`
+- **THEN** reading ingestion stores readings without creating threshold alerts, no scheduler containers run, and no external dispatch occurs
+
+#### Scenario: Alerts enabled
+
+- **WHEN** `ALERTS_ENABLED=true` and a reading breaches an active threshold
+- **THEN** a threshold alert is created (dedup window applies)
 
 ### Requirement: Thresholds
 
