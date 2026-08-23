@@ -10,11 +10,17 @@ Sistema web para el monitoreo de sensores de riego agrícola. Recibe lecturas de
 ├── TEST_DATA.md             # Credenciales de prueba y API Keys
 ├── .gitignore
 │
-├── docs/                    # Documentación técnica del proyecto
-│   ├── arquitectura.md          # Diagramas de arquitectura (MVP + Fase 2)
-│   ├── design_system.md         # Paleta, tipografía, tokens del frontend
-│   ├── documentacion_api.md     # Guía de la API REST
-│   ├── documentacion_base_de_datos.md  # Modelo de datos explicado
+├── docs/                    # Documentación en 3 capas
+│   ├── README.md                # Índice general de docs/
+│   ├── product/                 # Capa de producto (visión, problema, requerimientos)
+│   ├── architecture/            # Arquitectura (overview, frontend, backend, ADRs)
+│   ├── stack.md                 # Stack y versiones
+│   ├── api.md                   # Guía rápida de la API (contrato en openapi.yaml)
+│   ├── data-model.md            # Modelo de datos explicado
+│   ├── security.md              # Mecanismos de seguridad
+│   ├── design-system.md         # Paleta, tipografía, tokens del frontend
+│   ├── deployment.md            # Deploy en Dokploy
+│   ├── testing.md               # Estrategia de testing y CI
 │   └── deliverables/            # Entregables al cliente (SRS, QA, Word)
 │
 ├── openspec/                # Specs del sistema (SDD: capacidades + cambios)
@@ -358,7 +364,7 @@ El proyecto está diseñado para desplegarse ágilmente en un VPS utilizando **D
 
 Guía operativa paso a paso:
 
-- [`docs/dokploy_despliegue.md`](docs/dokploy_despliegue.md)
+- [`docs/deployment.md`](docs/deployment.md)
 - Smoke check post-deploy: `./scripts/dokploy_smoke_check.sh <tu-dominio>`
 - Smoke IA reports (login + generate + list + detail):  
   `./scripts/smoke_ai_reports.sh --base-url https://sensores.alanrz.bond --admin-password 'TU_PASSWORD'`
@@ -515,8 +521,8 @@ CI: GitHub Actions corre en cada push/PR — backend (ruff + pytest) y frontend 
 
 Checklist mínimo por cambio técnico:
 
-- ¿Cambió contrato técnico (API, BD, flujo visible)? → cambio OpenSpec (`openspec new change <nombre>`) + `docs/documentacion_api.md` / `docs/documentacion_base_de_datos.md`.
-- ¿Cambió flujo operativo o componentes activos/futuros? → `docs/arquitectura.md` y/o `docs/arquitectura_frontend.md`.
+- ¿Cambió contrato técnico (API, BD, flujo visible)? → cambio OpenSpec (`openspec new change <nombre>`) + `docs/api.md` / `docs/data-model.md`.
+- ¿Cambió flujo operativo o componentes activos/futuros? → `docs/architecture/overview.md` y/o `docs/architecture/frontend.md`.
 - ¿Cambió alcance funcional del producto? → `docs/deliverables/` (SRS).
 
 ### Plantilla DoD Documental (Por Feature/Hito)
@@ -530,9 +536,9 @@ Usar esta plantilla al cerrar cada módulo para asegurar trazabilidad documental
 Checklist DoD:
 
 - [ ] Cambio OpenSpec creado y archivado (`openspec/specs/` sincronizado).
-- [ ] API actualizada (`docs/documentacion_api.md`): endpoints, payloads, validaciones, errores, ejemplos.
-- [ ] BD actualizada (`docs/documentacion_base_de_datos.md`): tablas, relaciones, índices, reglas de negocio.
-- [ ] Arquitectura actualizada (`docs/arquitectura.md` y/o `docs/arquitectura_frontend.md`): flujo activo, componentes, límites de alcance.
+- [ ] API actualizada (`docs/api.md`): endpoints, payloads, validaciones, errores, ejemplos.
+- [ ] BD actualizada (`docs/data-model.md`): tablas, relaciones, índices, reglas de negocio.
+- [ ] Arquitectura actualizada (`docs/architecture/overview.md` y/o `frontend.md`): flujo activo, componentes, límites de alcance.
 - [ ] CI verde: backend (ruff + pytest) y frontend (typecheck + vitest + build).
 - [ ] Consistencia transversal validada: misma terminología, mismos nombres de endpoint/campos, mismos estados de fase.
 
@@ -586,16 +592,20 @@ CLIENT_OWN_AREA_ID="2" \
 
 ## Documentación
 
+La documentación se organiza en **3 capas** (ver [`docs/README.md`](docs/README.md)): **producto** (el por qué), **OpenSpec** (el qué) y **referencia técnica** (el cómo).
+
 | Documento | Descripción |
 |-----------|-------------|
+| [`docs/product/`](docs/product/) | **Producto**: visión, problema, requerimientos de alto nivel |
 | [`openspec/specs/`](openspec/specs/) | **Specs SDD del sistema** — 6 capacidades: data-model, security, readings, alerting, ai-modules, geo-visualization. Cada cambio de comportamiento parte de aquí |
-| [`TEST_DATA.md`](TEST_DATA.md) | Credenciales de prueba (admin/cliente) y API Keys |
+| [`docs/architecture/`](docs/architecture/) | Arquitectura: overview, frontend, backend, decisiones (ADRs) |
+| [`docs/stack.md`](docs/stack.md) | Stack tecnológico y versiones |
+| [`docs/api.md`](docs/api.md) | Guía rápida de la API REST (convenciones, auth, recursos) |
 | [`openapi.yaml`](openapi.yaml) | Contrato OpenAPI 3.1 autogenerado (`make openapi-sync`) |
-| [`docs/documentacion_api.md`](docs/documentacion_api.md) | Guía rápida de la API REST (convenciones, auth, recursos) |
-| [`docs/documentacion_base_de_datos.md`](docs/documentacion_base_de_datos.md) | Modelo de datos, tablas, relaciones |
-| [`docs/arquitectura.md`](docs/arquitectura.md) | Diagramas de infraestructura, flujos de datos, autenticación |
-| [`docs/arquitectura_frontend.md`](docs/arquitectura_frontend.md) | Stack, estructura y reglas del frontend |
-| [`docs/design_system.md`](docs/design_system.md) | Design system del frontend (tokens reales) |
+| [`docs/data-model.md`](docs/data-model.md) | Modelo de datos, tablas, relaciones, consultas de referencia |
+| [`docs/security.md`](docs/security.md) | Mecanismos de seguridad y pendientes |
+| [`docs/design-system.md`](docs/design-system.md) | Design system del frontend (tokens reales) |
+| [`docs/deployment.md`](docs/deployment.md) | Checklist operativo de deploy en Dokploy |
 | [`docs/testing.md`](docs/testing.md) | Estrategia de testing: backend (pytest) + frontend (vitest) + CI |
-| [`docs/dokploy_despliegue.md`](docs/dokploy_despliegue.md) | Checklist operativo de deploy en Dokploy |
 | [`docs/deliverables/`](docs/deliverables/) | Entregables al cliente: SRS, Reporte Ejecutivo QA, Entregable Word |
+| [`TEST_DATA.md`](TEST_DATA.md) | Credenciales de prueba (admin/cliente) y API Keys |

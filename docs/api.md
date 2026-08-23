@@ -2,7 +2,7 @@
 
 > **Audiencia:** Desarrolladores del equipo (frontend y backend).
 > **Propósito:** Entender cómo funciona la API del sistema, qué endpoints existen y cómo autenticarse. Esta es una guía de referencia rápida; el contrato detallado (payloads, errores, ejemplos) vive en `openapi.yaml` (raíz), autogenerado desde el código FastAPI.
-> **Referencia:** Arquitectura general en `docs/arquitectura.md`. Modelo de datos en `docs/documentacion_base_de_datos.md`. Comportamiento de cada capacidad en `openspec/specs/`.
+> **Referencia:** Arquitectura general en `docs/architecture/overview.md`. Modelo de datos en `docs/data-model.md`. Comportamiento de cada capacidad en `openspec/specs/`.
 
 ---
 
