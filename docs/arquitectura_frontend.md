@@ -136,7 +136,31 @@ El sistema usa un "Design System" estricto tipo *Bento Box* orgánico:
 
 ---
 
-## 5. Reglas Inquebrantables para el AI (Agent Directives)
+## 5. Flujo de Navegación por Rol
+
+```mermaid
+graph TD
+    A[Usuario Accede a Web] --> B{¿Autenticado?}
+    B -- No --> C[Login /recuperar-contrasena /restablecer-contrasena]
+    C --> D[POST /auth/login]
+    D -- Éxito --> E[AuthContext guarda access + refresh]
+    B -- Sí --> F{¿Qué Rol tiene?}
+    E --> F
+    F -- cliente --> G[Rutas /cliente/*]
+    F -- admin --> H[Rutas /admin/*]
+    G --> I[Dashboard, áreas, mapa, histórico, exportar, alertas, umbrales, notificaciones, perfil]
+    H --> J[Clientes, predios, áreas, cultivos, ciclos, nodos, mapa, alertas, umbrales, auditoría, reportes IA]
+    I --> K[Llamadas API con JWT: interceptor inyecta Bearer y renueva con /auth/refresh]
+    J --> K
+```
+
+- El flujo de sesión: el interceptor de `services/api.ts` ante un 401 intenta **una vez** renovar el access token con `POST /auth/refresh` (refresh token persistido por `AuthContext`); si falla, limpia sesión y redirige a `/`.
+- Los items de navegación tienen **fuente única** en `components/navigation/items.ts` (`clientNavItems`/`adminNavItems`), consumidos por `DesktopSidebar` (desktop) y `MobileTabBar` (móvil, misma paridad de rutas).
+- Polling en vistas clave (dashboard, alertas, mapas) con guardas de concurrencia y pausa cuando la pestaña está oculta (`usePageVisibility`); mapas en lazy loading con prefetch condicional.
+
+---
+
+## 6. Reglas Inquebrantables para el AI (Agent Directives)
 
 1. **Gestión de Estado**: Usa `React Context` y Custom Hooks para estado transversal. NO intentes introducir Redux o Zustand a menos que el usuario lo exija explícitamente.
 2. **Peticiones HTTP**: Jamás uses `fetch()`. Usa siempre la instancia preconfigurada de `axios` ubicada en `src/app/services/api.ts` importándola como `api`.
