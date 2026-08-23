@@ -219,10 +219,6 @@ export const router = createBrowserRouter([
                 Component: AIAssistantUsagePage,
               },
               {
-                path: "consume-ia",
-                Component: AIAssistantUsagePage,
-              },
-              {
                 path: "reportes-ia/:reportId",
                 Component: AIReportDetailPage,
               },

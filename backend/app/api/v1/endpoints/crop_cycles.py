@@ -73,8 +73,19 @@ def list_crop_cycles(
                 detail="Access denied to this irrigation area",
             )
 
+    allowed_area_ids: list[int] | None = None
+    if current_user.rol != "admin" and irrigation_area_id is None:
+        allowed_area_ids = _get_client_area_ids(current_user, db)
+        if not allowed_area_ids:
+            return PaginatedResponse(
+                page=page,
+                per_page=per_page,
+                total=0,
+                data=[],
+            )
+
     items, total = cycle_service.list_crop_cycles(
-        db, page, per_page, irrigation_area_id
+        db, page, per_page, irrigation_area_id, allowed_area_ids=allowed_area_ids
     )
     return PaginatedResponse(
         page=page,

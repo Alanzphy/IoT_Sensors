@@ -8,7 +8,7 @@ import { api } from "../../services/api";
 
 interface IrrigationArea {
   id: number;
-  nombre: string;
+  name: string;
 }
 
 interface CropCycle {
@@ -146,7 +146,7 @@ export function CropCycleManagement() {
 
           return (
             <BentoCard key={area.id} variant="light">
-              <h3 className="text-lg font-medium text-[var(--text-main)] mb-4">{area.nombre}</h3>
+              <h3 className="text-lg font-medium text-[var(--text-main)] mb-4">{area.name}</h3>
 
               <div className="space-y-3">
                 {areaCycles.map((cycle) => {
@@ -227,7 +227,7 @@ export function CropCycleManagement() {
                 >
                   <option value="">Seleccionar área</option>
                   {areas.map((area) => (
-                    <option key={area.id} value={area.id}>{area.nombre}</option>
+                    <option key={area.id} value={area.id}>{area.name}</option>
                   ))}
                 </select>
               </div>

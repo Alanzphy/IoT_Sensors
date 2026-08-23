@@ -1,9 +1,11 @@
-import { Mail, MapPin, Phone, User } from "lucide-react";
-import { useState } from "react";
+import { Loader2, Mail, User } from "lucide-react";
+import { useEffect, useState } from "react";
 import { BentoCard } from "../../components/BentoCard";
 import { PageTransition } from "../../components/PageTransition";
 import { PillButton } from "../../components/PillButton";
 import { useToast } from "../../components/Toast";
+import { api } from "../../services/api";
+import { UserProfile } from "../../types/api";
 
 const inputClass = `
   w-full px-4 py-2.5 bg-[var(--bg-base)] border border-[var(--border-strong)] rounded-[24px]
@@ -12,29 +14,71 @@ const inputClass = `
   disabled:opacity-60 disabled:cursor-default
 `;
 
+function formatUpdatedAt(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("es-ES", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
 export function ProfilePage() {
   const { showToast } = useToast();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "Juan Pérez García",
-    email: "juan.perez@ejemplo.com",
-    phone: "+52 999 123 4567",
-    location: "Mérida, Yucatán",
-    company: "Hacienda San José",
-  });
+  const [formName, setFormName] = useState("");
 
-  const handleSave = () => {
-    setIsEditing(false);
-    showToast("Perfil actualizado correctamente.", "success");
+  const loadProfile = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.get<UserProfile>("/users/me");
+      setProfile(res.data);
+      setFormName(res.data.full_name);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "No fue posible cargar el perfil.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const fields = [
-    { id: "profile-name",     label: "Nombre Completo",   key: "name"     as const, type: "text",  icon: User },
-    { id: "profile-company",  label: "Empresa / Hacienda", key: "company" as const, type: "text",  icon: null },
-    { id: "profile-email",    label: "Correo Electrónico", key: "email"   as const, type: "email", icon: Mail },
-    { id: "profile-phone",    label: "Teléfono",           key: "phone"   as const, type: "tel",   icon: Phone },
-    { id: "profile-location", label: "Ubicación",          key: "location" as const, type: "text", icon: MapPin },
-  ];
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  const handleSave = async () => {
+    if (!profile) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await api.patch<UserProfile>("/users/me", {
+        full_name: formName,
+      });
+      setProfile(res.data);
+      setFormName(res.data.full_name);
+      setIsEditing(false);
+      showToast("Perfil actualizado correctamente.", "success");
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "No fue posible guardar el perfil.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <PageTransition>
+        <div className="flex justify-center items-center min-h-screen p-4 text-[var(--text-subtle)]">
+          Cargando perfil...
+        </div>
+      </PageTransition>
+    );
+  }
 
   return (
     <PageTransition>
@@ -46,13 +90,22 @@ export function ProfilePage() {
               <h1 className="text-2xl md:text-3xl font-serif text-[var(--text-main)] mb-2">Mi Perfil</h1>
               <p className="text-[var(--text-muted)]">Administra tu información personal</p>
             </div>
-            <PillButton
-              variant={isEditing ? "primary" : "secondary"}
-              onClick={() => (isEditing ? handleSave() : setIsEditing(true))}
-            >
-              {isEditing ? "Guardar Cambios" : "Editar Perfil"}
-            </PillButton>
+            {profile && (
+              <PillButton
+                variant={isEditing ? "primary" : "secondary"}
+                disabled={saving}
+                onClick={() => (isEditing ? handleSave() : setIsEditing(true))}
+              >
+                {saving ? "Guardando..." : isEditing ? "Guardar Cambios" : "Editar Perfil"}
+              </PillButton>
+            )}
           </div>
+
+          {error && (
+            <div className="rounded-2xl border border-[var(--status-danger)]/25 bg-[var(--status-danger-bg)] px-4 py-3 text-sm text-[var(--status-danger)]">
+              {error}
+            </div>
+          )}
 
           {/* Profile Card */}
           <BentoCard>
@@ -62,32 +115,41 @@ export function ProfilePage() {
                 <div className="w-28 h-28 rounded-full bg-gradient-to-br from-[var(--accent-primary)] to-[var(--chart-1)] flex items-center justify-center">
                   <User className="w-14 h-14 text-[var(--text-inverted)]" />
                 </div>
-                {isEditing && (
-                  <PillButton variant="secondary" className="text-sm">
-                    Cambiar Foto
-                  </PillButton>
-                )}
               </div>
 
               {/* Fields */}
-              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
-                {fields.map(({ id, label, key, type, icon: Icon }) => (
-                  <div key={id} className={key === "name" || key === "company" ? "md:col-span-2" : ""}>
-                    <label htmlFor={id} className="flex items-center gap-2 text-sm text-[var(--text-muted)] mb-2">
-                      {Icon && <Icon className="w-4 h-4" />}
-                      {label}
+              {profile && (
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <label htmlFor="profile-name" className="flex items-center gap-2 text-sm text-[var(--text-muted)] mb-2">
+                      <User className="w-4 h-4" />
+                      Nombre Completo
                     </label>
                     <input
-                      id={id}
-                      type={type}
-                      value={formData[key]}
-                      onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
+                      id="profile-name"
+                      type="text"
+                      value={formName}
+                      onChange={(e) => setFormName(e.target.value)}
                       disabled={!isEditing}
                       className={inputClass}
                     />
                   </div>
-                ))}
-              </div>
+                  <div className="md:col-span-2">
+                    <label htmlFor="profile-email" className="flex items-center gap-2 text-sm text-[var(--text-muted)] mb-2">
+                      <Mail className="w-4 h-4" />
+                      Correo Electrónico
+                    </label>
+                    <input
+                      id="profile-email"
+                      type="email"
+                      value={profile.email}
+                      disabled
+                      readOnly
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </BentoCard>
 
@@ -113,7 +175,9 @@ export function ProfilePage() {
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               <PillButton variant="secondary">Cambiar Contraseña</PillButton>
               <p className="text-sm text-[var(--text-muted)]">
-                Última actualización: 15 de febrero, 2026
+                {profile
+                  ? `Última actualización: ${formatUpdatedAt(profile.updated_at)}`
+                  : "Última actualización: —"}
               </p>
             </div>
           </BentoCard>

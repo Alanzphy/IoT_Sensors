@@ -20,6 +20,9 @@ import os
 # Los tests individuales apagan flags con monkeypatch para probar el estado dormido.
 os.environ.setdefault("ALERTS_ENABLED", "true")
 os.environ.setdefault("AI_ASSISTANT_ENABLED", "true")
+# Evita que el guard de SECRET_KEY (producción) bloquee la suite de tests.
+os.environ.setdefault("SECRET_KEY", "test-secret-key-for-suite")
+os.environ.setdefault("DEBUG", "true")
 
 import pytest
 from fastapi.testclient import TestClient
@@ -134,6 +137,15 @@ def client(db):
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+def _reset_login_rate_limit():
+    """Limpia el limitador en memoria de login entre tests (estado global)."""
+    from app.api.v1.endpoints import auth as auth_endpoints
+
+    auth_endpoints.reset_login_rate_limit()
+    yield
 
 
 # ---------------------------------------------------------------------------

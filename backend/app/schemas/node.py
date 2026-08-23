@@ -25,7 +25,6 @@ class NodeResponse(BaseModel):
 
     id: int
     irrigation_area_id: int = Field(validation_alias="area_riego_id")
-    api_key: str
     serial_number: str | None = Field(default=None, validation_alias="numero_serie")
     name: str | None = Field(default=None, validation_alias="nombre")
     latitude: float | None = Field(default=None, validation_alias="latitud")
@@ -33,6 +32,12 @@ class NodeResponse(BaseModel):
     is_active: bool = Field(validation_alias="activo")
     created_at: datetime = Field(validation_alias="creado_en")
     updated_at: datetime = Field(validation_alias="actualizado_en")
+
+
+class NodeCreateResponse(NodeResponse):
+    """Respuesta de creación: única respuesta que expone la api_key."""
+
+    api_key: str
 
 
 class NodeGeoResponse(BaseModel):
@@ -45,7 +50,6 @@ class NodeGeoResponse(BaseModel):
     client_company_name: str
     crop_type_id: int
     crop_type_name: str
-    api_key: str
     serial_number: str | None = None
     name: str | None = None
     latitude: float | None = None

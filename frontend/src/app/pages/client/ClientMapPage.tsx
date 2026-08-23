@@ -175,7 +175,7 @@ export function ClientMapPage() {
       style: activeMapStyleUrl,
       center: [-106.0691, 28.632],
       zoom: 6,
-      attributionControl: true,
+      attributionControl: true as any,
     });
     mapStyleUrlRef.current = activeMapStyleUrl;
 

@@ -1,14 +1,42 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.core.deps import require_admin
+from app.core.deps import get_current_user, require_admin
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.base import PaginatedResponse
-from app.schemas.user import UserCreate, UserResponse, UserUpdate
+from app.schemas.user import (
+    UserCreate,
+    UserProfileUpdate,
+    UserResponse,
+    UserUpdate,
+)
 from app.services import user as user_service
 
 router = APIRouter()
+
+
+@router.get("/me", response_model=UserResponse)
+def get_me(
+    current_user: User = Depends(get_current_user),
+):
+    """Return the authenticated user's own profile."""
+    return UserResponse.model_validate(current_user)
+
+
+@router.patch("/me", response_model=UserResponse)
+def update_me(
+    data: UserProfileUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update editable profile fields of the authenticated user (email not editable)."""
+    user = user_service.update_user(
+        db,
+        current_user.id,
+        UserUpdate(**data.model_dump(exclude_unset=True)),
+    )
+    return UserResponse.model_validate(user)
 
 
 @router.get("", response_model=PaginatedResponse[UserResponse])

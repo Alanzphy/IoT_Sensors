@@ -1,5 +1,10 @@
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings
+
+INSECURE_DEFAULT_SECRET_KEYS = {
+    "CHANGE-ME-in-production",
+    "dev-only-change-me-in-production-abc123xyz",
+}
 
 
 class Settings(BaseSettings):
@@ -8,6 +13,7 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     API_V1_PREFIX: str = "/api/v1"
     FRONTEND_PUBLIC_URL: str = "http://localhost:5173"
+    CORS_ORIGINS: str = ""
 
     # --- Database ---
     DB_HOST: str = "localhost"
@@ -35,6 +41,10 @@ class Settings(BaseSettings):
     PASSWORD_RESET_REQUEST_MAX_PER_IP: int = 20
     PASSWORD_RESET_CONFIRM_RATE_LIMIT_WINDOW_MINUTES: int = 15
     PASSWORD_RESET_CONFIRM_MAX_PER_IP: int = 10
+
+    # --- Login rate limit ---
+    LOGIN_RATE_LIMIT_WINDOW_MINUTES: int = 15
+    LOGIN_RATE_LIMIT_MAX_ATTEMPTS: int = 10
 
     # --- Pagination ---
     DEFAULT_PAGE_SIZE: int = 50
@@ -118,6 +128,16 @@ class Settings(BaseSettings):
         if normalized in {"debug", "dev", "development", "local", "true", "1", "yes", "on"}:
             return True
         return value
+
+    @model_validator(mode="after")
+    def _validate_secret_key(self) -> "Settings":
+        if not self.DEBUG and self.SECRET_KEY in INSECURE_DEFAULT_SECRET_KEYS:
+            raise ValueError(
+                "SECRET_KEY must be changed from the default value in production. "
+                "Set SECRET_KEY to a strong, unique random value via environment "
+                "or .env."
+            )
+        return self
 
     model_config = {
         "env_file": ".env",

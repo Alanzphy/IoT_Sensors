@@ -1,10 +1,11 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -28,6 +29,47 @@ from app.services import password_reset as password_reset_service
 
 router = APIRouter()
 
+# In-memory login rate limiter: key (email or IP) -> list of attempt timestamps.
+_login_attempts: dict[str, list[datetime]] = {}
+
+
+def _prune_login_attempts(key: str) -> None:
+    cutoff = datetime.now(timezone.utc) - timedelta(
+        minutes=settings.LOGIN_RATE_LIMIT_WINDOW_MINUTES
+    )
+    attempts = _login_attempts.get(key)
+    if not attempts:
+        return
+    remaining = [ts for ts in attempts if ts > cutoff]
+    if remaining:
+        _login_attempts[key] = remaining
+    else:
+        _login_attempts.pop(key, None)
+
+
+def _check_login_rate_limit(email: str, ip: str) -> None:
+    for key in (email.lower(), ip):
+        _prune_login_attempts(key)
+        if len(_login_attempts.get(key, [])) >= settings.LOGIN_RATE_LIMIT_MAX_ATTEMPTS:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=(
+                    "Demasiados intentos de inicio de sesión. "
+                    "Espera unos minutos e inténtalo de nuevo."
+                ),
+            )
+
+
+def _record_login_attempt(email: str, ip: str) -> None:
+    now = datetime.now(timezone.utc)
+    for key in (email.lower(), ip):
+        _login_attempts.setdefault(key, []).append(now)
+
+
+def reset_login_rate_limit() -> None:
+    """Clear in-memory login rate-limit state (used by the test suite)."""
+    _login_attempts.clear()
+
 
 def _resolve_client_ip(request: Request) -> str:
     forwarded_for = request.headers.get("x-forwarded-for")
@@ -41,8 +83,12 @@ def _resolve_client_ip(request: Request) -> str:
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(body: LoginRequest, db: Session = Depends(get_db)):
+def login(body: LoginRequest, request: Request, db: Session = Depends(get_db)):
     """Authenticate user and return access + refresh tokens."""
+    client_ip = _resolve_client_ip(request)
+    _check_login_rate_limit(body.email, client_ip)
+    _record_login_attempt(body.email, client_ip)
+
     user = db.execute(
         select(User).where(
             User.correo == body.email,
@@ -81,9 +127,14 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
 @router.post("/docs-login", include_in_schema=False)
 def docs_login(
     form_data: OAuth2PasswordRequestForm = Depends(),
+    request: Request = None,
     db: Session = Depends(get_db),
 ):
     """Endpoint exclusivo para Swagger UI que acepta form-data en lugar de JSON."""
+    client_ip = _resolve_client_ip(request) if request else "unknown"
+    _check_login_rate_limit(form_data.username, client_ip)
+    _record_login_attempt(form_data.username, client_ip)
+
     user = db.execute(
         select(User).where(
             User.correo == form_data.username,

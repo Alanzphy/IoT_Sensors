@@ -25,6 +25,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const handleTokenRefreshed = (event: Event) => {
+      const detail = (event as CustomEvent<{ accessToken?: string }>).detail;
+      if (detail?.accessToken) {
+        setToken(detail.accessToken);
+      }
+    };
+    window.addEventListener("auth:token-refreshed", handleTokenRefreshed);
+    return () => {
+      window.removeEventListener("auth:token-refreshed", handleTokenRefreshed);
+    };
+  }, []);
+
+  useEffect(() => {
     if (token) {
       try {
         const decoded = jwtDecode<UserPayload>(token);

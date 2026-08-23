@@ -37,6 +37,12 @@ class TestListNodes:
         data = resp.json()
         assert data["total"] >= 1
 
+    def test_list_does_not_expose_api_key(self, client, admin_headers, sample_node):
+        resp = client.get("/api/v1/nodes", headers=admin_headers)
+        assert resp.status_code == 200
+        for item in resp.json()["data"]:
+            assert "api_key" not in item
+
     def test_list_filter_by_irrigation_area(
         self, client, admin_headers, sample_node, sample_irrigation_area
     ):
@@ -115,6 +121,11 @@ class TestGetNode:
         resp = client.get(f"/api/v1/nodes/{sample_node.id}", headers=admin_headers)
         assert resp.status_code == 200
         assert resp.json()["id"] == sample_node.id
+
+    def test_get_does_not_expose_api_key(self, client, admin_headers, sample_node):
+        resp = client.get(f"/api/v1/nodes/{sample_node.id}", headers=admin_headers)
+        assert resp.status_code == 200
+        assert "api_key" not in resp.json()
 
     def test_get_nonexistent_returns_404(self, client, admin_headers):
         resp = client.get("/api/v1/nodes/99999", headers=admin_headers)
@@ -225,6 +236,18 @@ class TestGeoNodes:
     def test_geo_requires_auth(self, client):
         resp = client.get("/api/v1/nodes/geo")
         assert resp.status_code == 401
+
+    def test_geo_does_not_expose_api_key(
+        self, client, admin_headers, sample_node
+    ):
+        resp = client.get(
+            "/api/v1/nodes/geo?include_without_coordinates=true",
+            headers=admin_headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["total"] >= 1
+        for item in resp.json()["data"]:
+            assert "api_key" not in item
 
     def test_geo_admin_returns_freshness_fields(
         self,

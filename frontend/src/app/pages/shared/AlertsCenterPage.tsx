@@ -30,7 +30,7 @@ import {
 type ReadFilter = "all" | "read" | "unread";
 
 const PAGE_SIZE = 20;
-const LIVE_REFRESH_INTERVAL_MS = 3000;
+const LIVE_REFRESH_INTERVAL_MS = 30000;
 
 const severityStyles: Record<AlertItem["severity"], string> = {
   info: "bg-[var(--status-info-bg)] text-[var(--status-info)]",
@@ -262,7 +262,7 @@ export function AlertsCenterPage() {
 
         <button
           type="button"
-          onClick={fetchAlerts}
+          onClick={() => fetchAlerts()}
           className="inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] px-4 py-2 text-sm font-medium text-[var(--text-body)] hover:bg-[var(--hover-overlay)]"
         >
           <RefreshCw className="h-4 w-4" />

@@ -108,3 +108,55 @@ class TestDeleteUser:
         # Ya no debe estar disponible
         resp2 = client.get(f"/api/v1/users/{created['id']}", headers=admin_headers)
         assert resp2.status_code == 404
+
+
+class TestMe:
+    def test_get_me_requires_auth(self, client):
+        resp = client.get("/api/v1/users/me")
+        assert resp.status_code == 401
+
+    def test_get_me_client(self, client, client_headers, client_user):
+        user, _ = client_user
+        resp = client.get("/api/v1/users/me", headers=client_headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["id"] == user.id
+        assert data["email"] == "cliente@test.com"
+        assert data["full_name"] == "Cliente Test"
+
+    def test_get_me_admin(self, client, admin_headers, admin_user):
+        resp = client.get("/api/v1/users/me", headers=admin_headers)
+        assert resp.status_code == 200
+        assert resp.json()["id"] == admin_user.id
+
+    def test_patch_me_updates_full_name(self, client, client_headers, client_user):
+        user, _ = client_user
+        resp = client.patch(
+            "/api/v1/users/me",
+            json={"full_name": "Cliente Renombrado"},
+            headers=client_headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["id"] == user.id
+        assert data["full_name"] == "Cliente Renombrado"
+        assert data["email"] == "cliente@test.com"
+
+    def test_patch_me_admin_updates_full_name(
+        self, client, admin_headers, admin_user
+    ):
+        resp = client.patch(
+            "/api/v1/users/me",
+            json={"full_name": "Admin Renombrado"},
+            headers=admin_headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["full_name"] == "Admin Renombrado"
+
+    def test_patch_me_rejects_email_edit(self, client, client_headers, client_user):
+        resp = client.patch(
+            "/api/v1/users/me",
+            json={"email": "hack@test.com"},
+            headers=client_headers,
+        )
+        assert resp.status_code == 422

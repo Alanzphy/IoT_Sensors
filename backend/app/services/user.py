@@ -1,8 +1,11 @@
+from datetime import UTC, datetime
+
 from fastapi import HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
+from app.models.refresh_token import RefreshToken
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
 
@@ -82,6 +85,15 @@ def update_user(db: Session, user_id: int, data: UserUpdate) -> User:
 
     if "password" in update_data:
         user.contrasena_hash = hash_password(update_data["password"])
+        # Revoke all existing refresh sessions after a password change.
+        db.execute(
+            update(RefreshToken)
+            .where(
+                RefreshToken.usuario_id == user.id,
+                RefreshToken.revocado_en.is_(None),
+            )
+            .values(revocado_en=datetime.now(UTC).replace(tzinfo=None))
+        )
     if "full_name" in update_data:
         user.nombre_completo = update_data["full_name"]
     if "role" in update_data:

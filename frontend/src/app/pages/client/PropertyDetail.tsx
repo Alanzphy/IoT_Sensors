@@ -1,11 +1,13 @@
-import { MapPin } from "lucide-react";
+import { MapPin, RadioTower } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BentoCard } from "../../components/BentoCard";
+import { EmptyState } from "../../components/EmptyState";
 import { FreshnessIndicator } from "../../components/FreshnessIndicator";
 import { PageTransition } from "../../components/PageTransition";
 import { cropIcons } from "../../components/icons/CropIcons";
 import { useSelection } from "../../context/SelectionContext";
 import { api } from "../../services/api";
+import { NodeItem } from "../../types/api";
 import { parseBackendTimestamp } from "../../utils/datetime";
 
 function AreaCard({ area }: { area: any }) {
@@ -13,7 +15,7 @@ function AreaCard({ area }: { area: any }) {
   const [lastReading, setLastReading] = useState<Date | null>(null);
 
   useEffect(() => {
-    api.get(`/readings/?irrigation_area_id=${area.id}&per_page=1`)
+    api.get(`/readings?irrigation_area_id=${area.id}&per_page=1`)
       .then(res => {
         const data = res.data?.data || [];
         if (data.length > 0) {
@@ -41,7 +43,7 @@ function AreaCard({ area }: { area: any }) {
         </div>
         <div className="flex-1">
           <h3 className="text-lg text-[var(--text-title)] font-medium">{area.name}</h3>
-          <p className="text-sm text-[var(--text-subtle)]">{area.size || area.hectares || 0} ha</p>
+          <p className="text-sm text-[var(--text-subtle)]">{area.area_size || 0} ha</p>
         </div>
       </div>
 
@@ -63,6 +65,90 @@ function AreaCard({ area }: { area: any }) {
 
         {lastReading && <FreshnessIndicator lastUpdate={lastReading} />}
       </div>
+    </BentoCard>
+  );
+}
+
+function NodesPanel({ areas }: { areas: any[] }) {
+  const [nodes, setNodes] = useState<NodeItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const areaIdsKey = areas.map((area) => area.id).join(",");
+
+  useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+    setNodes([]);
+
+    if (areas.length === 0) {
+      setLoading(false);
+      return;
+    }
+
+    Promise.all(
+      areas.map((area) =>
+        api
+          .get<{ data: NodeItem[] }>("/nodes", {
+            params: { irrigation_area_id: area.id },
+          })
+          .then((res) => res.data?.data ?? [])
+          .catch(() => [] as NodeItem[])
+      )
+    ).then((results) => {
+      if (!isMounted) return;
+      setNodes(results.flat());
+      setLoading(false);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [areaIdsKey]);
+
+  const areaName = (id: number) =>
+    areas.find((a) => a.id === id)?.name ?? `Área ${id}`;
+
+  return (
+    <BentoCard variant="light" className="mb-6">
+      <h3 className="text-lg text-[var(--text-title)] mb-4">Sensores por Área</h3>
+      {loading ? (
+        <div className="h-[120px] flex items-center justify-center text-[var(--text-subtle)]">
+          Cargando sensores...
+        </div>
+      ) : nodes.length === 0 ? (
+        <EmptyState
+          icon={RadioTower}
+          title="Sin sensores registrados"
+          description="Esta propiedad no tiene nodos IoT vinculados a sus áreas de riego."
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {nodes.map((node) => (
+            <div
+              key={node.id}
+              className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] p-4"
+            >
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="font-medium text-[var(--text-title)]">
+                  {node.name || node.serial_number || `Nodo ${node.id}`}
+                </span>
+                <span
+                  className={`px-2 py-0.5 text-xs rounded-full border ${
+                    node.is_active
+                      ? "bg-[var(--status-active-bg)] text-[var(--status-active)] border-[var(--status-active)]/30"
+                      : "bg-[var(--status-danger-bg)] text-[var(--status-danger)] border-[var(--status-danger)]/30"
+                  }`}
+                >
+                  {node.is_active ? "Activo" : "Inactivo"}
+                </span>
+              </div>
+              <p className="text-sm text-[var(--text-subtle)]">
+                {areaName(node.irrigation_area_id)}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
     </BentoCard>
   );
 }
@@ -89,47 +175,7 @@ export function PropertyDetail() {
           </div>
         </div>
 
-        {/* Map placeholder */}
-        <BentoCard variant="light" className="mb-6">
-          <h3 className="text-lg text-[var(--text-title)] mb-4">Ubicación de Sensores</h3>
-          <div className="h-[300px] bg-[var(--surface-card-secondary)] rounded-[24px] flex items-center justify-center relative overflow-hidden">
-          {/* Simple map illustration */}
-            <div className="absolute inset-0 opacity-20">
-              <svg className="w-full h-full" viewBox="0 0 400 300">
-                <path d="M0,150 Q100,100 200,150 T400,150" stroke="var(--accent-primary)" strokeWidth="2" fill="none" />
-                <path d="M50,50 L100,100 L150,80 L200,120" stroke="var(--card-brown)" strokeWidth="1.5" fill="none" />
-              </svg>
-            </div>
-
-          {/* Map markers */}
-            <div className="absolute top-[30%] left-[20%]">
-              <div className="w-8 h-8 bg-[var(--accent-primary)] rounded-full flex items-center justify-center text-[var(--text-inverted)] text-xs font-bold animate-pulse">
-                1
-              </div>
-            </div>
-            <div className="absolute top-[50%] left-[45%]">
-              <div className="w-8 h-8 bg-[var(--accent-primary)] rounded-full flex items-center justify-center text-[var(--text-inverted)] text-xs font-bold animate-pulse">
-                2
-              </div>
-            </div>
-            <div className="absolute top-[40%] left-[70%]">
-              <div className="w-8 h-8 bg-[var(--accent-primary)] rounded-full flex items-center justify-center text-[var(--text-inverted)] text-xs font-bold animate-pulse">
-                3
-              </div>
-            </div>
-            <div className="absolute top-[65%] left-[60%]">
-              <div className="w-8 h-8 bg-[var(--accent-primary)] rounded-full flex items-center justify-center text-[var(--text-inverted)] text-xs font-bold animate-pulse">
-                4
-              </div>
-            </div>
-
-
-            <div className="text-center z-10">
-              <MapPin className="w-12 h-12 text-[var(--accent-primary)] mx-auto mb-2" />
-              <p className="text-[var(--text-subtle)]">Mapa con {propertyAreas.length} sensores activos</p>
-            </div>
-          </div>
-        </BentoCard>
+        <NodesPanel areas={propertyAreas} />
 
         {/* Areas grid */}
         <div className="mb-4">

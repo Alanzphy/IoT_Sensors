@@ -26,6 +26,7 @@ def list_crop_cycles(
     page: int,
     per_page: int,
     irrigation_area_id: int | None = None,
+    allowed_area_ids: list[int] | None = None,
 ) -> tuple[list[CropCycle], int]:
     query = select(CropCycle).where(CropCycle.eliminado_en.is_(None))
     count_query = (
@@ -33,6 +34,12 @@ def list_crop_cycles(
         .select_from(CropCycle)
         .where(CropCycle.eliminado_en.is_(None))
     )
+    if allowed_area_ids is not None:
+        if not allowed_area_ids:
+            return [], 0
+        query = query.where(CropCycle.area_riego_id.in_(allowed_area_ids))
+        count_query = count_query.where(CropCycle.area_riego_id.in_(allowed_area_ids))
+
     if irrigation_area_id is not None:
         query = query.where(CropCycle.area_riego_id == irrigation_area_id)
         count_query = count_query.where(CropCycle.area_riego_id == irrigation_area_id)

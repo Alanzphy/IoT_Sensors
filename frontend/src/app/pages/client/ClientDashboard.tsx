@@ -34,8 +34,8 @@ const defaultSemaphore: Record<PriorityKey, SemaphoreLevel> = {
   "environmental.eto": "optimal",
 };
 
-// Intervalo de auto-refresco del dashboard: 3000ms (3s) para propósitos de prueba de tiempo real (originalmente 30000ms - 30s)
-const DASHBOARD_REFRESH_MS = 3000;
+// Intervalo de auto-refresco del dashboard: 30s
+const DASHBOARD_REFRESH_MS = 30000;
 const FRESH_MINUTES_THRESHOLD = 20;
 
 type ConnectionState = "online" | "warning" | "offline" | "no_data";

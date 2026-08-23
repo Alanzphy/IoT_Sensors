@@ -6,6 +6,10 @@ dist/
 wheels/
 *.egg-info
 
+# Coverage
+.coverage
+**/.coverage
+
 # Virtual environments
 .venv
 

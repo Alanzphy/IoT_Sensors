@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from sqlalchemy import delete, select
 
+from app.core.config import settings
 from app.models.audit_log import AuditLog
 from app.models.password_reset_token import PasswordResetToken
 from app.services import password_reset as password_reset_service
@@ -44,6 +45,23 @@ class TestLogin:
     def test_login_missing_fields_returns_422(self, client):
         resp = client.post("/api/v1/auth/login", json={"email": "admin@test.com"})
         assert resp.status_code == 422
+
+    def test_login_rate_limited_returns_429(self, client):
+        """Supera el límite de intentos por email/IP → 429."""
+        email = "bruteforce@test.com"
+        for _ in range(settings.LOGIN_RATE_LIMIT_MAX_ATTEMPTS):
+            resp = client.post(
+                "/api/v1/auth/login",
+                json={"email": email, "password": "wrong"},
+            )
+            assert resp.status_code == 401
+
+        resp = client.post(
+            "/api/v1/auth/login",
+            json={"email": email, "password": "wrong"},
+        )
+        assert resp.status_code == 429
+        assert "Demasiados intentos" in resp.json()["detail"]
 
 
 class TestRefreshToken:

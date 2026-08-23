@@ -19,6 +19,14 @@ class UserUpdate(BaseModel):
     is_active: bool | None = None
 
 
+class UserProfileUpdate(BaseModel):
+    """Campos editables por el propio usuario vía PATCH /users/me."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    full_name: str | None = None
+
+
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

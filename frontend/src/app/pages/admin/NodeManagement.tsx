@@ -1,4 +1,4 @@
-import { Copy, Eye, EyeOff, Pencil, Plus, Radio, Trash2 } from "lucide-react";
+import { Pencil, Plus, Radio, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BentoCard } from "../../components/BentoCard";
 import { EmptyState } from "../../components/EmptyState";
@@ -15,7 +15,7 @@ interface IrrigationArea {
 interface NodeData {
   id: number;
   irrigation_area_id: number;
-  api_key: string;
+  api_key?: string;
   serial_number: string | null;
   name: string | null;
   latitude: number | null;
@@ -66,8 +66,6 @@ export function NodeManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [visibleApiKeys, setVisibleApiKeys] = useState<Record<number, boolean>>({});
-
   // Form State
   const [formName, setFormName] = useState("");
   const [formSerialNumber, setFormSerialNumber] = useState("");
@@ -112,7 +110,7 @@ export function NodeManagement() {
       const latitude = parseCoordinateInput(formLat, "Latitud", -90, 90);
       const longitude = parseCoordinateInput(formLng, "Longitud", -180, 180);
 
-      await api.post("/nodes", {
+      const res = await api.post("/nodes", {
         irrigation_area_id: parseInt(formAreaId),
         name: formName.trim() || null,
         serial_number: formSerialNumber.trim() || null,
@@ -120,7 +118,13 @@ export function NodeManagement() {
         longitude,
         is_active: true,
       });
-      showToast("Nodo creado correctamente", "success");
+      const newKey = res.data?.api_key;
+      showToast(
+        newKey
+          ? `Nodo creado. API Key: ${newKey} (se muestra solo una vez)`
+          : "Nodo creado correctamente",
+        "success",
+      );
       setShowCreateForm(false);
       setFormName("");
       setFormSerialNumber("");
@@ -198,18 +202,6 @@ export function NodeManagement() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const toggleApiKeyVisibility = (nodeId: number) => {
-    setVisibleApiKeys(prev => ({
-      ...prev,
-      [nodeId]: !prev[nodeId]
-    }));
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    showToast("API Key copiada al portapapeles", "success");
   };
 
   const getAreaName = (id: number) => {
@@ -301,32 +293,9 @@ export function NodeManagement() {
                     {node.serial_number || '-'}
                   </td>
                   <td className="py-4 px-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-[var(--text-muted)] font-mono">
-                        {visibleApiKeys[node.id]
-                          ? node.api_key
-                          : '••••••••••••••••'
-                        }
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => toggleApiKeyVisibility(node.id)}
-                        className="p-1 rounded hover:bg-[var(--hover-overlay)] transition-colors"
-                      >
-                        {visibleApiKeys[node.id] ? (
-                          <EyeOff className="w-4 h-4 text-[var(--text-muted)]" />
-                        ) : (
-                          <Eye className="w-4 h-4 text-[var(--text-muted)]" />
-                        )}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => copyToClipboard(node.api_key)}
-                        className="p-1 rounded hover:bg-[var(--hover-overlay)] transition-colors"
-                      >
-                        <Copy className="w-4 h-4 text-[var(--text-muted)]" />
-                      </button>
-                    </div>
+                    <span className="text-sm text-[var(--text-muted)]">
+                      Se muestra al crear
+                    </span>
                   </td>
                   <td className="py-4 px-4 text-sm text-[var(--text-main)]">
                     {getAreaName(node.irrigation_area_id)}

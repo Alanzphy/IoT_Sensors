@@ -45,8 +45,7 @@ function formatRelativeDate(iso: string): string {
 
 export function AlertsPopover({
   className = "fixed top-4 right-4 md:right-6 z-40",
-  // refreshIntervalMs = 30000,
-  refreshIntervalMs = 3000,
+  refreshIntervalMs = 30000,
 }: AlertsPopoverProps) {
   const fixedBottomRightClassName =
     "fixed !right-4 !top-auto !left-auto !z-[60] !bottom-[calc(6rem+env(safe-area-inset-bottom))] sm:!bottom-4";

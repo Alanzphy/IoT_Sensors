@@ -1,4 +1,4 @@
-import { Copy, Eye, EyeOff, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -52,7 +52,6 @@ export function NodeDetail() {
   const [latestReading, setLatestReading] = useState<any>(null);
   const [historicalData, setHistoricalData] = useState<any[]>([]);
 
-  const [showApiKey, setShowApiKey] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [savingEdit, setSavingEdit] = useState(false);
@@ -260,35 +259,10 @@ export function NodeDetail() {
           <BentoCard variant="sand">
             <h3 className="text-lg font-serif text-[var(--text-title)] mb-4">API Key (Solo Admin)</h3>
             <div className="bg-[var(--surface-panel)] border border-[var(--border-subtle)] p-4 rounded-[24px]">
-              <div className="flex items-center gap-3 mb-2">
-                <code className="flex-1 font-mono text-sm text-[var(--text-main)] break-all">
-                  {showApiKey ? node.api_key : '••••••••••••••••••••••••••••'}
-                </code>
-                <button
-                  type="button"
-                  onClick={() => setShowApiKey(!showApiKey)}
-                  className="p-2 rounded-full hover:bg-[var(--hover-overlay)] transition-colors flex-shrink-0"
-                >
-                  {showApiKey ? (
-                    <EyeOff className="w-4 h-4 text-[var(--text-subtle)]" />
-                  ) : (
-                    <Eye className="w-4 h-4 text-[var(--text-subtle)]" />
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(node.api_key);
-                    showToast("API Key copiada al portapapeles", "success");
-                  }}
-                  className="p-2 rounded-full hover:bg-[var(--hover-overlay)] transition-colors flex-shrink-0"
-                  title="Copiar API Key"
-                >
-                  <Copy className="w-4 h-4 text-[var(--text-subtle)]" />
-                </button>
-              </div>
-              <p className="text-xs text-[var(--text-subtle)]">
-                Usar esta clave para autenticar las solicitudes del sensor Módulo de Control.
+              <p className="text-sm text-[var(--text-muted)]">
+                La API Key se muestra una sola vez al crear el nodo (respuesta del POST
+                /api/v1/nodes). Si la pierdes, genera una nueva o consulta el seed del
+                entorno de prueba (TEST_DATA.md).
               </p>
             </div>
           </BentoCard>
