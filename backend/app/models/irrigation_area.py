@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from app.models.crop_cycle import CropCycle
     from app.models.crop_type import CropType
     from app.models.node import Node
+    from app.models.ndvi_snapshot import NDVILatestSnapshot
     from app.models.notificationpreference import NotificationPreference
     from app.models.property import Property
     from app.models.threshold import Threshold
@@ -59,6 +60,12 @@ class IrrigationArea(Base, TimestampMixin, SoftDeleteMixin):
     )
     ai_reports: Mapped[list["AIReport"]] = relationship(
         "AIReport", back_populates="irrigation_area"
+    )
+    ndvi_snapshot: Mapped["NDVILatestSnapshot | None"] = relationship(
+        "NDVILatestSnapshot",
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
 
     __table_args__ = (

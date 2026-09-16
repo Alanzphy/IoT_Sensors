@@ -13,6 +13,7 @@ from app.models.alert import Alert
 from app.models.audit_log import AuditLog
 from app.models.notification_preference import NotificationPreference
 from app.models.ai_report import AIReport
+from app.models.ndvi_snapshot import NDVILatestSnapshot
 
 __all__ = [
     "User",
@@ -30,4 +31,5 @@ __all__ = [
     "AuditLog",
     "NotificationPreference",
     "AIReport",
+    "NDVILatestSnapshot",
 ]
