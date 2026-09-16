@@ -4,6 +4,14 @@ Actúa como un arquitecto de software y desarrollador Senior. Estoy construyendo
 - El alcance actual es un Producto Mínimo Viable (MVP) enfocado estrictamente en la ingesta de datos, gestión de usuarios y visualización.
 - RESTRICCIÓN: No diseñes ni implementes **nuevas** funcionalidades de Inteligencia Artificial (Azure OpenAI), n8n, ni agentes autónomos. **Nota de estado:** el código de Fase 2 (IA, alertas de umbral/inactividad, notificaciones email/WhatsApp, password reset, auditoría) **ya existe implementado**, pero está **dormido detrás de flags (OFF por defecto)** — ver sección 4 y `ALERTS_ENABLED`/`AI_ASSISTANT_ENABLED`/`AI_REPORTS_ENABLED` en `backend/app/core/config.py`. No lo borres ni lo expandas sin autorización; el MVP corre con todos esos flags apagados (los schedulers requieren `docker compose --profile phase2 up`).
 
+### Approved integration-week override
+
+The latest **point-sampled NDVI** result from Agro.io is approved as a bounded integration addition. It MUST use the separate `contracts/edge-cloud/v1/ndvi.schema.json` event and MUST NOT become a thirteenth telemetry field. Polygon/history NDVI remains deferred. All other Phase 2 restrictions in this file remain unchanged. Start integration work at `docs/integration/README.md`.
+
+### Integration agent
+
+Si el trabajo asignado es una carpeta `openspec/changes/integration-*`, esa carpeta es el brief. Lee también las rutas de Scope de esa proposal y los contratos o evidencia que nombra. Implementa `tasks.md`. No sigas `docs/integration/week-plan.md` ni Agro.io. No sigas `docs/integration/work-packets/` para implementar. Si te bloqueas, detente. Los PRs de IoT siguen la política ordinaria de IoT_Sensors (este repo no es producción Agro; no apliques la regla de Agro sobre `main`). **No** trates `main` de Agro.io como destino de merge. Si el cambio asignado está en Agro.io (no debería ocurrir desde este repo), detente. El PR usa `Closes #N` cuando exista un issue; el issue solo nombra esa carpeta.
+
 2. ARQUITECTURA TÉCNICA
 El sistema sigue una arquitectura cliente-servidor tradicional, separando la recolección de datos, el backend y el frontend.
 - Infraestructura: Todo el entorno de servidor ("Servidor Grogu") estará montado en una VPS con Linux.
@@ -45,7 +53,7 @@ El payload contiene **3 categorías dinámicas** (12 campos en total). Los datos
   - Tamaño del área
   - GPS latitud/longitud (registrado en el Nodo)
 
-> **Nota:** El parámetro NDVI (Índice de Vegetación) queda **excluido del MVP**. Se evaluará en fases posteriores.
+> **Note:** NDVI remains excluded from telemetry. The approved latest-point exception uses the separate event defined by the override and contract above.
 
 2.2. DATOS PRIORITARIOS
 Los siguientes datos son los de mayor importancia para el cliente y deben tener prominencia en el dashboard y las alertas:
@@ -177,9 +185,9 @@ La arquitectura de la base de datos y la API del MVP deben diseñarse preparando
 - En el MVP existe un indicador visual pasivo de frescura (último timestamp + tiempo transcurrido). En Fase 2 se implementará una **alerta backend activa** cuando un nodo lleve ≥20 minutos (2 lecturas consecutivas perdidas) sin enviar datos, generando una notificación push al usuario.
 
 4.5. NDVI (ÍNDICE DE VEGETACIÓN)
-- Parámetro de desarrollo vegetativo (% normalizado 0-1). Excluido del MVP por falta de fuente de datos definida.
-- En Fase 2 se evaluará integración con servicios de imágenes satelitales o datos proporcionados por hardware del cliente.
-- Entregables del Sprint 2 (pendiente): migración de BD y modelos (columna nullable en la tabla `lecturas`), contrato API actualizado, y UI de histórico/dashboard y exportación con NDVI.
+- Synchronizing and displaying Agro.io's latest point NDVI is approved through a separate event with Sentinel-2 provenance.
+- Historical and polygon-sampled NDVI remain deferred to a later phase.
+- NDVI is not added to the `lecturas` table or telemetry payload.
 
 4.6. VISUALIZACIÓN GEOESPACIAL (MAPAS)
 - Integración con API de mapas (Google Maps u otra) para renderizar ubicación de predios y nodos sobre mapa interactivo, tipo "Google Earth".
@@ -200,13 +208,13 @@ La arquitectura de la base de datos y la API del MVP deben diseñarse preparando
 4.10. REQUISITO DE DISEÑO ACTUAL (para soportar Fase 2)
 - Para soportar todas las modalidades futuras, la base de datos del MVP debe estar perfectamente normalizada. Las tablas y endpoints de la API deben garantizar trazabilidad total (timestamps precisos en cada lectura, IDs de cultivos/nodos/predios/áreas) y permitir tanto consultas rápidas filtradas (para el chat de IA) como extracciones masivas de datos históricos (para los reportes nocturnos). El volumen estimado es de **3 categorías × 12 campos dinámicos × 144 lecturas/día × N nodos**, lo cual debe considerarse en el diseño de índices y particionamiento.
 
-> **IMPORTANTE:** Cuando se implemente la Fase 2, se deberá actualizar: el schema de BD (nuevas tablas: `umbrales`, `alertas`, `audit_log`, posible campo NDVI), el SRS (reincorporar como activos los REQs marcados como Fase 2), los casos de uso (nuevos flujos de alertas y configuración de umbrales por parte del cliente), y los diagramas de actividad.
+> **IMPORTANT:** When the remaining Phase 2 work is implemented, update the database schema (new `umbrales`, `alertas`, and `audit_log` tables; separate NDVI snapshot storage, never a telemetry field), SRS, use cases, and activity diagrams.
 
 5. INSTRUCCIONES PARA TUS RESPUESTAS
 - Cuando te pida diagramas, código, o diseño de base de datos/endpoints, apégate a esta arquitectura y la jerarquía: **Cliente → Predios → Áreas de Riego (→ Tipo de Cultivo + Nodo IoT 1:1)**.
 - **Stack:** Python/FastAPI (backend), React (frontend), MySQL 8 (BD), Docker Compose (deploy). Ver sección 2.4 para detalles.
 - Mantén las soluciones simples y modulares para un entorno Linux.
-- Si te pido diseñar el payload del sensor, usa la estructura de las **3 categorías dinámicas** definida en la sección 2.1 (Suelo, Riego, Ambiental) con los key names exactos del JSON de la sección 2.4. **NO** incluyas datos estáticos (Cultivo, Tamaño, GPS) en el payload. Campos no disponibles como `0` o `null`. Sin NDVI.
+- When designing sensor payloads, use the **three dynamic categories** in section 2.1 with the exact JSON keys from section 2.4. Do not include static crop, size, or GPS data. Unavailable values may be `0` or `null` in the legacy baseline; the edge-cloud v1 contract requires `null`. NDVI is never telemetry and uses its separate latest-point contract.
 - El catálogo de cultivos es **administrable** por el Admin (CRUD). Valores iniciales de seed: **Nogal, Alfalfa, Manzana, Maíz, Chile, Algodón**.
 - Toda lectura debe llevar `timestamp` (ISO 8601 UTC). Todo endpoint de consulta debe soportar filtros por rango de fechas (`start_date`, `end_date`).
 - Contempla el indicador de frescura de datos (último timestamp + tiempo transcurrido) en diseños de dashboard.

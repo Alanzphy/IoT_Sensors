@@ -1,0 +1,33 @@
+{
+  "provider": "open-meteo",
+  "coordinates": {
+    "requested_latitude": 28.632,
+    "requested_longitude": -106.0691,
+    "provider_latitude": 28.625,
+    "provider_longitude": -106.0625
+  },
+  "current": {
+    "observed_at": "2026-09-15T16:00:00Z",
+    "temperature_2m": 27.4,
+    "relative_humidity_2m": 41.0,
+    "wind_speed_10m": 12.2,
+    "shortwave_radiation": 612.0,
+    "weather_code": 2
+  },
+  "today": {
+    "date": "2026-09-15",
+    "precipitation_sum": 1.7,
+    "et0_fao_evapotranspiration": 5.3
+  },
+  "fetched_at": "2026-09-15T16:05:00Z",
+  "units": {
+    "temperature_2m": "°C",
+    "relative_humidity_2m": "%",
+    "wind_speed_10m": "km/h",
+    "shortwave_radiation": "W/m²",
+    "precipitation_sum": "mm",
+    "et0_fao_evapotranspiration": "mm"
+  },
+  "cache_state": "fresh",
+  "cache_age_seconds": 0
+}
