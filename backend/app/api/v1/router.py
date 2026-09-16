@@ -10,6 +10,7 @@ from app.api.v1.endpoints import (
     crop_cycles,
     crop_types,
     irrigation_areas,
+    ndvi_snapshots,
     nodes,
     notification_preferences,
     properties,
@@ -42,6 +43,9 @@ api_v1_router.include_router(
     tags=["Notification Preferences"],
 )
 api_v1_router.include_router(readings.router, prefix="/readings", tags=["Readings"])
+api_v1_router.include_router(
+    ndvi_snapshots.router, prefix="/ndvi-snapshots", tags=["NDVI Snapshots"]
+)
 api_v1_router.include_router(
     thresholds.router,
     prefix="/thresholds",
