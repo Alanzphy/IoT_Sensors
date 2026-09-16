@@ -1,138 +1,99 @@
-# Despliegue en Dokploy (Checklist Operativo)
+# Greenfield Dokploy acceptance deployment
 
-Este documento te deja el proyecto listo para desplegar en Dokploy sin tocar el flujo local.
+The first IoT_Sensors installation is a **pre-release acceptance deployment**. No production deployment, live users, or production data exist beforehand. Alan (Integrator) owns its Dokploy setup and CD and may designate this same stack as production only after all acceptance evidence is recorded and manually signed off. A separate staging stack is safer optional isolation, not a hard blocker.
 
-## 1) Crear proyecto en Dokploy
+This guide does not contain secret values. Alan coordinates environment and secret configuration in Dokploy without copying values into repositories, issues, fixtures, logs, or documentation.
 
-1. Tipo de proyecto: `Compose`.
-2. Repositorio: `Alanzphy/IoT_Sensors`.
-3. Rama: `main`.
-4. Compose path: `docker-compose.yml`.
+## 1. Pre-deployment gates
 
-## 2) Variables de entorno (pestaña Environment)
+- Deploy accepted refs from `main` only after required PR checks and contract parity pass.
+- Record the canonical edge-cloud contract ref and prove its JSON files are byte-identical to Agro.io's vendored copy.
+- Use a new empty MySQL database and coordinate a clean `alembic upgrade head` proof before admitting application data.
+- Prepare the `Client → Property → Irrigation Area → Crop Type + IoT Node (1:1)` mappings and node API keys without exposing key values.
+- Keep full Agro.io/Avalonia/systemd off the VPS. CI or an ephemeral headless harness may simulate the edge path; ARM64 Raspberry remains the real device target.
+- Agro.io has no Dokploy or VPS CD path. Alan's deployment authority here applies only to IoT_Sensors.
 
-Pega este bloque y reemplaza valores sensibles:
+## 2. Dokploy application
+
+| Setting | Acceptance value |
+|---|---|
+| Project type | Compose |
+| Repository | `Alanzphy/IoT_Sensors` |
+| Branch | `main` |
+| Compose path | `docker-compose.yml` |
+| Deployment state | Pre-release until manual sign-off |
+
+Configure the deployment-specific domain and URL values (`DOMAIN`, `FRONTEND_PUBLIC_URL`, and `PASSWORD_RESET_URL_BASE`), strong application/database credentials, and loopback port bindings. Do not publish MySQL or backend ports directly; Traefik/Dokploy owns public routing and TLS.
+
+## 2.1 Continuous delivery (IoT_Sensors only)
+
+Trigger from an accepted `main` ref only. Record the image and git ref. Rollback is redeploying the previous accepted `main` ref. There is no automatic production promotion.
+
+1. Deploy only a `main` ref that already passed required PR checks and contract parity.
+2. Record the deployed image digest/tag and git SHA before smoke.
+3. Run `scripts/dokploy_smoke_check.sh <domain>`. HTTPS `/health` must be exactly `{"status":"ok"}` (optional whitespace allowed). Docs and frontend checks stay required. A 2xx SPA HTML body is a failure.
+4. Keep weather off until commercial Open-Meteo credentials exist in Dokploy secrets (`OPEN_METEO_ENABLED=false`, empty API key). Never store that key in the repo.
+5. After smoke, the stack remains pre-release until the manual sign-off in section 6.
+
+Agro.io has no Dokploy or VPS CD path.
+
+## 3. MVP feature flags
+
+The acceptance deployment runs the MVP only. These controlling gates must remain off:
 
 ```env
-# Dominio publico
-DOMAIN=sensores.alanrz.bond
-FRONTEND_PUBLIC_URL=https://sensores.alanrz.bond
-PASSWORD_RESET_URL_BASE=https://sensores.alanrz.bond/restablecer-contrasena
-
-# App
 DEBUG=false
-SECRET_KEY=CAMBIA_ESTE_SECRET_LARGO_Y_ALEATORIO
-JWT_ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-REFRESH_TOKEN_EXPIRE_DAYS=7
-
-# Base de datos MySQL
-DB_USER=root
-DB_PASSWORD=CAMBIA_ESTA_PASSWORD
-DB_NAME=sensores_riego
-
-# Bind local de puertos (mantener en localhost)
-MYSQL_PORT_BIND=127.0.0.1:3306
-BACKEND_PORT_BIND=127.0.0.1:5050
-FRONTEND_PORT_BIND=127.0.0.1:3022
-
-# Scheduler inactividad
-SCHEDULER_ADMIN_EMAIL=admin@sensores.com
-SCHEDULER_ADMIN_PASSWORD=CAMBIA_PASSWORD_ADMIN
-INACTIVITY_SCAN_INTERVAL_SECONDS=300
-INACTIVITY_SCAN_MINUTES=20
-INACTIVITY_SCAN_HTTP_TIMEOUT_SECONDS=20
-
-# Notificaciones
-NOTIFICATIONS_ENABLED=true
-NOTIFICATIONS_EMAIL_ENABLED=true
-NOTIFICATIONS_WHATSAPP_ENABLED=true
-
-# SMTP (Gmail app password o proveedor SMTP)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USERNAME=alerts@sensores.com
-SMTP_PASSWORD=CAMBIA_APP_PASSWORD_SMTP
-SMTP_FROM_EMAIL=alerts@sensores.com
-SMTP_USE_TLS=true
-SMTP_USE_SSL=false
-NOTIFICATION_EMAIL_SUBJECT_PREFIX=[Sensores IoT]
-
-# WhatsApp Meta
-WHATSAPP_PROVIDER=meta
-WHATSAPP_MESSAGE_MODE=template
-WHATSAPP_API_BASE_URL=https://graph.facebook.com/v20.0
-WHATSAPP_PHONE_NUMBER_ID=CAMBIA_PHONE_NUMBER_ID
-WHATSAPP_ACCESS_TOKEN=CAMBIA_ACCESS_TOKEN
-WHATSAPP_HTTP_TIMEOUT_SECONDS=15
-WHATSAPP_TEMPLATE_NAME=alerta_riego_critica_v1
-WHATSAPP_TEMPLATE_LANGUAGE_CODE=es_MX
-
-# Twilio (solo si cambias provider a twilio)
-TWILIO_ACCOUNT_SID=
-TWILIO_AUTH_TOKEN=
-TWILIO_WHATSAPP_FROM=
-TWILIO_MESSAGING_SERVICE_SID=
-TWILIO_CONTENT_SID=
-TWILIO_STATUS_CALLBACK_URL=
-TWILIO_API_BASE_URL=https://api.twilio.com
-
-# Scheduler dispatch de notificaciones
-NOTIFICATION_DISPATCH_INTERVAL_SECONDS=300
-NOTIFICATION_DISPATCH_LIMIT=200
-NOTIFICATION_DISPATCH_ONLY_UNREAD=false
-NOTIFICATION_DISPATCH_HTTP_TIMEOUT_SECONDS=20
-
-# Reportes IA (backend-first)
-AI_REPORTS_ENABLED=true
-AI_REPORTS_DEFAULT_NOTIFY=true
-AI_REPORTS_SCHEDULER_ENABLED=true
-AI_REPORTS_SCHEDULER_FORCE=false
-AI_REPORTS_SCHEDULER_POLL_SECONDS=60
-AI_REPORTS_SCHEDULE_HOUR_UTC=2
-AI_REPORTS_SCHEDULE_MINUTE_UTC=0
-AI_REPORTS_HTTP_TIMEOUT_SECONDS=30
-
-# Azure OpenAI (opcional)
+ALERTS_ENABLED=false
+NOTIFICATIONS_ENABLED=false
+NOTIFICATIONS_EMAIL_ENABLED=false
+NOTIFICATIONS_WHATSAPP_ENABLED=false
+AI_ASSISTANT_ENABLED=false
+AI_REPORTS_ENABLED=false
+AI_REPORTS_DEFAULT_NOTIFY=false
+AI_REPORTS_SCHEDULER_ENABLED=false
+AI_ALERT_RECOMMENDATIONS_ENABLED=false
 AZURE_OPENAI_ENABLED=false
-AZURE_OPENAI_ENDPOINT=
-AZURE_OPENAI_API_KEY=
-AZURE_OPENAI_API_VERSION=2024-10-21
-AZURE_OPENAI_DEPLOYMENT=
-AZURE_OPENAI_TEMPERATURE=0.2
-AZURE_OPENAI_MAX_TOKENS=900
-AZURE_OPENAI_TIMEOUT_SECONDS=30
+OPEN_METEO_ENABLED=false
+OPEN_METEO_API_KEY=
 ```
 
-## 3) DNS y SSL
+`.env.docker.example` could not be updated in this unit: agent `.env*` permissions deny read/write. Compose pass-through defaults match these MVP-off gates, including Open-Meteo disabled with an empty API key. Align that example file later with filesystem access; do not put commercial keys in the repository.
 
-1. Asegura que el dominio (`DOMAIN`) apunte a la IP de la VPS.
-2. Si usas Cloudflare y el certificado no sale al primer intento, prueba temporalmente `DNS only` hasta que Traefik emita SSL.
+Do not start Compose with the `phase2` profile. A normal Compose deployment starts only the MVP services:
 
-## 4) Deploy
+- `mysql`
+- `backend`
+- `frontend`
 
-1. Click en `Deploy`.
-2. Espera estado healthy en servicios:
-   - `mysql`
-   - `backend`
-   - `frontend`
-   - `inactivity_scheduler`
-   - `notification_scheduler`
-   - `ai_report_scheduler`
+The `inactivity_scheduler`, `notification_scheduler`, and `ai_report_scheduler` services run only through `docker compose --profile phase2 up` and are not part of MVP acceptance. Their credentials and provider settings are unnecessary while the profile and controlling gates remain off.
 
-## 5) Validacion post deploy
+## 4. Fresh-database migration gate
 
-1. `https://TU_DOMINIO/health` debe responder `{"status":"ok"}`.
-2. `https://TU_DOMINIO/api/v1/docs` debe abrir Swagger.
-3. `https://TU_DOMINIO` debe abrir frontend.
-4. Login admin y prueba de dispatch:
-   - `POST /api/v1/alerts/dispatch-notifications`
-5. Confirma correo y WhatsApp en cliente objetivo.
-6. Probar generación manual de reporte IA:
-   - `POST /api/v1/ai-reports/generate`
+The historical flatten migration drops old category tables, but this confirmed greenfield installation has no existing database or production data to preserve. The current acceptance requirement is therefore:
 
-## 6) Problemas comunes
+1. Start from an empty acceptance database.
+2. Run `alembic upgrade head` through the approved deployment procedure.
+3. Record the command, exit result, resulting Alembic revision, and absence of pre-existing application rows.
+4. Confirm the application can create and read the expected hierarchy and one contract-valid telemetry event.
 
-1. No llegan WhatsApp y email si: `NOTIFICATIONS_ENABLED=false`.
-2. WhatsApp falla si token/phone id inválidos o plantilla no aprobada cuando `WHATSAPP_MESSAGE_MODE=template`.
-3. Links de WhatsApp mal direccionados si `FRONTEND_PUBLIC_URL` no coincide con el dominio real.
+After go-live, this greenfield exception ends. Future migrations must preserve existing data, avoid destructive drop/rewrite behavior without an approved copy-and-verify path, and include backup, rollback/recovery, and row-count evidence.
+
+## 5. Acceptance checks
+
+Alan records exact refs, commands, response codes, counts, and observed results:
+
+- `/health` returns `{"status":"ok"}` over HTTPS.
+- `/api/v1/docs` and the frontend load over HTTPS through Traefik.
+- JWT user access and `X-API-Key` node ingestion remain separate authentication boundaries.
+- Nested reading JSON contains `soil`, `irrigation`, and `environmental` with exactly 12 dynamic fields and uppercase UTC `Z` timestamps.
+- The same node/endpoint/`X-Event-ID` and body produces one canonical MySQL row; the same ID with a different body returns `409` without mutation.
+- One-node, 8-node, and 16-node harness counts reconcile. The 16-node run includes a forced HTTPS failure and same-ID retry.
+- Latest/history/export/freshness/dashboard use canonical cloud data.
+- Phase 2, notification, and AI gates are false; no `phase2` scheduler service is running.
+- Latest point NDVI, if included in acceptance, uses its separate event/storage path with Sentinel-2 provenance and never appears in telemetry.
+
+Central weather and latest point NDVI are independent lanes. They do not block core telemetry, and they cannot replace a failed core E2E gate.
+
+## 6. Manual production designation
+
+Until manual sign-off, label the stack and all evidence **pre-release acceptance** and admit no client traffic or production data. After all required gates pass, Alan records the accepted refs and time of sign-off, then may designate the same stack as production. If acceptance fails, keep it pre-release, correct the bounded work unit, and repeat only the affected evidence gate.

@@ -4,6 +4,7 @@ from pydantic_settings import BaseSettings
 INSECURE_DEFAULT_SECRET_KEYS = {
     "CHANGE-ME-in-production",
     "dev-only-change-me-in-production-abc123xyz",
+    "CHANGE-THIS-TO-A-LONG-RANDOM-STRING",
 }
 
 
