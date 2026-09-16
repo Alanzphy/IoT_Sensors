@@ -16,6 +16,7 @@ from app.api.v1.endpoints import (
     readings,
     thresholds,
     users,
+    weather,
 )
 
 api_v1_router = APIRouter()
@@ -42,6 +43,7 @@ api_v1_router.include_router(
     tags=["Notification Preferences"],
 )
 api_v1_router.include_router(readings.router, prefix="/readings", tags=["Readings"])
+api_v1_router.include_router(weather.router, prefix="/weather", tags=["Weather"])
 api_v1_router.include_router(
     thresholds.router,
     prefix="/thresholds",

@@ -927,6 +927,7 @@ dependencies = [
     { name = "bcrypt" },
     { name = "cryptography" },
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "openpyxl" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -940,7 +941,6 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "httpx" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "ruff" },
@@ -952,6 +952,7 @@ requires-dist = [
     { name = "bcrypt", specifier = ">=4.0.1" },
     { name = "cryptography", specifier = ">=44.0.0" },
     { name = "fastapi", specifier = ">=0.135.1" },
+    { name = "httpx", specifier = ">=0.28.0" },
     { name = "openpyxl", specifier = ">=3.1.5" },
     { name = "pydantic", specifier = ">=2.12.5" },
     { name = "pydantic-settings", specifier = ">=2.13.1" },
@@ -965,7 +966,6 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "httpx", specifier = ">=0.28.0" },
     { name = "pytest", specifier = ">=8.3.0" },
     { name = "pytest-cov", specifier = ">=6.0.0" },
     { name = "ruff", specifier = ">=0.16.4" },
