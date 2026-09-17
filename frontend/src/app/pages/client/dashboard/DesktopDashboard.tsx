@@ -1,3 +1,4 @@
+import type { CurrentReadings, ChartReading } from "./readings";
 import { Droplets, Sun, Wind, Zap } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { BentoCard } from "../../../components/BentoCard";
@@ -19,8 +20,8 @@ export function DesktopDashboard({
   prioritySemaphore,
   connectionState,
 }: {
-  historicalData: any[];
-  currentReadings: any;
+  historicalData: ChartReading[];
+  currentReadings: CurrentReadings;
   prioritySemaphore: Record<PriorityKey, SemaphoreLevel>;
   connectionState: ConnectionState;
 }) {
@@ -35,7 +36,7 @@ export function DesktopDashboard({
   return (
     <div className="grid grid-cols-12 gap-6">
       {/* Priority Data - Dark Cards (Row 1) */}
-      <div className="col-span-4">
+      <div className="col-span-12 xl:col-span-4">
         <MetricCard
           title="Humedad del Suelo"
           value={currentReadings.soilHumidity}
@@ -49,7 +50,7 @@ export function DesktopDashboard({
             <SemaphorePill level={prioritySemaphore["soil.humidity"]} />
           </div>
           {/* Circular progress ring */}
-          <div className="relative w-32 h-32 mx-auto my-4">
+          {typeof currentReadings.soilHumidity === "number" && <div className="relative w-32 h-32 mx-auto my-4">
             <svg className="transform -rotate-90 w-32 h-32">
               <circle
                 cx="64"
@@ -67,16 +68,16 @@ export function DesktopDashboard({
                 strokeWidth="8"
                 fill="none"
                 strokeDasharray={`${2 * Math.PI * 56}`}
-                strokeDashoffset={`${2 * Math.PI * 56 * (1 - (typeof currentReadings.soilHumidity === 'number' ? currentReadings.soilHumidity : 0) / 100)}`}
+                strokeDashoffset={`${2 * Math.PI * 56 * (1 - currentReadings.soilHumidity / 100)}`}
                 strokeLinecap="round"
                 style={{ transition: "stroke-dashoffset 0.8s ease" }}
               />
             </svg>
-          </div>
+          </div>}
         </MetricCard>
       </div>
 
-      <div className="col-span-4">
+      <div className="col-span-12 xl:col-span-4">
         <MetricCard
           title="Flujo de Agua"
           value={currentReadings.waterFlow}
@@ -110,7 +111,7 @@ export function DesktopDashboard({
         </MetricCard>
       </div>
 
-      <div className="col-span-4">
+      <div className="col-span-12 xl:col-span-4">
         <MetricCard
           title="E.T.O."
           value={currentReadings.eto}
@@ -123,25 +124,11 @@ export function DesktopDashboard({
           <div className="mb-2">
             <SemaphorePill level={prioritySemaphore["environmental.eto"]} />
           </div>
-          <div className="flex items-center gap-2 mt-4">
-            <div className="flex items-center gap-1 text-[var(--accent-gold)]">
-              <svg
-                className="w-4 h-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-              <span className="text-sm">+0.3 vs ayer</span>
-            </div>
-          </div>
         </MetricCard>
       </div>
 
       {/* Irrigation Status (Row 2) */}
-      <div className="col-span-4 animate-stagger-1">
+      <div className="col-span-12 xl:col-span-4 animate-stagger-1">
         <BentoCard variant="sand">
           <div className="flex items-start justify-between mb-4">
             <h3 className="text-lg text-[var(--text-main)]">Estado del Riego</h3>
@@ -167,7 +154,7 @@ export function DesktopDashboard({
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-[var(--text-muted)]">Tiempo transcurrido</span>
+              <span className="text-[var(--text-muted)]">Antigüedad de la lectura</span>
               <span className="font-bold text-[var(--text-main)]">
                 {currentReadings.irrigationElapsedTime}
               </span>
@@ -177,7 +164,7 @@ export function DesktopDashboard({
       </div>
 
       {/* Soil Metrics (Row 2) */}
-      <div className="col-span-8">
+      <div className="col-span-12 xl:col-span-8">
         <BentoCard variant="light">
           <h3 className="text-lg text-[var(--text-main)] mb-4">Suelo</h3>
           <div className="grid grid-cols-3 gap-6">
@@ -207,11 +194,12 @@ export function DesktopDashboard({
       </div>
 
       {/* Chart (Row 3) */}
-      <div className="col-span-8 row-span-2 animate-stagger-3">
+      <div className="col-span-12 xl:col-span-8 row-span-2 animate-stagger-3">
         <BentoCard variant="light" className="h-full">
           <h3 className="text-lg text-[var(--text-main)] mb-6">
-            Humedad del Suelo - Últimas 24 horas
+            Humedad del Suelo - Últimas 12 lecturas
           </h3>
+          {historicalData.length === 0 && <p className="text-[var(--text-muted)]">Sin lecturas recientes para graficar.</p>}
           <div className="h-[300px] min-h-[300px]">
             <ResponsiveContainer width="100%" height="100%" className="animate-chart-entrance">
               <AreaChart data={historicalData}>
@@ -268,7 +256,7 @@ export function DesktopDashboard({
       </div>
 
       {/* Environmental Metrics (Row 3-4) */}
-      <div className="col-span-4">
+      <div className="col-span-12 xl:col-span-4">
         <BentoCard variant="light" className="h-full">
           <h3 className="text-lg text-[var(--text-main)] mb-4">Ambiental</h3>
           <div className="divide-y divide-[var(--border-subtle)] rounded-[24px] overflow-hidden">

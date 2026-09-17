@@ -46,7 +46,7 @@ export function MetricCard({
       </div>
 
       <div className="flex items-baseline gap-2">
-        <span className={`${priority ? "text-5xl" : "text-4xl"} font-bold font-mono-data`}>
+        <span className={`${value === "Sin datos" ? "text-2xl" : priority ? "text-5xl" : "text-4xl"} font-bold font-mono-data`}>
           {value}
         </span>
         <span className={`text-xl ${variant === "dark" || variant === "brown" ? "text-[var(--text-on-dark)]/80" : "text-[var(--text-muted)]"}`}>
