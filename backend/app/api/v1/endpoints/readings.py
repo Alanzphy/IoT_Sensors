@@ -63,7 +63,7 @@ def get_latest_reading(
     reading = reading_service.get_latest_reading(db, irrigation_area_id)
     if reading is None:
         return None
-    return ReadingResponse.model_validate(reading)
+    return ReadingResponse.from_reading(reading)
 
 
 @router.get("/priority-status", response_model=PriorityStatusResponse)
@@ -194,5 +194,5 @@ def list_readings(
         page=page,
         per_page=per_page,
         total=total,
-        data=[ReadingResponse.model_validate(r) for r in items],
+        data=[ReadingResponse.from_reading(r) for r in items],
     )

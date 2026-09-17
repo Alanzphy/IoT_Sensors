@@ -1,7 +1,14 @@
 """Tests de integración para /api/v1/readings (POST ingesta + GET historia + export)."""
 
+import json
+import re
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
+import pytest
 
+from app.models.reading import Reading
+from app.schemas.reading import ReadingResponse
 
 SENSOR_PAYLOAD = {
     "timestamp": "2026-04-01T10:00:00Z",
@@ -24,6 +31,79 @@ SENSOR_PAYLOAD = {
         "eto": 5.2,
     },
 }
+
+
+TELEMETRY_SCHEMA = json.loads(
+    (Path(__file__).resolve().parents[3] / "contracts/edge-cloud/v1/telemetry.schema.json")
+    .read_text()
+)
+
+
+@pytest.mark.parametrize("endpoint", ["", "/latest"])
+@pytest.mark.parametrize("values", ["measured", "null", "zero", "mixed"])
+def test_get_reading_matches_v1_contract(
+    client, client_headers, node_headers, sample_node, endpoint, values
+):
+    payload = {"timestamp": SENSOR_PAYLOAD["timestamp"]}
+    for category in ("soil", "irrigation", "environmental"):
+        payload[category] = {}
+        for index, (field, value) in enumerate(SENSOR_PAYLOAD[category].items()):
+            if values == "null" or (values == "mixed" and index % 2 == 0):
+                value = None
+            elif values == "zero" or values == "mixed":
+                value = False if field == "active" else 0
+            payload[category][field] = value
+
+    created = client.post("/api/v1/readings", json=payload, headers=node_headers)
+    assert created.status_code == 201
+    response = client.get(
+        f"/api/v1/readings{endpoint}",
+        params={"irrigation_area_id": sample_node.area_riego_id},
+        headers=client_headers,
+    )
+    assert response.status_code == 200
+    if endpoint:
+        reading = response.json()
+    else:
+        assert response.json()["total"] == 1
+        reading = response.json()["data"][0]
+
+    # Only the two API wrapper IDs may extend the telemetry contract.
+    assert set(reading) == set(TELEMETRY_SCHEMA["required"]) | {"id", "node_id"}
+    assert reading["id"] == created.json()["id"]
+    assert reading["node_id"] == sample_node.id
+    assert reading["timestamp"] == payload["timestamp"]
+    assert re.fullmatch(
+        TELEMETRY_SCHEMA["properties"]["timestamp"]["pattern"], reading["timestamp"]
+    )
+    assert datetime.fromisoformat(reading["timestamp"]).utcoffset() == timedelta(0)
+    for category in ("soil", "irrigation", "environmental"):
+        schema = TELEMETRY_SCHEMA["properties"][category]
+        assert isinstance(reading[category], dict)
+        assert set(reading[category]) == set(schema["required"])
+        assert reading[category] == payload[category]
+        for field, value in reading[category].items():
+            allowed_types = schema["properties"][field]["type"]
+            if value is None:
+                assert "null" in allowed_types
+            elif "boolean" in allowed_types:
+                assert type(value) is bool
+            else:
+                assert "number" in allowed_types
+                assert type(value) in (int, float)
+
+
+@pytest.mark.parametrize("timestamp", [
+    datetime(2026, 4, 1, 10, 0, 0, 123456),
+    datetime(2026, 4, 1, 10, 0, 0, 123456, tzinfo=timezone.utc),
+    datetime(2026, 4, 1, 4, 0, 0, 123456, tzinfo=timezone(timedelta(hours=-6))),
+    datetime(2026, 4, 1, 15, 30, 0, 123456, tzinfo=timezone(timedelta(hours=5, minutes=30))),
+])
+def test_reading_serializer_normalizes_utc_and_preserves_precision(timestamp):
+    reading = Reading(id=1, nodo_id=2, marca_tiempo=timestamp)
+    serialized = ReadingResponse.from_reading(reading).model_dump(mode="json")
+    assert serialized["timestamp"] == "2026-04-01T10:00:00.123456Z"
+    assert reading.marca_tiempo == timestamp
 
 
 class TestPostReading:
