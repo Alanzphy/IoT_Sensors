@@ -1,7 +1,9 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
+
+from app.models.reading import Reading
 
 
 # ---------- Input sub-schemas (sensor payload) ----------
@@ -105,9 +107,28 @@ class ReadingResponse(BaseModel):
     id: int
     node_id: int = Field(validation_alias="nodo_id")
     timestamp: datetime = Field(validation_alias="marca_tiempo")
-    soil: SoilResponse | None = None
-    irrigation: IrrigationResponse | None = None
-    environmental: EnvironmentalResponse | None = None
+    soil: SoilResponse
+    irrigation: IrrigationResponse
+    environmental: EnvironmentalResponse
+
+    @classmethod
+    def from_reading(cls, reading: Reading) -> "ReadingResponse":
+        """Map the flat storage columns to the nested telemetry contract."""
+        return cls(
+            id=reading.id,
+            nodo_id=reading.nodo_id,
+            marca_tiempo=reading.marca_tiempo,
+            soil=SoilResponse.model_validate(reading),
+            irrigation=IrrigationResponse.model_validate(reading),
+            environmental=EnvironmentalResponse.model_validate(reading),
+        )
+
+    @field_serializer("timestamp", when_used="json")
+    def serialize_timestamp(self, value: datetime) -> str:
+        # MySQL DATETIME stores UTC without timezone information.
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 class ReadingAvailabilityResponse(BaseModel):
