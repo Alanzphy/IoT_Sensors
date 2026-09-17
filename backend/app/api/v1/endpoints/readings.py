@@ -1,6 +1,9 @@
+import hashlib
+import json
 from datetime import date
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Header, Query, Request
 from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -40,13 +43,34 @@ def _get_client_node_ids(user: User, db: Session) -> list[int]:
 # ---------- POST (sensor ingestion via API Key) ----------
 
 
-@router.post("", response_model=ReadingCreateResponse, status_code=201)
+async def _reading_payload_hash(request: Request) -> str:
+    # Compare the submitted JSON, before schema defaults/coercions and database
+    # decimal rounding. Whitespace and object key order are not body changes.
+    canonical = json.dumps(await request.json(), sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+@router.post(
+    "",
+    response_model=ReadingCreateResponse,
+    status_code=201,
+    responses={
+        200: {"model": ReadingCreateResponse, "description": "Exact event retry"},
+        409: {"description": "Event ID reused with a different body"},
+    },
+)
 def create_reading(
     data: ReadingCreate,
+    response: Response,
+    event_id: UUID = Header(..., alias="X-Event-ID"),
+    payload_hash: str = Depends(_reading_payload_hash),
     node: Node = Depends(validate_api_key),
     db: Session = Depends(get_db),
 ):
-    reading = reading_service.create_reading(db, node, data)
+    reading, created = reading_service.ingest_reading(
+        db, node, data, str(event_id), payload_hash
+    )
+    response.status_code = 201 if created else 200
     return ReadingCreateResponse.model_validate(reading)
 
 

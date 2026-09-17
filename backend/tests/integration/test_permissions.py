@@ -4,6 +4,8 @@ Verifica que los clientes solo pueden ver sus propios datos
 y que el admin puede ver todo.
 """
 
+from uuid import uuid4
+
 
 
 SENSOR_PAYLOAD = {
@@ -87,7 +89,7 @@ class TestClientCanOnlySeeOwnData:
         self, client, client_headers, node_headers, sample_node, sample_irrigation_area
     ):
         """El cliente puede ver lecturas de su propio área de riego."""
-        client.post("/api/v1/readings", json=SENSOR_PAYLOAD, headers=node_headers)
+        client.post("/api/v1/readings", json=SENSOR_PAYLOAD, headers={"X-Event-ID": str(uuid4()), **node_headers})
         resp = client.get(
             f"/api/v1/readings?irrigation_area_id={sample_irrigation_area.id}",
             headers=client_headers,
@@ -97,7 +99,7 @@ class TestClientCanOnlySeeOwnData:
     def test_client_can_get_latest_reading_of_own_area(
         self, client, client_headers, node_headers, sample_node, sample_irrigation_area
     ):
-        client.post("/api/v1/readings", json=SENSOR_PAYLOAD, headers=node_headers)
+        client.post("/api/v1/readings", json=SENSOR_PAYLOAD, headers={"X-Event-ID": str(uuid4()), **node_headers})
         resp = client.get(
             f"/api/v1/readings/latest?irrigation_area_id={sample_irrigation_area.id}",
             headers=client_headers,
@@ -147,7 +149,7 @@ class TestClientCanOnlySeeOwnData:
         own_ingest = client.post(
             "/api/v1/readings",
             json={**SENSOR_PAYLOAD, "timestamp": "2026-04-01T12:00:00Z"},
-            headers=node_headers,
+            headers={"X-Event-ID": str(uuid4()), **node_headers},
         )
         assert own_ingest.status_code == 201
 
@@ -160,7 +162,7 @@ class TestClientCanOnlySeeOwnData:
         other_ingest = client.post(
             "/api/v1/readings",
             json={**SENSOR_PAYLOAD, "timestamp": "2026-04-01T13:00:00Z"},
-            headers={"X-API-Key": other_api_key},
+            headers={"X-Event-ID": str(uuid4()), **{"X-API-Key": other_api_key}},
         )
         assert other_ingest.status_code == 201
 
@@ -232,7 +234,7 @@ class TestAdminCanSeeAll:
     def test_admin_can_see_readings_of_any_area(
         self, client, admin_headers, node_headers, sample_node, sample_irrigation_area
     ):
-        client.post("/api/v1/readings", json=SENSOR_PAYLOAD, headers=node_headers)
+        client.post("/api/v1/readings", json=SENSOR_PAYLOAD, headers={"X-Event-ID": str(uuid4()), **node_headers})
         resp = client.get(
             f"/api/v1/readings?irrigation_area_id={sample_irrigation_area.id}",
             headers=admin_headers,

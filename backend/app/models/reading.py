@@ -8,6 +8,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    String,
     func,
     DECIMAL,
     Boolean,
@@ -33,6 +34,10 @@ class Reading(Base):
     creado_en: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, server_default=func.now()
     )
+
+    # Nullable only for readings created before event IDs were required.
+    event_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    payload_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     # Datos Suelo
     suelo_conductividad: Mapped[Decimal | None] = mapped_column(
@@ -74,6 +79,7 @@ class Reading(Base):
     node: Mapped["Node"] = relationship("Node", back_populates="readings")
 
     __table_args__ = (
+        Index("uq_lecturas_nodo_event_id", "nodo_id", "event_id", unique=True),
         Index("idx_lecturas_nodo_tiempo", "nodo_id", "marca_tiempo"),
         Index("idx_lecturas_tiempo", "marca_tiempo"),
     )
