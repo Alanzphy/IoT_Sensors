@@ -50,6 +50,14 @@ class Settings(BaseSettings):
     DEFAULT_PAGE_SIZE: int = 50
     MAX_PAGE_SIZE: int = 200
 
+    # --- Open-Meteo weather ---
+    OPEN_METEO_ENABLED: bool = False
+    OPEN_METEO_BASE_URL: str = "https://customer-api.open-meteo.com"
+    OPEN_METEO_API_KEY: str = ""
+    OPEN_METEO_HTTP_TIMEOUT_SECONDS: int = 10
+    OPEN_METEO_CACHE_TTL_MINUTES: int = 15
+    OPEN_METEO_STALE_TTL_MINUTES: int = 60
+
     # --- Alert generation behavior ---
     # Fase 2: generation is dormant by default; enable with ALERTS_ENABLED=true.
     ALERTS_ENABLED: bool = False
