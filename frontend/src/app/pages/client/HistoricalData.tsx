@@ -1,7 +1,7 @@
-import { differenceInCalendarDays, endOfDay, format, parseISO, startOfDay, startOfMonth, subDays } from "date-fns";
+import { differenceInCalendarDays, format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { Download, Loader2 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { BentoCard } from "../../components/BentoCard";
 import { ChartSkeleton } from "../../components/ChartSkeleton";
@@ -11,185 +11,61 @@ import { ReadingDateRangeSelector } from "../../components/ReadingDateRangeSelec
 import { SelectionScopeBar } from "../../components/selection/SelectionScopeBar";
 import { useSelection } from "../../context/SelectionContext";
 import { useIsMobile } from "../../hooks/useIsMobile";
-import { api } from "../../services/api";
+import { fetchReadingPage, fetchChartReadings } from "../../services/readings";
+import { useReadingFilters } from "../../services/useReadingFilters";
+import { readingQuery, type ExportFormat } from "../../utils/readingFilters";
+import { aggregateReadingsForChart, MS_IN_DAY } from "../../utils/readingChart";
 import { downloadBlobExport } from "../../utils/export";
-import { normalizeTimestamp, parseBackendTimestamp } from "../../utils/datetime";
-import { ReadingResponse } from "../../types/api";
+import { normalizeTimestamp } from "../../utils/datetime";
+import type { PaginatedResponse, ReadingResponse } from "../../types/api";
 
-type QuickDateRange = "Hoy" | "Últimos 7 días" | "Últimos 30 días" | "Este mes";
-type DateRangeMode = QuickDateRange | "Personalizado";
-
-const DEFAULT_QUICK_RANGE: QuickDateRange = "Últimos 7 días";
-const MAX_CHART_POINTS = 450;
-const MS_IN_MINUTE = 60 * 1000;
-const MS_IN_HOUR = 60 * MS_IN_MINUTE;
-const MS_IN_DAY = 24 * MS_IN_HOUR;
-const BUCKET_OPTIONS_MS = [
-  30 * MS_IN_MINUTE,
-  1 * MS_IN_HOUR,
-  2 * MS_IN_HOUR,
-  3 * MS_IN_HOUR,
-  6 * MS_IN_HOUR,
-  12 * MS_IN_HOUR,
-  1 * MS_IN_DAY,
-  2 * MS_IN_DAY,
-  7 * MS_IN_DAY,
+const columns: { label: string; value: (reading: ReadingResponse) => number | boolean | null | undefined }[] = [
+  { label: "Humedad Suelo (%)", value: (r) => r.soil?.humidity },
+  { label: "Flujo (L/min)", value: (r) => r.irrigation?.flow_per_minute },
+  { label: "E.T.O. (mm/día)", value: (r) => r.environmental?.eto },
+  { label: "Conductividad (dS/m)", value: (r) => r.soil?.conductivity },
+  { label: "Temp. Suelo (°C)", value: (r) => r.soil?.temperature },
+  { label: "Potencial hídrico (MPa)", value: (r) => r.soil?.water_potential },
+  { label: "Riego activo", value: (r) => r.irrigation?.active },
+  { label: "Acumulado (L)", value: (r) => r.irrigation?.accumulated_liters },
+  { label: "Temp. Aire (°C)", value: (r) => r.environmental?.temperature },
+  { label: "H. Relativa (%)", value: (r) => r.environmental?.relative_humidity },
+  { label: "Viento (km/h)", value: (r) => r.environmental?.wind_speed },
+  { label: "Radiación solar (W/m²)", value: (r) => r.environmental?.solar_radiation },
 ];
-
-type HistoricalChartPoint = {
-  timestampMs: number;
-  soilHumidity: number;
-  waterFlow: number;
-  soilTemp: number;
-  airTemp: number;
-  relativeHumidity: number;
-  eto: number;
-};
-
-type ChartAggregationResult = {
-  bucketMs: number;
-  points: HistoricalChartPoint[];
-};
-
-function getBaseBucketMs(daySpan: number): number {
-  if (daySpan <= 7) return 30 * MS_IN_MINUTE;
-  if (daySpan <= 30) return 2 * MS_IN_HOUR;
-  if (daySpan <= 90) return 6 * MS_IN_HOUR;
-  if (daySpan <= 365) return 1 * MS_IN_DAY;
-  return 2 * MS_IN_DAY;
-}
-
-function chooseBucketMs(daySpan: number, rangeMs: number): number {
-  const baseBucketMs = getBaseBucketMs(daySpan);
-  const requiredBucketMs = Math.max(1, Math.ceil(rangeMs / MAX_CHART_POINTS));
-  const desiredBucketMs = Math.max(baseBucketMs, requiredBucketMs);
-
-  for (const option of BUCKET_OPTIONS_MS) {
-    if (option >= desiredBucketMs) {
-      return option;
-    }
-  }
-
-  return desiredBucketMs;
-}
-
-function toUtcDateParam(value: Date): string {
-  const year = value.getUTCFullYear();
-  const month = String(value.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(value.getUTCDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function aggregateReadingsForChart(
-  readings: ReadingResponse[],
-  rangeStart: Date,
-  rangeEnd: Date,
-): ChartAggregationResult {
-  const startMs = rangeStart.getTime();
-  const endMs = rangeEnd.getTime();
-  const daySpan = Math.max(1, differenceInCalendarDays(rangeEnd, rangeStart));
-  const rangeMs = Math.max(1, endMs - startMs + 1);
-  const bucketMs = chooseBucketMs(daySpan, rangeMs);
-
-  const buckets = new Map<number, {
-    count: number;
-    soilHumidity: number;
-    waterFlow: number;
-    soilTemp: number;
-    airTemp: number;
-    relativeHumidity: number;
-    eto: number;
-  }>();
-
-  for (const reading of readings) {
-    const parsedDate = parseBackendTimestamp(reading.timestamp);
-    if (!parsedDate) continue;
-    const readingMs = parsedDate.getTime();
-
-    if (!Number.isFinite(readingMs) || readingMs < startMs || readingMs > endMs) {
-      continue;
-    }
-
-    const bucketIndex = Math.floor((readingMs - startMs) / bucketMs);
-    const bucketStartMs = startMs + (bucketIndex * bucketMs);
-    const current = buckets.get(bucketStartMs) ?? {
-      count: 0,
-      soilHumidity: 0,
-      waterFlow: 0,
-      soilTemp: 0,
-      airTemp: 0,
-      relativeHumidity: 0,
-      eto: 0,
-    };
-
-    current.count += 1;
-    current.soilHumidity += reading.soil?.humidity ?? 0;
-    current.waterFlow += reading.irrigation?.flow_per_minute ?? 0;
-    current.soilTemp += reading.soil?.temperature ?? 0;
-    current.airTemp += reading.environmental?.temperature ?? 0;
-    current.relativeHumidity += reading.environmental?.relative_humidity ?? 0;
-    current.eto += reading.environmental?.eto ?? 0;
-
-    buckets.set(bucketStartMs, current);
-  }
-
-  const points = Array.from(buckets.entries())
-    .sort((a, b) => a[0] - b[0])
-    .map(([timestampMs, bucket]) => ({
-      timestampMs,
-      soilHumidity: bucket.soilHumidity / bucket.count,
-      waterFlow: bucket.waterFlow / bucket.count,
-      soilTemp: bucket.soilTemp / bucket.count,
-      airTemp: bucket.airTemp / bucket.count,
-      relativeHumidity: bucket.relativeHumidity / bucket.count,
-      eto: bucket.eto / bucket.count,
-    }));
-
-  if (points.length <= MAX_CHART_POINTS) {
-    return { bucketMs, points };
-  }
-
-  const step = Math.ceil(points.length / MAX_CHART_POINTS);
-  return {
-    bucketMs,
-    points: points.filter((_, index) => index % step === 0 || index === points.length - 1),
-  };
-}
-
-function getQuickRangeDates(range: QuickDateRange) {
-  const now = new Date();
-
-  if (range === "Hoy") {
-    return { start: startOfDay(now), end: endOfDay(now) };
-  }
-
-  if (range === "Últimos 30 días") {
-    return { start: startOfDay(subDays(now, 29)), end: endOfDay(now) };
-  }
-
-  if (range === "Este mes") {
-    return { start: startOfMonth(now), end: endOfDay(now) };
-  }
-
-  return { start: startOfDay(subDays(now, 6)), end: endOfDay(now) };
+function displayValue(value: ReturnType<typeof columns[number]["value"]>) {
+  if (value == null) return "Sin datos";
+  if (typeof value === "boolean") return value ? "Encendido" : "Apagado";
+  return value.toFixed(1);
 }
 
 export function HistoricalData() {
   const { selectedArea } = useSelection();
+  return <AreaHistory key={selectedArea?.id ?? "none"} />;
+}
+
+function AreaHistory() {
+  const { selectedArea } = useSelection();
   const isMobile = useIsMobile();
 
-  const [dateRange, setDateRange] = useState<DateRangeMode>(DEFAULT_QUICK_RANGE);
-
-  const [startDate, setStartDate] = useState<Date>(() => getQuickRangeDates(DEFAULT_QUICK_RANGE).start);
-  const [endDate, setEndDate] = useState<Date>(() => getQuickRangeDates(DEFAULT_QUICK_RANGE).end);
-
-  const [readings, setReadings] = useState<ReadingResponse[]>([]);
-  const [chartReadings, setChartReadings] = useState<ReadingResponse[]>([]);
-  const [loading, setLoading] = useState(false);
-  const hasFetchedRef = useRef(false);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
+  const filters = useReadingFilters();
+  const { startDate, endDate, cycleId, page, setPage } = filters;
+  const query = selectedArea ? readingQuery(selectedArea.id, startDate, endDate, cycleId).toString() : "";
+  const [retry, setRetry] = useState(0);
+  const requestKey = `${query}&page=${page}&retry=${retry}`;
+  const chartKey = `${query}&retry=${retry}`;
+  const [table, setTable] = useState<{ key: string; data?: PaginatedResponse<ReadingResponse>; error?: string }>();
+  const [chart, setChart] = useState<{ key: string; data?: Awaited<ReturnType<typeof fetchChartReadings>>; error?: string }>();
+  const currentTable = table?.key === requestKey ? table : undefined;
+  const currentChart = chart?.key === chartKey ? chart : undefined;
+  const loading = Boolean(query && !currentTable);
+  const chartLoading = Boolean(query && !currentChart);
+  const readings = currentTable?.data?.data ?? [];
+  const chartReadings = currentChart?.data?.readings;
+  const totalItems = currentTable?.data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalItems / (currentTable?.data?.per_page ?? 20)));
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string>();
 
   const [soilEnvSeries, setSoilEnvSeries] = useState({
     soilHumidity: true,
@@ -203,133 +79,33 @@ export function HistoricalData() {
     eto: true,
   });
 
-  // Update dates when preset changes
   useEffect(() => {
-    if (dateRange === "Personalizado") return;
+    if (!query) return;
+    const controller = new AbortController();
+    fetchReadingPage(query, page, 20, controller.signal).then((data) => {
+      if (!controller.signal.aborted) setTable({ key: requestKey, data });
+    }).catch(() => {
+      if (!controller.signal.aborted) setTable({ key: requestKey, error: "No se pudo cargar el histórico." });
+    });
+    return () => controller.abort();
+  }, [query, page, requestKey]);
 
-    const { start, end } = getQuickRangeDates(dateRange);
-    setStartDate(start);
-    setEndDate(end);
-    setPage(1);
-  }, [dateRange]);
-
-  const handleStartDateChange = (date: Date) => {
-    const nextStart = startOfDay(date);
-    setDateRange("Personalizado");
-    setStartDate(nextStart);
-    if (nextStart > endDate) {
-      setEndDate(endOfDay(nextStart));
-    }
-    setPage(1);
-  };
-
-  const handleEndDateChange = (date: Date) => {
-    const nextEnd = endOfDay(date);
-    setDateRange("Personalizado");
-    setEndDate(nextEnd);
-    if (nextEnd < startDate) {
-      setStartDate(startOfDay(nextEnd));
-    }
-    setPage(1);
-  };
-
-  // Reset history on area change to trigger skeleton correctly
   useEffect(() => {
-    setReadings([]);
-    setChartReadings([]);
-    hasFetchedRef.current = false;
-    setPage(1);
-  }, [selectedArea?.id]);
-
-  // Fetch API
-  useEffect(() => {
-    if (!selectedArea) return;
-
-    let isMounted = true;
-
-    const isoStartDate = toUtcDateParam(startDate);
-    const isoEndDate = toUtcDateParam(endDate);
-
-    const fetchChartReadings = async (): Promise<ReadingResponse[]> => {
-      const expectedPoints = Math.max(1, differenceInCalendarDays(endDate, startDate) + 1) * 144;
-      const perPage = 200;
-      const maxPages = Math.min(8, Math.max(1, Math.ceil(expectedPoints / perPage)));
-      const collected: ReadingResponse[] = [];
-
-      for (let chartPage = 1; chartPage <= maxPages; chartPage += 1) {
-        const chartParams = new URLSearchParams({
-          irrigation_area_id: selectedArea.id.toString(),
-          start_date: isoStartDate,
-          end_date: isoEndDate,
-          page: chartPage.toString(),
-          per_page: perPage.toString(),
-        });
-
-        const chartRes = await api.get<{data: ReadingResponse[], total: number, page: number, per_page: number}>(`/readings?${chartParams}`);
-        const chunk = chartRes.data.data ?? [];
-
-        if (chunk.length === 0) {
-          break;
-        }
-
-        collected.push(...chunk);
-
-        if (chunk.length < perPage || collected.length >= (chartRes.data.total ?? 0)) {
-          break;
-        }
-      }
-
-      return collected;
-    };
-
-    const fetchHistorical = async () => {
-      // Only show full skeleton load visually if it's the very first load or area changed
-      if (!hasFetchedRef.current) setLoading(true);
-      try {
-        const params = new URLSearchParams({
-          irrigation_area_id: selectedArea.id.toString(),
-          start_date: isoStartDate,
-          end_date: isoEndDate,
-          page: page.toString(),
-          per_page: "20"
-        });
-
-        // if cycle is selected, we could use it here. but backend filters by dates.
-
-        const [res, chartDataResponse] = await Promise.all([
-          api.get<{data: ReadingResponse[], total: number, page: number, per_page: number}>(`/readings?${params}`),
-          fetchChartReadings(),
-        ]);
-
-        if (isMounted) {
-          hasFetchedRef.current = true;
-          setReadings(res.data.data);
-          setChartReadings(chartDataResponse);
-          setTotalPages(Math.ceil(res.data.total / res.data.per_page));
-          setTotalItems(res.data.total);
-        }
-      } catch (err) {
-        console.error("Failed to fetch historical readings", err);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-
-    fetchHistorical();
-
-    return () => {
-      isMounted = false;
-    }
-  }, [selectedArea, startDate, endDate, page]);
+    if (!query) return;
+    const controller = new AbortController();
+    fetchChartReadings(query, controller.signal).then((data) => {
+      if (!controller.signal.aborted) setChart({ key: chartKey, data });
+    }).catch(() => {
+      if (!controller.signal.aborted) setChart({ key: chartKey, error: "No se pudo cargar la gráfica." });
+    });
+    return () => controller.abort();
+  }, [query, chartKey]);
 
   const daySpan = Math.max(1, differenceInCalendarDays(endDate, startDate));
   const { points: chartData, bucketMs } = useMemo(
-    () => aggregateReadingsForChart(chartReadings, startDate, endDate),
+    () => aggregateReadingsForChart(chartReadings ?? [], startDate, endDate),
     [chartReadings, startDate, endDate],
   );
-  const isCustomRange = dateRange === "Personalizado";
-  const selectedRangeLabel = `${format(startDate, "dd MMM yyyy", { locale: es })} - ${format(endDate, "dd MMM yyyy", { locale: es })}`;
-
   const getXAxisTickLabel = (value: number) => {
     const date = new Date(value);
 
@@ -358,7 +134,7 @@ export function HistoricalData() {
   const soilEnvTempDomain = useMemo<[number, number]>(() => {
     const values = chartData
       .flatMap((point) => [point.soilTemp, point.airTemp])
-      .filter((value) => Number.isFinite(value));
+      .filter((value): value is number => value != null && Number.isFinite(value));
 
     if (values.length === 0) {
       return [0, 40];
@@ -380,21 +156,17 @@ export function HistoricalData() {
   const showIrrigationFlowAxis = irrigationSeries.waterFlow;
   const showIrrigationEtoAxis = irrigationSeries.eto;
 
-  const handleExport = async (formatType: string) => {
-    if (!selectedArea) return;
+  const handleExport = async (formatType: ExportFormat) => {
+    if (!selectedArea || exporting) return;
+    setExporting(true);
+    setExportError(undefined);
     try {
-      const params = new URLSearchParams({
-        irrigation_area_id: selectedArea.id.toString(),
-        start_date: toUtcDateParam(startDate),
-        end_date: toUtcDateParam(endDate),
-        format: formatType
-      });
-
-      const fileName = `export_${selectedArea.name}_${format(new Date(), 'yyyy-MM-dd')}.${formatType}`;
-      await downloadBlobExport(`/readings/export?${params}`, fileName);
-    } catch (err) {
-      console.error("Export failed", err);
-    }
+      const params = new URLSearchParams(query);
+      params.set("format", formatType);
+      await downloadBlobExport(`/readings/export?${params}`, `export_${selectedArea.name}_${format(new Date(), "yyyy-MM-dd")}.${formatType}`);
+    } catch {
+      setExportError("No se pudo exportar. Intenta nuevamente.");
+    } finally { setExporting(false); }
   };
 
   return (
@@ -406,87 +178,25 @@ export function HistoricalData() {
       </div>
       <SelectionScopeBar className="mb-6" />
 
-      {/* Filters */}
+      {!selectedArea && <p role="status">Selecciona un área de riego para consultar sus lecturas.</p>}
       <BentoCard variant="light" className="mb-6">
-        <div className="space-y-4">
-          <div>
-            <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-subtle)]">Modo de rango</label>
-            <div className="inline-flex rounded-full border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] p-1">
-              <button
-                type="button"
-                onClick={() => {
-                  if (isCustomRange) setDateRange(DEFAULT_QUICK_RANGE);
-                }}
-                className={`px-4 py-2 text-sm rounded-full transition-all ${
-                  !isCustomRange
-                    ? "bg-[var(--accent-primary)] text-[var(--text-inverted)]"
-                    : "text-[var(--text-subtle)] hover:bg-[var(--hover-overlay)] hover:text-[var(--text-body)]"
-                }`}
-              >
-                Rápido
-              </button>
-              <button
-                type="button"
-                onClick={() => setDateRange("Personalizado")}
-                className={`px-4 py-2 text-sm rounded-full transition-all ${
-                  isCustomRange
-                    ? "bg-[var(--accent-primary)] text-[var(--text-inverted)]"
-                    : "text-[var(--text-subtle)] hover:bg-[var(--hover-overlay)] hover:text-[var(--text-body)]"
-                }`}
-              >
-                Personalizado
-              </button>
-            </div>
-          </div>
-
-          {!isCustomRange && (
-            <div>
-              <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-subtle)]">Presets rápidos</label>
-              <div className="flex flex-wrap gap-2">
-                {(["Hoy", "Últimos 7 días", "Últimos 30 días", "Este mes"] as const).map((range) => (
-                <button
-                  key={range}
-                  type="button"
-                  onClick={() => setDateRange(range)}
-                  className={`px-4 py-2 rounded-full transition-all ${
-                    dateRange === range
-                      ? "bg-[var(--accent-primary)] text-[var(--text-inverted)]"
-                      : "bg-[var(--surface-card-primary)] border border-[var(--border-subtle)] text-[var(--text-subtle)] hover:bg-[var(--hover-overlay)] hover:text-[var(--text-body)]"
-                  }`}
-                >
-                  {range}
-                </button>
-              ))}
-            </div>
-            </div>
-          )}
-
-          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-subtle)]">Rango seleccionado</p>
-            <p className="mt-1 text-sm text-[var(--text-body)]">{selectedRangeLabel}</p>
-            <p className="mt-1 text-xs text-[var(--text-subtle)]">Modo activo: {isCustomRange ? "Personalizado" : dateRange}</p>
-          </div>
-        </div>
-
-        {isCustomRange && (
-          <div className="mt-4">
-            <ReadingDateRangeSelector
-              variant="soft"
-              irrigationAreaId={selectedArea?.id}
-              startDate={startDate}
-              endDate={endDate}
-              onStartDateChange={handleStartDateChange}
-              onEndDateChange={handleEndDateChange}
-            />
-          </div>
-        )}
+        <ReadingDateRangeSelector irrigationAreaId={selectedArea?.id} {...filters} />
       </BentoCard>
 
       {/* Multi-line Chart */}
       <BentoCard variant="light" className="mb-6">
         <h3 className="text-lg text-[var(--text-title)] mb-6">Gráfica de Métricas</h3>
+        <p className="mb-4 text-xs text-[var(--text-subtle)]">Las horas de la gráfica y la tabla se muestran en tu zona horaria local.</p>
 
-        {loading && chartData.length === 0 ? (
+        {currentChart?.data && currentChart.data.readings.length < currentChart.data.total && (
+          <p role="status" className="mb-4 text-[var(--status-warning)]">
+            Gráfica parcial: {currentChart.data.readings.length} de {currentChart.data.total} lecturas del rango.
+            Reduce el rango para ver más detalle. La tabla y la exportación incluyen todos los resultados.
+          </p>
+        )}
+        {currentChart?.error ? (
+          <div role="alert">{currentChart.error} <button onClick={() => setRetry((n) => n + 1)}>Reintentar gráfica</button></div>
+        ) : chartLoading ? (
           <ChartSkeleton title={false} height="sm" />
         ) : chartData.length > 0 ? (
           <div className="space-y-10 lg:space-y-12">
@@ -537,7 +247,7 @@ export function HistoricalData() {
                 </div>
 
                 <div className="relative h-[320px] min-h-[320px]">
-                  {loading && (
+                  {chartLoading && (
                     <div className="absolute inset-0 z-10 bg-[var(--surface-page)]/60 flex items-center justify-center backdrop-blur-[1px]">
                       <Loader2 className="w-8 h-8 text-[var(--accent-primary)] animate-spin" />
                     </div>
@@ -636,7 +346,7 @@ export function HistoricalData() {
                 </div>
 
                 <div className="relative h-[320px] min-h-[320px]">
-                  {loading && (
+                  {chartLoading && (
                     <div className="absolute inset-0 z-10 bg-[var(--surface-page)]/60 flex items-center justify-center backdrop-blur-[1px]">
                       <Loader2 className="w-8 h-8 text-[var(--accent-primary)] animate-spin" />
                     </div>
@@ -704,7 +414,7 @@ export function HistoricalData() {
           </div>
         ) : (
           <div className="w-full h-[120px] flex items-center justify-center text-[var(--text-subtle)]">
-            {!loading && "No hay datos para el rango seleccionado"}
+            {selectedArea && "No hay datos para el rango seleccionado"}
           </div>
         )}
       </BentoCard>
@@ -719,34 +429,34 @@ export function HistoricalData() {
             </span>
           </h3>
           <div className="flex gap-2">
-            <PillButton variant="secondary" className="text-sm flex items-center gap-2" onClick={() => handleExport('csv')}>
+            <PillButton variant="secondary" className="text-sm flex items-center gap-2" disabled={exporting || !selectedArea} onClick={() => handleExport('csv')}>
               <Download className="w-4 h-4" /> CSV
             </PillButton>
-            <PillButton variant="secondary" className="text-sm flex items-center gap-2" onClick={() => handleExport('xlsx')}>
+            <PillButton variant="secondary" className="text-sm flex items-center gap-2" disabled={exporting || !selectedArea} onClick={() => handleExport('xlsx')}>
               <Download className="w-4 h-4" /> Excel
             </PillButton>
-            <PillButton variant="secondary" className="text-sm flex items-center gap-2" onClick={() => handleExport('pdf')}>
+            <PillButton variant="secondary" className="text-sm flex items-center gap-2" disabled={exporting || !selectedArea} onClick={() => handleExport('pdf')}>
               <Download className="w-4 h-4" /> PDF
             </PillButton>
           </div>
         </div>
 
+        {exporting && <p role="status">Descargando archivo…</p>}
+        {exportError && <p role="alert">{exportError}</p>}
+        {currentTable?.error && <div role="alert">{currentTable.error} <button onClick={() => setRetry((n) => n + 1)}>Reintentar histórico</button></div>}
+        {loading && <p role="status">Cargando lecturas…</p>}
         <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
-          <table className="w-full min-w-[800px]">
+          <table className="w-full min-w-[1500px]">
             <thead>
               <tr className="border-b border-[var(--border-strong)]">
-                <th scope="col" className="text-left py-3 px-4 text-xs uppercase tracking-[0.08em] font-semibold text-[var(--text-subtle)]">Fecha/Hora</th>
-                <th scope="col" className="text-left py-3 px-4 text-xs uppercase tracking-[0.08em] font-semibold text-[var(--text-subtle)]">Humedad Suelo (%)</th>
-                <th scope="col" className="text-left py-3 px-4 text-xs uppercase tracking-[0.08em] font-semibold text-[var(--text-subtle)]">Temp. Suelo (°C)</th>
-                <th scope="col" className="text-left py-3 px-4 text-xs uppercase tracking-[0.08em] font-semibold text-[var(--text-subtle)]">Flujo (L/min)</th>
-                <th scope="col" className="text-left py-3 px-4 text-xs uppercase tracking-[0.08em] font-semibold text-[var(--text-subtle)]">Temp. Aire (°C)</th>
-                <th scope="col" className="text-left py-3 px-4 text-xs uppercase tracking-[0.08em] font-semibold text-[var(--text-subtle)]">H. Relativa (%)</th>
+                <th scope="col" className="text-left py-3 px-4 text-xs uppercase tracking-[0.08em] font-semibold text-[var(--text-subtle)]">Fecha/Hora (local)</th>
+                {columns.map(({ label }) => <th key={label} scope="col" className="text-left py-3 px-4 text-xs uppercase tracking-[0.08em] font-semibold text-[var(--text-subtle)]">{label}</th>)}
               </tr>
             </thead>
             <tbody className="relative">
-              {!loading && readings.length === 0 && (
+              {selectedArea && !loading && !currentTable?.error && readings.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-[var(--text-subtle)]">No hay registros.</td>
+                  <td colSpan={13} className="py-8 text-center text-[var(--text-subtle)]">No hay registros.</td>
                 </tr>
               )}
               {readings.map((r, i) => (
@@ -754,21 +464,7 @@ export function HistoricalData() {
                   <td className="py-3 px-4 text-sm text-[var(--text-body)]">
                     {format(parseISO(normalizeTimestamp(r.timestamp)), "dd MMM yyyy, HH:mm", { locale: es })}
                   </td>
-                  <td className="py-3 px-4 text-sm text-[var(--text-body)] font-mono-data font-medium">
-                    {r.soil?.humidity?.toFixed(1) ?? "-"}
-                  </td>
-                  <td className="py-3 px-4 text-sm text-[var(--text-body)] font-mono-data font-medium">
-                    {r.soil?.temperature?.toFixed(1) ?? "-"}
-                  </td>
-                  <td className="py-3 px-4 text-sm text-[var(--text-body)] font-mono-data font-medium">
-                    {r.irrigation?.flow_per_minute?.toFixed(1) ?? "-"}
-                  </td>
-                  <td className="py-3 px-4 text-sm text-[var(--text-body)] font-mono-data font-medium">
-                    {r.environmental?.temperature?.toFixed(1) ?? "-"}
-                  </td>
-                  <td className="py-3 px-4 text-sm text-[var(--text-body)] font-mono-data font-medium">
-                    {r.environmental?.relative_humidity?.toFixed(1) ?? "-"}
-                  </td>
+                  {columns.map(({ label, value }) => <td key={label} className="py-3 px-4 text-sm text-[var(--text-body)] font-mono-data font-medium">{displayValue(value(r))}</td>)}
                 </tr>
               ))}
             </tbody>

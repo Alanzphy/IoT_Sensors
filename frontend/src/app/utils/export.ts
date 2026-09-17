@@ -5,15 +5,15 @@ export async function downloadBlobExport(endpoint: string, fileName: string): Pr
     responseType: "blob",
   });
 
-  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const url = window.URL.createObjectURL(response.data instanceof Blob ? response.data : new Blob([response.data]));
+  const link = document.createElement("a");
   try {
-    const link = document.createElement("a");
     link.href = url;
     link.setAttribute("download", fileName);
     document.body.appendChild(link);
     link.click();
-    link.remove();
   } finally {
+    link.remove();
     window.URL.revokeObjectURL(url);
   }
 }

@@ -3,6 +3,8 @@ import { es } from "date-fns/locale";
 import { Calendar as CalendarIcon, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../services/api";
+import type { PaginatedResponse } from "../types/api";
+import { QUICK_RANGES, type DateRangeMode } from "../utils/readingFilters";
 import { Calendar } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { cn } from "./ui/utils";
@@ -23,6 +25,10 @@ interface ReadingDateRangeSelectorProps {
   irrigationAreaId?: number;
   variant?: DateRangeSelectorVariant;
   className?: string;
+  preset?: DateRangeMode;
+  onPresetChange?: (preset: DateRangeMode) => void;
+  cycleId?: number;
+  onCycleChange?: (cycleId?: number) => void;
 }
 
 function toIsoDate(day: Date): string {
@@ -36,8 +42,38 @@ export function ReadingDateRangeSelector({
   onEndDateChange,
   irrigationAreaId,
   variant = "soft",
-  className,
+  className, preset, onPresetChange, cycleId, onCycleChange,
 }: ReadingDateRangeSelectorProps) {
+  const [cycles, setCycles] = useState<{ id: number; irrigation_area_id: number; start_date: string; end_date: string | null }[]>([]);
+  const [cyclesLoading, setCyclesLoading] = useState(false);
+  const [cyclesError, setCyclesError] = useState(false);
+  const [retry, setRetry] = useState(0);
+  const [availabilityError, setAvailabilityError] = useState(false);
+  useEffect(() => {
+    setCycles([]);
+    setCyclesError(false);
+    if (!irrigationAreaId) { setCyclesLoading(false); return; }
+    const controller = new AbortController();
+    setCyclesLoading(true);
+    const load = async () => {
+      try {
+        const all: typeof cycles = [];
+        for (let page = 1; !controller.signal.aborted; page += 1) {
+          const params = new URLSearchParams({ irrigation_area_id: String(irrigationAreaId), page: String(page), per_page: "200" });
+          const response = await api.get<PaginatedResponse<(typeof cycles)[number]>>(`/crop-cycles?${params}`, { signal: controller.signal });
+          all.push(...response.data.data);
+          if (all.length >= response.data.total || response.data.data.length === 0) break;
+        }
+        if (!controller.signal.aborted) setCycles(all.filter((cycle) => cycle.irrigation_area_id === irrigationAreaId));
+      } catch {
+        if (!controller.signal.aborted) setCyclesError(true);
+      } finally {
+        if (!controller.signal.aborted) setCyclesLoading(false);
+      }
+    };
+    void load();
+    return () => controller.abort();
+  }, [irrigationAreaId, retry]);
   const [month, setMonth] = useState<Date>(startOfMonth(endDate));
   const [startOpen, setStartOpen] = useState(false);
   const [endOpen, setEndOpen] = useState(false);
@@ -62,6 +98,10 @@ export function ReadingDateRangeSelector({
 
     const fetchAvailability = async () => {
       setLoadingAvailability(true);
+      setAvailabilityError(false);
+      setMinDate(null);
+      setMaxDate(null);
+      setAvailableDates([]);
       try {
         const params = new URLSearchParams({
           irrigation_area_id: irrigationAreaId.toString(),
@@ -77,6 +117,7 @@ export function ReadingDateRangeSelector({
       } catch (error) {
         if (!cancelled) {
           setAvailableDates([]);
+          setAvailabilityError(true);
         }
         console.error("Failed to fetch reading availability", error);
       } finally {
@@ -91,44 +132,9 @@ export function ReadingDateRangeSelector({
     return () => {
       cancelled = true;
     };
-  }, [irrigationAreaId, month]);
+  }, [irrigationAreaId, month, retry]);
 
   const availableDateSet = useMemo(() => new Set(availableDates), [availableDates]);
-
-  useEffect(() => {
-    if (!minDate || !maxDate) return;
-
-    let nextStart = startOfDay(startDate);
-    let nextEnd = startOfDay(endDate);
-    let changed = false;
-
-    if (isBefore(nextStart, minDate)) {
-      nextStart = minDate;
-      changed = true;
-    }
-
-    if (isAfter(nextEnd, maxDate)) {
-      nextEnd = maxDate;
-      changed = true;
-    }
-
-    if (isAfter(nextStart, nextEnd)) {
-      nextEnd = nextStart;
-      changed = true;
-    }
-
-    if (changed) {
-      onStartDateChange(nextStart);
-      onEndDateChange(nextEnd);
-    }
-  }, [minDate, maxDate, startDate, endDate, onStartDateChange, onEndDateChange]);
-
-  const isDayDisabled = (day: Date) => {
-    const normalizedDay = startOfDay(day);
-    if (minDate && isBefore(normalizedDay, minDate)) return true;
-    if (maxDate && isAfter(normalizedDay, maxDate)) return true;
-    return false;
-  };
 
   const handleStartSelect = (date: Date | undefined) => {
     if (!date) return;
@@ -157,12 +163,32 @@ export function ReadingDateRangeSelector({
 
   return (
     <div className={cn("space-y-3", className)}>
+      {onPresetChange && <div className="flex flex-wrap gap-2" aria-label="Rangos rápidos">
+        {[...QUICK_RANGES, "Personalizado" as const].map((range) => <button key={range} type="button"
+          aria-pressed={preset === range} onClick={() => onPresetChange(range)}
+          className={`rounded-full px-4 py-2 text-sm ${preset === range ? "bg-[var(--accent-primary)] text-[var(--text-inverted)]" : "border border-[var(--border-subtle)] text-[var(--text-body)]"}`}>
+          {range}
+        </button>)}
+      </div>}
+      {onCycleChange && <label className="block text-sm text-[var(--text-muted)]">
+        Ciclo de cultivo
+        <select value={cycleId ?? ""} disabled={!irrigationAreaId || cyclesLoading || cyclesError}
+          onChange={(event) => onCycleChange(event.target.value ? Number(event.target.value) : undefined)}
+          className="mt-2 block w-full rounded-2xl bg-[var(--surface-card-primary)] p-3 text-[var(--text-body)]">
+          <option value="">Todos los ciclos</option>
+          {cycles.map((cycle) => <option key={cycle.id} value={cycle.id}>{cycle.start_date} — {cycle.end_date ?? "Sin fecha de fin"}</option>)}
+        </select>
+      </label>}
+      {cyclesLoading && <p role="status">Cargando ciclos…</p>}
+      {cyclesError && <p role="alert">No se pudieron cargar los ciclos. <button type="button" onClick={() => setRetry((n) => n + 1)}>Reintentar ciclos</button></p>}
+      {onCycleChange && irrigationAreaId && !cyclesLoading && !cyclesError && cycles.length === 0 && <p className="text-sm">Sin ciclos registrados para esta área.</p>}
+      <p className="text-xs text-[var(--text-muted)]">Fechas de consulta en UTC. El ciclo seleccionado se aplica junto con el rango de fechas.</p>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
           <label className="mb-2 block text-sm text-[var(--text-muted)]">Fecha inicio</label>
           <Popover open={startOpen} onOpenChange={setStartOpen}>
             <PopoverTrigger asChild>
-              <button type="button" className={triggerBase}>
+              <button type="button" aria-label="Fecha inicio" className={triggerBase}>
                 <CalendarIcon className="h-5 w-5 text-[var(--text-muted)]" />
                 <span className="text-sm">{format(startDate, "dd/MM/yyyy")}</span>
               </button>
@@ -175,7 +201,6 @@ export function ReadingDateRangeSelector({
                 onMonthChange={setMonth}
                 selected={startDate}
                 onSelect={handleStartSelect}
-                disabled={isDayDisabled}
                 modifiers={{
                   available: (day) => availableDateSet.has(toIsoDate(day)),
                 }}
@@ -191,7 +216,7 @@ export function ReadingDateRangeSelector({
           <label className="mb-2 block text-sm text-[var(--text-muted)]">Fecha fin</label>
           <Popover open={endOpen} onOpenChange={setEndOpen}>
             <PopoverTrigger asChild>
-              <button type="button" className={triggerBase}>
+              <button type="button" aria-label="Fecha fin" className={triggerBase}>
                 <CalendarIcon className="h-5 w-5 text-[var(--text-muted)]" />
                 <span className="text-sm">{format(endDate, "dd/MM/yyyy")}</span>
               </button>
@@ -204,7 +229,6 @@ export function ReadingDateRangeSelector({
                 onMonthChange={setMonth}
                 selected={endDate}
                 onSelect={handleEndSelect}
-                disabled={isDayDisabled}
                 modifiers={{
                   available: (day) => availableDateSet.has(toIsoDate(day)),
                 }}
@@ -217,6 +241,7 @@ export function ReadingDateRangeSelector({
         </div>
       </div>
 
+      {availabilityError && <p role="alert">No se pudo cargar la disponibilidad. Puedes elegir las fechas manualmente. <button type="button" onClick={() => setRetry((n) => n + 1)}>Reintentar disponibilidad</button></p>}
       <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--text-muted)]">
         {loadingAvailability && (
           <span className="inline-flex items-center gap-1">
