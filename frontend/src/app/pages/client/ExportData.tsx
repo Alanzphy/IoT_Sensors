@@ -1,4 +1,4 @@
-import { format, startOfDay, subDays } from "date-fns";
+import { format } from "date-fns";
 import { Calendar, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { useState } from "react";
 import { BentoCard } from "../../components/BentoCard";
@@ -9,17 +9,26 @@ import { SelectionScopeBar } from "../../components/selection/SelectionScopeBar"
 import { useToast } from "../../components/Toast";
 import { useSelection } from "../../context/SelectionContext";
 import { downloadBlobExport } from "../../utils/export";
+import { useReadingFilters } from "../../services/useReadingFilters";
+import { readingQuery } from "../../utils/readingFilters";
 
 export function ExportData() {
   const { selectedArea } = useSelection();
+  return <AreaExport key={selectedArea?.id ?? "none"} />;
+}
+
+function AreaExport() {
+  const { selectedArea } = useSelection();
   const { showToast } = useToast();
 
-  const [startDate, setStartDate] = useState<Date>(startOfDay(subDays(new Date(), 7)));
-  const [endDate, setEndDate] = useState<Date>(startOfDay(new Date()));
+  const filters = useReadingFilters();
+  const { startDate, endDate, cycleId } = filters;
+  const [error, setError] = useState<string>();
   const [exportFormat, setExportFormat] = useState<"csv" | "xlsx" | "pdf">("csv");
   const [loading, setLoading] = useState(false);
 
   const handleExport = async () => {
+    if (loading) return;
     if (!selectedArea) {
       showToast("Por favor selecciona un área de riego.", "error");
       return;
@@ -27,18 +36,15 @@ export function ExportData() {
 
     try {
       setLoading(true);
-      const params = new URLSearchParams({
-        irrigation_area_id: selectedArea.id.toString(),
-        start_date: format(startDate, "yyyy-MM-dd"),
-        end_date: format(endDate, "yyyy-MM-dd"),
-        format: exportFormat
-      });
+      setError(undefined);
+      const params = readingQuery(selectedArea.id, startDate, endDate, cycleId);
+      params.set("format", exportFormat);
 
       const fileName = `export_${selectedArea.name}_${format(new Date(), "yyyy-MM-dd")}.${exportFormat}`;
       await downloadBlobExport(`/readings/export?${params}`, fileName);
       showToast("Exportación completada correctamente.", "success");
     } catch (err) {
-      console.error("Export failed", err);
+      setError("No se pudo exportar. Intenta nuevamente.");
       showToast("Hubo un error al exportar los datos. Intenta nuevamente.", "error");
     } finally {
       setLoading(false);
@@ -78,18 +84,7 @@ export function ExportData() {
                 <ReadingDateRangeSelector
                   variant="soft"
                   irrigationAreaId={selectedArea?.id}
-                  startDate={startDate}
-                  endDate={endDate}
-                  onStartDateChange={(nextDate) => {
-                    const normalized = startOfDay(nextDate);
-                    setStartDate(normalized);
-                    if (normalized > endDate) setEndDate(normalized);
-                  }}
-                  onEndDateChange={(nextDate) => {
-                    const normalized = startOfDay(nextDate);
-                    setEndDate(normalized);
-                    if (normalized < startDate) setStartDate(normalized);
-                  }}
+                  {...filters}
                 />
               </div>
 
@@ -119,6 +114,8 @@ export function ExportData() {
                 </div>
               </div>
 
+              {error && <p role="alert">{error}</p>}
+              {!selectedArea && <p role="status">Selecciona un área de riego para exportar.</p>}
               {/* Export Button */}
               <div className="pt-2">
                 <PillButton
