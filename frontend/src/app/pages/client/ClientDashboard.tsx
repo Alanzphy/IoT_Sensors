@@ -86,9 +86,13 @@ export function ClientDashboard() {
           }
         }
       }
+      const latestReading = latest.status === "fulfilled" ? latest.value.data : null;
+      if (latestReading?.soil?.humidity == null) semaphore["soil.humidity"] = null;
+      if (latestReading?.irrigation?.flow_per_minute == null) semaphore["irrigation.flow_per_minute"] = null;
+      if (latestReading?.environmental?.eto == null) semaphore["environmental.eto"] = null;
       setSnapshot({
         areaId,
-        reading: latest.status === "fulfilled" ? latest.value.data : null,
+        reading: latestReading,
         history: history.status === "fulfilled" ? toChartReadings(history.value.data.data) : [],
         semaphore,
         error: latest.status === "rejected" ? "No se pudo cargar la última lectura." :

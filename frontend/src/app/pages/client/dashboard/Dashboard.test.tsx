@@ -146,3 +146,20 @@ it("discards late responses for a previously selected area", async () => {
   expect(screen.getByText("77")).toBeTruthy();
   await waitFor(() => expect(mocks.get).toHaveBeenCalledWith("/readings/latest", { params: { irrigation_area_id: 13 } }));
 });
+
+
+it("does not label missing telemetry as optimal when priority status defaults to optimal", async () => {
+  mocks.get.mockImplementation((path: string) => {
+    if (path === "/readings/latest") return Promise.resolve({ data: { ...reading, soil: null, irrigation: null, environmental: null } });
+    if (path === "/readings/priority-status") return Promise.resolve({ data: { items: [
+      { parameter: "soil.humidity", level: "optimal" },
+      { parameter: "irrigation.flow_per_minute", level: "optimal" },
+      { parameter: "environmental.eto", level: "optimal" },
+    ] } });
+    return respond(path);
+  });
+  render(<ClientDashboard />);
+  await screen.findByText("Humedad del Suelo");
+  expect(screen.queryByText("Óptimo")).toBeNull();
+  expect(screen.getAllByText("Sin datos de umbral")).toHaveLength(3);
+});

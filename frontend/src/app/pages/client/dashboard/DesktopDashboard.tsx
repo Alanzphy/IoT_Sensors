@@ -36,7 +36,7 @@ export function DesktopDashboard({
   return (
     <div className="grid grid-cols-12 gap-6">
       {/* Priority Data - Dark Cards (Row 1) */}
-      <div className="col-span-4">
+      <div className="col-span-12 xl:col-span-4">
         <MetricCard
           title="Humedad del Suelo"
           value={currentReadings.soilHumidity}
@@ -77,7 +77,7 @@ export function DesktopDashboard({
         </MetricCard>
       </div>
 
-      <div className="col-span-4">
+      <div className="col-span-12 xl:col-span-4">
         <MetricCard
           title="Flujo de Agua"
           value={currentReadings.waterFlow}
@@ -111,7 +111,7 @@ export function DesktopDashboard({
         </MetricCard>
       </div>
 
-      <div className="col-span-4">
+      <div className="col-span-12 xl:col-span-4">
         <MetricCard
           title="E.T.O."
           value={currentReadings.eto}
@@ -128,7 +128,7 @@ export function DesktopDashboard({
       </div>
 
       {/* Irrigation Status (Row 2) */}
-      <div className="col-span-4 animate-stagger-1">
+      <div className="col-span-12 xl:col-span-4 animate-stagger-1">
         <BentoCard variant="sand">
           <div className="flex items-start justify-between mb-4">
             <h3 className="text-lg text-[var(--text-main)]">Estado del Riego</h3>
@@ -164,7 +164,7 @@ export function DesktopDashboard({
       </div>
 
       {/* Soil Metrics (Row 2) */}
-      <div className="col-span-8">
+      <div className="col-span-12 xl:col-span-8">
         <BentoCard variant="light">
           <h3 className="text-lg text-[var(--text-main)] mb-4">Suelo</h3>
           <div className="grid grid-cols-3 gap-6">
@@ -194,7 +194,7 @@ export function DesktopDashboard({
       </div>
 
       {/* Chart (Row 3) */}
-      <div className="col-span-8 row-span-2 animate-stagger-3">
+      <div className="col-span-12 xl:col-span-8 row-span-2 animate-stagger-3">
         <BentoCard variant="light" className="h-full">
           <h3 className="text-lg text-[var(--text-main)] mb-6">
             Humedad del Suelo - Últimas 12 lecturas
@@ -256,7 +256,7 @@ export function DesktopDashboard({
       </div>
 
       {/* Environmental Metrics (Row 3-4) */}
-      <div className="col-span-4">
+      <div className="col-span-12 xl:col-span-4">
         <BentoCard variant="light" className="h-full">
           <h3 className="text-lg text-[var(--text-main)] mb-4">Ambiental</h3>
           <div className="divide-y divide-[var(--border-subtle)] rounded-[24px] overflow-hidden">
