@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
+import { FRESH_MINUTES_THRESHOLD } from "../pages/client/dashboard/helpers";
 
 interface FreshnessIndicatorProps {
   lastUpdate: Date;
   variant?: "light" | "dark";
 }
-
-const FRESH_MINUTES_THRESHOLD = 20;
 
 function getTimeText(minutesAgo: number): string {
   if (minutesAgo < 1) return "hace un momento";
@@ -18,9 +17,9 @@ function getTimeText(minutesAgo: number): string {
 export function FreshnessIndicator({ lastUpdate, variant = "light" }: FreshnessIndicatorProps) {
   const [, forceUpdate] = useState(0);
 
-  // Re-render quickly for testing
+  // Keep elapsed time and freshness current even without a new reading.
   useEffect(() => {
-    const interval = setInterval(() => forceUpdate((n) => n + 1), 3000);
+    const interval = setInterval(() => forceUpdate((n) => n + 1), 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -32,13 +31,10 @@ export function FreshnessIndicator({ lastUpdate, variant = "light" }: FreshnessI
 
   if (minutesAgo < FRESH_MINUTES_THRESHOLD) {
     dotColor = "var(--status-active)";
-    statusLabel = "En línea";
-  } else if (minutesAgo < 120) {
-    dotColor = "var(--status-warning)";
-    statusLabel = "Advertencia";
+    statusLabel = "Datos actuales";
   } else {
-    dotColor = "var(--status-danger)";
-    statusLabel = "Sin conexión";
+    dotColor = "var(--status-warning)";
+    statusLabel = "Sin reporte reciente";
   }
 
   const textColor = variant === "dark" ? "text-[var(--text-on-dark)]/70" : "text-[var(--text-muted)]";
@@ -66,7 +62,7 @@ export function FreshnessIndicator({ lastUpdate, variant = "light" }: FreshnessI
           aria-hidden="true"
         />
       </span>
-      <span>Último dato: {getTimeText(minutesAgo)}</span>
+      <span>{statusLabel} · Último dato: <time dateTime={lastUpdate.toISOString()}>{lastUpdate.toLocaleString("es-MX")}</time> · {getTimeText(minutesAgo)}</span>
     </div>
   );
 }

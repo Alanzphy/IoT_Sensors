@@ -1,12 +1,16 @@
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Database } from "lucide-react";
 import { MetricSkeletonGrid } from "../../components/MetricSkeleton";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useSelection } from "../../context/SelectionContext";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { usePageVisibility } from "../../hooks/usePageVisibility";
 import { api } from "../../services/api";
-import { formatElapsed, parseBackendTimestamp } from "../../utils/datetime";
+import { EmptyState } from "../../components/EmptyState";
+import { FreshnessIndicator } from "../../components/FreshnessIndicator";
+import type { PaginatedResponse, ReadingResponse } from "../../types/api";
+import { toCurrentReadings, toChartReadings, type ChartReading } from "./dashboard/readings";
+import { ExternalDataCards } from "./dashboard/ExternalDataCards";
 import {
   DASHBOARD_REFRESH_MS,
   defaultSemaphore,
@@ -32,28 +36,25 @@ export function ClientDashboard() {
     ? areas.filter(a => a.property_id === selectedProperty.id)
     : [];
 
-  const [currentReadings, setCurrentReadings] = useState({
-    soilHumidity: 0 as number | '-',
-    waterFlow: 0 as number | '-',
-    accumulatedWater: 0 as number | '-',
-    eto: 0 as number | '-',
-    irrigationActive: false,
-    irrigationElapsedTime: "N/A",
-    soilConductivity: 0 as number | '-',
-    soilTemp: 0 as number | '-',
-    waterPotential: 0 as number | '-',
-    airTemp: 0 as number | '-',
-    relativeHumidity: 0 as number | '-',
-    windSpeed: 0 as number | '-',
-    solarRadiation: 0 as number | '-',
-    lastUpdate: null as Date | null,
-  });
-
-  const [historicalData, setHistoricalData] = useState<any[]>([]);
-  const hasFetchedInitialRef = useRef(false);
-  const [prioritySemaphore, setPrioritySemaphore] = useState<Record<PriorityKey, SemaphoreLevel>>(defaultSemaphore);
-  const [loading, setLoading] = useState(false);
+  const areaId = selectedArea?.id;
+  const [snapshot, setSnapshot] = useState<{
+    areaId: number;
+    reading: ReadingResponse | null;
+    history: ChartReading[];
+    semaphore: Record<PriorityKey, SemaphoreLevel>;
+    error: string | null;
+  } | null>(null);
+  const [retry, setRetry] = useState(0);
+  const [, tick] = useState(0);
+  const activeSnapshot = snapshot?.areaId === areaId ? snapshot : null;
+  const loading = Boolean(areaId && !activeSnapshot);
+  const currentReadings = toCurrentReadings(activeSnapshot?.reading ?? null);
   const connectionState = getConnectionState(currentReadings.lastUpdate);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => tick((value) => value + 1), DASHBOARD_REFRESH_MS);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (selectedProperty && filteredAreas.length > 0 && !selectedArea) {
@@ -62,127 +63,45 @@ export function ClientDashboard() {
   }, [selectedProperty, filteredAreas, selectedArea, setSelectedArea]);
 
   useEffect(() => {
-    // Si cambia el área seleccionada, borramos datos anteriores para que retorne a loading skeleton real
-    setHistoricalData([]);
-    hasFetchedInitialRef.current = false;
-  }, [selectedArea?.id]);
-
-  useEffect(() => {
-    // Solo detenemos si no hay área, NO paramos de montar el effect si no estamos en focus.
-    if (!selectedArea) return;
-
-    let isMounted = true;
+    if (!areaId || !isPageVisible) return;
+    let cancelled = false;
     let inFlight = false;
-    const areaId = selectedArea.id;
-
     const fetchData = async () => {
-      // Si ya hay request activo, o la página NO está visible, no solicitamos.
-      if (inFlight || !isPageVisible) return;
+      if (inFlight) return;
       inFlight = true;
-      // Solo mostrar skeleton si es la primera carga para esta área
-      if (!hasFetchedInitialRef.current) {
-        setLoading(true);
+      const params = { irrigation_area_id: areaId };
+      const [latest, history, priority] = await Promise.allSettled([
+        api.get<ReadingResponse | null>("/readings/latest", { params }),
+        api.get<PaginatedResponse<ReadingResponse>>("/readings", { params: { ...params, page: 1, per_page: 12 } }),
+        api.get<{ items: PriorityStatusItem[] }>("/readings/priority-status", { params }),
+      ]);
+      inFlight = false;
+      if (cancelled) return;
+      const semaphore = { ...defaultSemaphore };
+      if (priority.status === "fulfilled") {
+        for (const item of priority.value.data.items ?? []) {
+          if (item.parameter in semaphore &&
+            (item.level === "optimal" || item.level === "warning" || item.level === "critical")) {
+            semaphore[item.parameter as PriorityKey] = item.level;
+          }
+        }
       }
-
-      try {
-        const [latestRes, histRes, priorityRes] = await Promise.all([
-          api.get(`/readings/latest?irrigation_area_id=${areaId}`),
-          api.get(`/readings?irrigation_area_id=${areaId}&per_page=12`),
-          api.get(`/readings/priority-status?irrigation_area_id=${areaId}`),
-        ]);
-
-        const latestData = latestRes.data;
-
-        if (isMounted) {
-          if (latestData) {
-            setCurrentReadings({
-              soilHumidity: latestData.soil?.humidity ?? '-',
-              waterFlow: latestData.irrigation?.flow_per_minute ?? '-',
-              accumulatedWater: latestData.irrigation?.accumulated_liters ?? '-',
-              eto: latestData.environmental?.eto ?? '-',
-              irrigationActive: latestData.irrigation?.active ?? false,
-              irrigationElapsedTime: formatElapsed(parseBackendTimestamp(latestData.timestamp)),
-              soilConductivity: latestData.soil?.conductivity ?? '-',
-              soilTemp: latestData.soil?.temperature ?? '-',
-              waterPotential: latestData.soil?.water_potential ?? '-',
-              airTemp: latestData.environmental?.temperature ?? '-',
-              relativeHumidity: latestData.environmental?.relative_humidity ?? '-',
-              windSpeed: latestData.environmental?.wind_speed ?? '-',
-              solarRadiation: latestData.environmental?.solar_radiation ?? '-',
-              lastUpdate: parseBackendTimestamp(latestData.timestamp),
-            });
-          } else {
-            setCurrentReadings({
-              soilHumidity: '-', waterFlow: '-', accumulatedWater: '-', eto: '-',
-              irrigationActive: false, irrigationElapsedTime: "N/A",
-              soilConductivity: '-', soilTemp: '-', waterPotential: '-',
-              airTemp: '-', relativeHumidity: '-', windSpeed: '-', solarRadiation: '-',
-              lastUpdate: null,
-            });
-          }
-        }
-
-        if (isMounted && histRes.data?.data) {
-          const rawItems = histRes.data.data;
-          const chartData = rawItems.reverse().map((item: any) => {
-            const t = parseBackendTimestamp(item.timestamp);
-            if (!t) {
-              return null;
-            }
-            return {
-              time: t.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
-              fullTime: t,
-              soilHumidity: item.soil?.humidity ?? 0,
-              waterFlow: item.irrigation?.flow_per_minute ?? 0,
-            };
-          }).filter(Boolean);
-          setHistoricalData(chartData);
-        }
-
-        if (isMounted) {
-          const items: PriorityStatusItem[] = priorityRes.data?.items ?? [];
-          const nextSemaphore: Record<PriorityKey, SemaphoreLevel> = {
-            ...defaultSemaphore,
-          };
-
-          for (const item of items) {
-            if (!(item.parameter in nextSemaphore)) continue;
-            const key = item.parameter as PriorityKey;
-            if (
-              item.level === "optimal" ||
-              item.level === "warning" ||
-              item.level === "critical"
-            ) {
-              nextSemaphore[key] = item.level;
-            }
-          }
-
-          if (isMounted) {
-            hasFetchedInitialRef.current = true;
-            setPrioritySemaphore(nextSemaphore);
-          }
-        }
-      } catch (err) {
-        console.error("Error fetching dashboard data:", err);
-      } finally {
-        inFlight = false;
-        if (isMounted) setLoading(false);
-      }
+      setSnapshot({
+        areaId,
+        reading: latest.status === "fulfilled" ? latest.value.data : null,
+        history: history.status === "fulfilled" ? toChartReadings(history.value.data.data) : [],
+        semaphore,
+        error: latest.status === "rejected" ? "No se pudo cargar la última lectura." :
+          history.status === "rejected" ? "No se pudieron cargar las lecturas recientes." : null,
+      });
     };
-
-    // Llamada inicial (depende de isPageVisible para disparar si se acaba de volver la pestaña visible)
-    fetchData();
-
-    const intervalId = window.setInterval(() => {
-      // Revisa visibility dentro del refetch en intervalo.
-      if (isMounted) fetchData();
-    }, DASHBOARD_REFRESH_MS);
-
+    void fetchData();
+    const timer = window.setInterval(() => void fetchData(), DASHBOARD_REFRESH_MS);
     return () => {
-      isMounted = false;
-      window.clearInterval(intervalId);
+      cancelled = true;
+      window.clearInterval(timer);
     };
-  }, [selectedArea, isPageVisible]);
+  }, [areaId, isPageVisible, retry]);
 
 
   return (
@@ -244,54 +163,40 @@ export function ClientDashboard() {
             </div>
           )}
 
-          {selectedArea && (
-            <>
-              {connectionState === "online" && (
-                <div className="inline-flex items-center rounded-full border border-[var(--status-active)]/35 bg-[var(--status-active-bg)] px-3 py-2 text-xs font-semibold text-[var(--status-active)]">
-                  <span className="mr-2 inline-flex h-2 w-2 rounded-full bg-[var(--status-active)] animate-glow-pulse" />
-                  En línea
-                </div>
-              )}
-              {connectionState === "warning" && (
-                <div className="inline-flex items-center rounded-full border border-[var(--status-warning)]/35 bg-[var(--status-warning-bg)] px-3 py-2 text-xs font-semibold text-[var(--status-warning)]">
-                  <span className="mr-2 inline-flex h-2 w-2 rounded-full bg-[var(--status-warning)]" />
-                  Sin reporte reciente
-                </div>
-              )}
-              {connectionState === "offline" && (
-                <div className="inline-flex items-center rounded-full border border-[var(--status-danger)]/35 bg-[var(--status-danger-bg)] px-3 py-2 text-xs font-semibold text-[var(--status-danger)]">
-                  <span className="mr-2 inline-flex h-2 w-2 rounded-full bg-[var(--status-danger)]" />
-                  Sin conexión
-                </div>
-              )}
-              {connectionState === "no_data" && (
-                <div className="inline-flex items-center rounded-full border border-[var(--border-subtle)] bg-[var(--surface-card-primary)] px-3 py-2 text-xs font-semibold text-[var(--text-subtle)]">
-                  <span className="mr-2 inline-flex h-2 w-2 rounded-full bg-[var(--text-muted)]" />
-                  Sin lecturas
-                </div>
-              )}
-            </>
-          )}
+          {currentReadings.lastUpdate && <FreshnessIndicator lastUpdate={currentReadings.lastUpdate} />}
+
         </div>
       </div>
 
-      {/* Bento Grid Layout */}
-      {!selectedArea ? null : loading ? (
-        <MetricSkeletonGrid count={isMobile ? 3 : 6} />
-      ) : isMobile ? (
-        <MobileDashboard
-          historicalData={historicalData}
-          currentReadings={currentReadings}
-          prioritySemaphore={prioritySemaphore}
-          connectionState={connectionState}
-        />
+      {!selectedArea ? (
+        <EmptyState icon={Database} title="Selecciona un área de riego" />
       ) : (
-        <DesktopDashboard
-          historicalData={historicalData}
-          currentReadings={currentReadings}
-          prioritySemaphore={prioritySemaphore}
-          connectionState={connectionState}
-        />
+        <>
+          {activeSnapshot?.error && (
+            <div role="alert" className="mb-4 rounded-2xl bg-[var(--status-danger-bg)] p-4 text-[var(--status-danger)]">
+              <p>{activeSnapshot.error}</p>
+              <button type="button" className="mt-2 underline" onClick={() => setRetry((value) => value + 1)}>Reintentar</button>
+            </div>
+          )}
+          {loading ? <div role="status" aria-label="Cargando lecturas"><MetricSkeletonGrid count={isMobile ? 3 : 6} /></div> : !activeSnapshot?.reading ? (
+            !activeSnapshot?.error && <EmptyState icon={Database} title="Sin lecturas" description="Esta área todavía no tiene datos de sensores." />
+          ) : isMobile ? (
+            <MobileDashboard
+              historicalData={activeSnapshot.history}
+              currentReadings={currentReadings}
+              prioritySemaphore={activeSnapshot.semaphore}
+              connectionState={connectionState}
+            />
+          ) : (
+            <DesktopDashboard
+              historicalData={activeSnapshot.history}
+              currentReadings={currentReadings}
+              prioritySemaphore={activeSnapshot.semaphore}
+              connectionState={connectionState}
+            />
+          )}
+          <ExternalDataCards key={selectedArea.id} areaId={selectedArea.id} />
+        </>
       )}
     </div>
   );

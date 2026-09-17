@@ -1,3 +1,4 @@
+import type { CurrentReadings, ChartReading } from "./readings";
 import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { BentoCard } from "../../../components/BentoCard";
 import { MetricCard } from "../../../components/MetricCard";
@@ -17,8 +18,8 @@ export function MobileDashboard({
   prioritySemaphore,
   connectionState,
 }: {
-  historicalData: any[];
-  currentReadings: any;
+  historicalData: ChartReading[];
+  currentReadings: CurrentReadings;
   prioritySemaphore: Record<PriorityKey, SemaphoreLevel>;
   connectionState: ConnectionState;
 }) {
@@ -92,7 +93,8 @@ export function MobileDashboard({
 
       {/* Chart */}
       <BentoCard variant="light">
-        <h3 className="text-lg text-[var(--text-main)] mb-4">Últimas 24 horas</h3>
+        <h3 className="text-lg text-[var(--text-main)] mb-4">Últimas 12 lecturas</h3>
+        {historicalData.length === 0 && <p className="text-[var(--text-muted)]">Sin lecturas recientes para graficar.</p>}
         <div className="h-[200px] min-h-[200px]">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={historicalData}>
@@ -111,7 +113,7 @@ export function MobileDashboard({
               <YAxis
                 stroke="var(--text-muted)"
                 style={{ fontSize: "10px" }}
-                domain={[30, 60]}
+                domain={[0, 100]}
               />
               <Area
                 type="monotone"
@@ -139,7 +141,7 @@ export function MobileDashboard({
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-[var(--text-muted)]">Tiempo transcurrido</span>
+            <span className="text-[var(--text-muted)]">Antigüedad de la lectura</span>
             <span className="font-bold text-[var(--text-main)]">
               {currentReadings.irrigationElapsedTime}
             </span>
