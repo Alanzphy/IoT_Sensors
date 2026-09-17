@@ -25,9 +25,17 @@ class TestSecretKeyGuard:
         settings = Settings(DEBUG=True, SECRET_KEY="CHANGE-ME-in-production")
         assert settings.DEBUG is True
 
+    def test_docker_example_placeholder_secret_key_raises_outside_debug(self):
+        with pytest.raises(ValueError):
+            Settings(
+                DEBUG=False,
+                SECRET_KEY="CHANGE-THIS-TO-A-LONG-RANDOM-STRING",
+            )
+
     def test_known_insecure_defaults_are_registered(self):
         assert "CHANGE-ME-in-production" in INSECURE_DEFAULT_SECRET_KEYS
         assert (
             "dev-only-change-me-in-production-abc123xyz"
             in INSECURE_DEFAULT_SECRET_KEYS
         )
+        assert "CHANGE-THIS-TO-A-LONG-RANDOM-STRING" in INSECURE_DEFAULT_SECRET_KEYS
