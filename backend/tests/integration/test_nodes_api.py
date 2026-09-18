@@ -1,5 +1,7 @@
 """Tests de integración para /api/v1/nodes."""
 
+from uuid import uuid4
+
 
 
 SENSOR_PAYLOAD = {
@@ -257,7 +259,7 @@ class TestGeoNodes:
         sample_irrigation_area,
     ):
         ingest = client.post(
-            "/api/v1/readings", json=SENSOR_PAYLOAD, headers=node_headers
+            "/api/v1/readings", json=SENSOR_PAYLOAD, headers={"X-Event-ID": str(uuid4()), **node_headers}
         )
         assert ingest.status_code == 201
 

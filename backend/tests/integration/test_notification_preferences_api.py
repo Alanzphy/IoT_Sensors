@@ -1,5 +1,7 @@
 """Integration tests for /api/v1/notification-preferences and dispatch preference gating."""
 
+from uuid import uuid4
+
 from app.core.config import settings
 from app.core.security import hash_password
 from app.models.client import Client
@@ -240,7 +242,7 @@ class TestNotificationPreferencesDispatch:
 
         ingest = client.post(
             "/api/v1/readings",
-            headers=node_headers,
+            headers={"X-Event-ID": str(uuid4()), **node_headers},
             json={
                 **SENSOR_PAYLOAD,
                 "timestamp": "2026-04-03T10:00:00Z",
@@ -314,7 +316,7 @@ class TestNotificationPreferencesDispatch:
 
         ingest = client.post(
             "/api/v1/readings",
-            headers=node_headers,
+            headers={"X-Event-ID": str(uuid4()), **node_headers},
             json={
                 **SENSOR_PAYLOAD,
                 "timestamp": "2026-04-03T11:00:00Z",
@@ -370,7 +372,7 @@ class TestNotificationPreferencesDispatch:
 
         ingest = client.post(
             "/api/v1/readings",
-            headers=node_headers,
+            headers={"X-Event-ID": str(uuid4()), **node_headers},
             json={
                 **SENSOR_PAYLOAD,
                 "timestamp": "2026-04-03T12:00:00Z",

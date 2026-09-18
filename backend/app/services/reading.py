@@ -4,6 +4,7 @@ from datetime import date, datetime, timedelta
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -143,10 +144,48 @@ def _create_threshold_alerts(db: Session, node: Node, reading: Reading) -> None:
         db.add(alert)
 
 
-def create_reading(db: Session, node: Node, data: ReadingCreate) -> Reading:
+def ingest_reading(
+    db: Session, node: Node, data: ReadingCreate, event_id: str, payload_hash: str
+) -> tuple[Reading, bool]:
+    """Bind a telemetry event to one reading; return (reading, created)."""
+    node_id = node.id
+    query = select(Reading).where(
+        Reading.nodo_id == node_id, Reading.event_id == event_id
+    )
+    existing = db.execute(query).scalar_one_or_none()
+    if existing is None:
+        try:
+            return create_reading(
+                db, node, data, event_id=event_id, payload_hash=payload_hash
+            ), True
+        except IntegrityError:
+            # A concurrent request may have committed the same event. Roll back
+            # all writes and start a fresh snapshot (also on MySQL REPEATABLE READ).
+            db.rollback()
+            existing = db.execute(query).scalar_one_or_none()
+            if existing is None:
+                raise  # An unrelated constraint failure must not become a retry.
+    if existing.payload_hash != payload_hash:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="X-Event-ID already used with a different body",
+        )
+    return existing, False
+
+
+def create_reading(
+    db: Session,
+    node: Node,
+    data: ReadingCreate,
+    *,
+    event_id: str | None = None,
+    payload_hash: str | None = None,
+) -> Reading:
     """Insert reading in a single table."""
     reading = Reading(
         nodo_id=node.id,
+        event_id=event_id,
+        payload_hash=payload_hash,
         marca_tiempo=data.timestamp,
         suelo_conductividad=data.soil.conductivity,
         suelo_temperatura=data.soil.temperature,

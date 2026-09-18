@@ -1,5 +1,7 @@
 """Integration tests for /api/v1/thresholds and /api/v1/alerts."""
 
+from uuid import uuid4
+
 from datetime import UTC, datetime, timedelta
 
 from app.core.config import settings
@@ -357,7 +359,7 @@ class TestAlertsApi:
         self._create_threshold(client, admin_headers, area_id)
         ingest = client.post(
             "/api/v1/readings",
-            headers=node_headers,
+            headers={"X-Event-ID": str(uuid4()), **node_headers},
             json={
                 **SENSOR_PAYLOAD,
                 "timestamp": timestamp,
@@ -394,7 +396,7 @@ class TestAlertsApi:
                 "humidity": 35.0,
             },
         }
-        ingest = client.post("/api/v1/readings", headers=node_headers, json=payload)
+        ingest = client.post("/api/v1/readings", headers={"X-Event-ID": str(uuid4()), **node_headers}, json=payload)
         assert ingest.status_code == 201
 
         list_resp = client.get(
@@ -428,7 +430,7 @@ class TestAlertsApi:
                 "humidity": 35.0,
             },
         }
-        ingest = client.post("/api/v1/readings", headers=node_headers, json=payload)
+        ingest = client.post("/api/v1/readings", headers={"X-Event-ID": str(uuid4()), **node_headers}, json=payload)
         assert ingest.status_code == 201
 
         list_resp = client.get(
@@ -464,8 +466,8 @@ class TestAlertsApi:
             },
         }
 
-        first = client.post("/api/v1/readings", headers=node_headers, json=payload1)
-        second = client.post("/api/v1/readings", headers=node_headers, json=payload2)
+        first = client.post("/api/v1/readings", headers={"X-Event-ID": str(uuid4()), **node_headers}, json=payload1)
+        second = client.post("/api/v1/readings", headers={"X-Event-ID": str(uuid4()), **node_headers}, json=payload2)
         assert first.status_code == 201
         assert second.status_code == 201
 
@@ -493,7 +495,7 @@ class TestAlertsApi:
                 "humidity": 33.0,
             },
         }
-        ingest = client.post("/api/v1/readings", headers=node_headers, json=payload)
+        ingest = client.post("/api/v1/readings", headers={"X-Event-ID": str(uuid4()), **node_headers}, json=payload)
         assert ingest.status_code == 201
 
         list_resp = client.get(
@@ -571,7 +573,7 @@ class TestAlertsApi:
 
         ingest = client.post(
             "/api/v1/readings",
-            headers={"X-API-Key": foreign_node.api_key},
+            headers={"X-Event-ID": str(uuid4()), **{"X-API-Key": foreign_node.api_key}},
             json={
                 **SENSOR_PAYLOAD,
                 "timestamp": "2026-04-02T11:00:00Z",
@@ -631,7 +633,7 @@ class TestAlertsApi:
         }
         ingest = client.post(
             "/api/v1/readings",
-            headers={"X-API-Key": foreign_node.api_key},
+            headers={"X-Event-ID": str(uuid4()), **{"X-API-Key": foreign_node.api_key}},
             json=payload,
         )
         assert ingest.status_code == 201
@@ -669,7 +671,7 @@ class TestAlertsApi:
 
         own_ingest = client.post(
             "/api/v1/readings",
-            headers=node_headers,
+            headers={"X-Event-ID": str(uuid4()), **node_headers},
             json={
                 **SENSOR_PAYLOAD,
                 "timestamp": "2026-04-03T10:00:00Z",
@@ -687,7 +689,7 @@ class TestAlertsApi:
         self._create_threshold(client, admin_headers, foreign_area.id)
         foreign_ingest = client.post(
             "/api/v1/readings",
-            headers={"X-API-Key": foreign_node.api_key},
+            headers={"X-Event-ID": str(uuid4()), **{"X-API-Key": foreign_node.api_key}},
             json={
                 **SENSOR_PAYLOAD,
                 "timestamp": "2026-04-03T10:05:00Z",
@@ -720,7 +722,7 @@ class TestAlertsApi:
 
         own_ingest = client.post(
             "/api/v1/readings",
-            headers=node_headers,
+            headers={"X-Event-ID": str(uuid4()), **node_headers},
             json={
                 **SENSOR_PAYLOAD,
                 "timestamp": "2026-04-04T10:00:00Z",
@@ -738,7 +740,7 @@ class TestAlertsApi:
         self._create_threshold(client, admin_headers, foreign_area.id)
         foreign_ingest = client.post(
             "/api/v1/readings",
-            headers={"X-API-Key": foreign_node.api_key},
+            headers={"X-Event-ID": str(uuid4()), **{"X-API-Key": foreign_node.api_key}},
             json={
                 **SENSOR_PAYLOAD,
                 "timestamp": "2026-04-04T10:05:00Z",
@@ -778,7 +780,7 @@ class TestInactivityAlertsApi:
         stale_ts = datetime.now(UTC) - timedelta(minutes=30)
         ingest = client.post(
             "/api/v1/readings",
-            headers=node_headers,
+            headers={"X-Event-ID": str(uuid4()), **node_headers},
             json={
                 **SENSOR_PAYLOAD,
                 "timestamp": self._iso_utc(stale_ts),
@@ -812,7 +814,7 @@ class TestInactivityAlertsApi:
         stale_ts = datetime.now(UTC) - timedelta(minutes=35)
         ingest = client.post(
             "/api/v1/readings",
-            headers=node_headers,
+            headers={"X-Event-ID": str(uuid4()), **node_headers},
             json={
                 **SENSOR_PAYLOAD,
                 "timestamp": self._iso_utc(stale_ts),
@@ -842,7 +844,7 @@ class TestInactivityAlertsApi:
         recent_ts = datetime.now(UTC) - timedelta(minutes=5)
         ingest = client.post(
             "/api/v1/readings",
-            headers=node_headers,
+            headers={"X-Event-ID": str(uuid4()), **node_headers},
             json={
                 **SENSOR_PAYLOAD,
                 "timestamp": self._iso_utc(recent_ts),
@@ -948,7 +950,7 @@ class TestAlertNotificationDispatchApi:
 
         ingest = client.post(
             "/api/v1/readings",
-            headers=node_headers,
+            headers={"X-Event-ID": str(uuid4()), **node_headers},
             json={
                 **SENSOR_PAYLOAD,
                 "timestamp": "2026-04-02T10:00:00Z",
@@ -1024,7 +1026,7 @@ class TestAlertNotificationDispatchApi:
 
         ingest = client.post(
             "/api/v1/readings",
-            headers=node_headers,
+            headers={"X-Event-ID": str(uuid4()), **node_headers},
             json={
                 **SENSOR_PAYLOAD,
                 "timestamp": "2026-04-02T11:00:00Z",

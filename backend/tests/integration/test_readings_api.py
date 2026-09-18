@@ -1,5 +1,7 @@
 """Tests de integración para /api/v1/readings (POST ingesta + GET historia + export)."""
 
+from uuid import uuid4
+
 import json
 import re
 from datetime import datetime, timedelta, timezone
@@ -54,7 +56,7 @@ def test_get_reading_matches_v1_contract(
                 value = False if field == "active" else 0
             payload[category][field] = value
 
-    created = client.post("/api/v1/readings", json=payload, headers=node_headers)
+    created = client.post("/api/v1/readings", json=payload, headers={"X-Event-ID": str(uuid4()), **node_headers})
     assert created.status_code == 201
     response = client.get(
         f"/api/v1/readings{endpoint}",
@@ -109,7 +111,7 @@ def test_reading_serializer_normalizes_utc_and_preserves_precision(timestamp):
 class TestPostReading:
     def test_ingest_reading_valid_api_key(self, client, sample_node, node_headers):
         resp = client.post(
-            "/api/v1/readings", json=SENSOR_PAYLOAD, headers=node_headers
+            "/api/v1/readings", json=SENSOR_PAYLOAD, headers={"X-Event-ID": str(uuid4()), **node_headers}
         )
         assert resp.status_code == 201
         data = resp.json()
@@ -120,7 +122,7 @@ class TestPostReading:
         resp = client.post(
             "/api/v1/readings",
             json=SENSOR_PAYLOAD,
-            headers={"X-API-Key": "invalid_key_xyz"},
+            headers={"X-Event-ID": str(uuid4()), **{"X-API-Key": "invalid_key_xyz"}},
         )
         assert resp.status_code == 401
 
@@ -130,7 +132,7 @@ class TestPostReading:
 
     def test_ingest_reading_missing_timestamp_returns_422(self, client, node_headers):
         payload = {k: v for k, v in SENSOR_PAYLOAD.items() if k != "timestamp"}
-        resp = client.post("/api/v1/readings", json=payload, headers=node_headers)
+        resp = client.post("/api/v1/readings", json=payload, headers={"X-Event-ID": str(uuid4()), **node_headers})
         assert resp.status_code == 422
 
     def test_ingest_reading_null_optional_fields(self, client, node_headers):
@@ -151,14 +153,14 @@ class TestPostReading:
                 "eto": None,
             },
         }
-        resp = client.post("/api/v1/readings", json=payload, headers=node_headers)
+        resp = client.post("/api/v1/readings", json=payload, headers={"X-Event-ID": str(uuid4()), **node_headers})
         assert resp.status_code == 201
 
     def test_ingest_returns_timestamp_and_created_at(self, client, node_headers):
         resp = client.post(
             "/api/v1/readings",
             json={**SENSOR_PAYLOAD, "timestamp": "2026-04-02T09:00:00Z"},
-            headers=node_headers,
+            headers={"X-Event-ID": str(uuid4()), **node_headers},
         )
         data = resp.json()
         assert "timestamp" in data
@@ -170,7 +172,7 @@ class TestGetReadings:
         return client.post(
             "/api/v1/readings",
             json={**SENSOR_PAYLOAD, "timestamp": timestamp},
-            headers=node_headers,
+            headers={"X-Event-ID": str(uuid4()), **node_headers},
         )
 
     def test_list_readings_requires_auth(self, client, sample_node, node_headers):
@@ -236,12 +238,12 @@ class TestGetLatestReading:
         client.post(
             "/api/v1/readings",
             json={**SENSOR_PAYLOAD, "timestamp": "2026-04-01T08:00:00Z"},
-            headers=node_headers,
+            headers={"X-Event-ID": str(uuid4()), **node_headers},
         )
         client.post(
             "/api/v1/readings",
             json={**SENSOR_PAYLOAD, "timestamp": "2026-04-01T10:00:00Z"},
-            headers=node_headers,
+            headers={"X-Event-ID": str(uuid4()), **node_headers},
         )
         resp = client.get(
             f"/api/v1/readings/latest?irrigation_area_id={sample_irrigation_area.id}",
@@ -331,7 +333,7 @@ class TestGetPriorityStatus:
             },
         }
         ingest = client.post(
-            "/api/v1/readings", json=reading_payload, headers=node_headers
+            "/api/v1/readings", json=reading_payload, headers={"X-Event-ID": str(uuid4()), **node_headers}
         )
         assert ingest.status_code == 201
 
@@ -359,7 +361,7 @@ class TestGetPriorityStatus:
 class TestExportReadings:
     def _ingest_one(self, client, node_headers):
         return client.post(
-            "/api/v1/readings", json=SENSOR_PAYLOAD, headers=node_headers
+            "/api/v1/readings", json=SENSOR_PAYLOAD, headers={"X-Event-ID": str(uuid4()), **node_headers}
         )
 
     def test_export_csv(

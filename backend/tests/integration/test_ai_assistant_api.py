@@ -1,5 +1,7 @@
 """Integration tests for /api/v1/ai-assistant/chat."""
 
+from uuid import uuid4
+
 from app.core.config import settings
 from app.core.security import hash_password
 from app.models.client import Client
@@ -89,7 +91,7 @@ class TestAIAssistantApi:
         admin_headers,
         node_headers,
     ):
-        ingest = client.post("/api/v1/readings", headers=node_headers, json=SENSOR_PAYLOAD)
+        ingest = client.post("/api/v1/readings", headers={"X-Event-ID": str(uuid4()), **node_headers}, json=SENSOR_PAYLOAD)
         assert ingest.status_code == 201
 
         resp = client.post(
@@ -176,7 +178,7 @@ class TestAIAssistantApi:
         client_headers,
         node_headers,
     ):
-        ingest = client.post("/api/v1/readings", headers=node_headers, json=SENSOR_PAYLOAD)
+        ingest = client.post("/api/v1/readings", headers={"X-Event-ID": str(uuid4()), **node_headers}, json=SENSOR_PAYLOAD)
         assert ingest.status_code == 201
 
         resp = client.post(
